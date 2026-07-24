@@ -5,10 +5,13 @@ const healing = @import("game/healing.zig");
 const city = @import("game/city.zig");
 const crew = @import("game/crew.zig");
 const economy = @import("game/economy.zig");
+const events = @import("game/events.zig");
+const rivals = @import("game/rivals.zig");
+const save = @import("game/save.zig");
 
 pub fn main() void {
-    std.debug.print("Empire & Kin - Phase 4 Ready\n", .{});
-    std.debug.print("Systems: Healing | Combat | Missions | City | Crew | Economy\n\n", .{});
+    std.debug.print("Empire & Kin - Phase 5 Ready\n", .{});
+    std.debug.print("Systems: Healing | Combat | Missions | City | Crew | Economy | Events | Rivals | Save\n\n", .{});
 
     // --- Crew ---
     var the_kin = crew.createStarterCrew();
@@ -21,24 +24,34 @@ pub fn main() void {
         city.createDistrict(.brooklyn_waterfront),
     };
 
-    std.debug.print("\nDistricts under watch:\n", .{});
-    for (districts) |d| {
-        std.debug.print("  - {s}: Control {d}% | Heat {d} | Daily potential ${d}\n", .{ d.name, d.control, d.heat, city.dailyIncome(d) });
-    }
-
-    // --- Economy daily tick ---
+    // --- Economy ---
     var eco = economy.init();
     economy.dailyTick(&eco, &districts, &the_kin);
+
+    // --- Rivals ---
+    var rival_families = rivals.createRivals();
+    std.debug.print("\nRival Families:\n", .{});
+    for (rival_families) |r| {
+        const status = if (rivals.isWar(r)) "AT WAR" else "tense";
+        std.debug.print("  - {s} (Boss: {s}) | Strength {d} | Hostility {d} [{s}]\n", .{ r.name, r.boss, r.strength, r.hostility, status });
+    }
+
+    // Provoke one rival a bit
+    rivals.provoke(&rival_families[1], 25);
+    std.debug.print("\nProvoked {s} \u2192 hostility now {d}\n", .{ rival_families[1].name, rival_families[1].hostility });
+
+    // --- Random Event ---
+    const ev = events.rollEvent(eco.day + 17);
+    std.debug.print("\nEVENT: {s}\n  {s}\n", .{ ev.title, ev.description });
+    events.applyEvent(ev, &districts, &the_kin, &eco.treasury);
+
+    // --- Save / Load demo ---
+    save.saveGame(eco, the_kin);
+    std.debug.print("\nGame saved.\n", .{});
+
+    if (save.loadGame()) |loaded| {
+        std.debug.print("Loaded \u2192 Day {d} | Treasury ${d} | Influence {d} | Crew morale {d}\n", .{ loaded.day, loaded.treasury, loaded.influence, loaded.crew_morale });
+    }
+
     economy.statusReport(eco, the_kin);
-
-    // --- Quick combat + mission reminder ---
-    var enforcer = combat.Fighter{ .name = "Tony", .hp = 45, .attack = 14, .defense = 6 };
-    var rival = combat.Fighter{ .name = "Rival", .hp = 30, .attack = 9, .defense = 3 };
-    const dmg = combat.resolveHit(enforcer, rival);
-    combat.applyDamage(&rival, dmg);
-    std.debug.print("\nStreet fight: {s} drops rival for {d} dmg (rival HP: {d})\n", .{ enforcer.name, dmg, rival.hp });
-
-    var job = missions.generateMission(42, .bootlegging);
-    const payout = missions.completeMission(&job);
-    std.debug.print("Job done: '{s}' \u2192 ${d}\n", .{ job.name, payout });
 }

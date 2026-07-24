@@ -10,4 +10,6 @@ Prohibition NYC mob game. GTA action + Sims life + City Builder.
 
 **Phase 4**: City districts, crew management, economy loop.
 
-Next: Phase 5 (events, police raids, rival families, save/load).
+**Phase 5**: Events, police raids, rival families, save/load.
+
+Next: Phase 6 (full game loop, turn system, win/lose conditions).

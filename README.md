@@ -45,6 +45,9 @@ Real-time continuous simulation. The city lives whether you are looking or not.
 | Day / Night       | Done   | Periods + activity levels                  |
 | Street Life       | Done   | Pedestrians & traffic density              |
 | Dynamic Police    | Done   | Responds to heat + wanted + time of day    |
+| Rackets           | Done   | Types, levels, crew assignment             |
+| Crew Orders       | Done   | Collect, rest, enforce, scout, guard       |
+| Influence / Rep   | Done   | Influence points + reputation scale        |
 
 ---
 
@@ -54,12 +57,8 @@ Real-time continuous simulation. The city lives whether you are looking or not.
 ### Phase 7 – Free-Roam Skeleton ✅
 ### Phase 7.5 – Era + Multi-Ethnic Underworld ✅
 ### Phase 8 – Living World ✅
-- Pedestrian & traffic AI (stubs)
-- Dynamic police response to heat
-- Day/night cycle
-
-### Phase 9 – Empire Layer
-- Full racket assignment UI
+### Phase 9 – Empire Layer ✅
+- Racket assignment
 - Crew orders
 - Influence & reputation
 
@@ -76,7 +75,7 @@ Real-time continuous simulation. The city lives whether you are looking or not.
 zig build run
 ```
 
-Phase 8 demo advances the clock through day → night, scales street activity, and shows police escalating when heat and wanted rise.
+Phase 9 demo builds rackets, assigns crew, issues orders, upgrades, and tracks influence/reputation.
 
 ---
 

@@ -1,8 +1,6 @@
 const std = @import("std");
 const backend = @import("backend.zig");
-
-/// Headless backend with a simple top-down ASCII “scene” every N frames.
-/// Real Magister/Arcis/RealCity backend will draw actual meshes/lighting.
+const input = @import("input.zig");
 
 var frame_count: u64 = 0;
 var close_after_frames: u64 = 90;
@@ -10,6 +8,7 @@ var cam: backend.Camera = .{};
 var player_x: f32 = 0;
 var player_z: f32 = 0;
 var ground_drawn: bool = false;
+var mapper: input.Mapper = .{};
 
 const MAP_W: usize = 41;
 const MAP_H: usize = 21;
@@ -17,10 +16,10 @@ const MAP_H: usize = 21;
 fn initImpl(title: []const u8, width: u32, height: u32) !void {
     _ = width;
     _ = height;
-    std.debug.print("[NullBackend] init: {s} (Step 3 minimal scene)\n", .{title});
+    std.debug.print("[NullBackend] init: {s} (Step 4 input)\n", .{title});
+    std.debug.print("[NullBackend] bindings: {s}\n", .{input.bindingHelp()});
     frame_count = 0;
-    player_x = 0;
-    player_z = 0;
+    mapper = .{};
 }
 
 fn shutdownImpl() void {
@@ -33,19 +32,28 @@ fn beginFrameImpl() void {
 }
 
 fn endFrameImpl() void {
-    if (frame_count % 30 == 0) {
-        printAsciiScene();
+    if (frame_count % 30 == 0) printAsciiScene();
+}
+
+fn scriptedRaw() input.RawKeys {
+    var raw: input.RawKeys = .{};
+    if (frame_count < 45) {
+        raw.d = true;
+        raw.w = true;
+    } else if (frame_count < 55) {
+        raw.a = true;
     }
+    if (frame_count == 65 or frame_count == 66) raw.escape = true;
+    if (frame_count == 75 or frame_count == 76) raw.escape = true;
+    return raw;
 }
 
 fn pollInputImpl() backend.InputState {
-    if (frame_count < 50) {
-        return .{ .move_x = 0.6, .move_y = 0.15 };
-    }
-    if (frame_count == 60) {
-        return .{ .pause = true };
-    }
-    return .{};
+    return mapper.map(scriptedRaw());
+}
+
+pub fn pollRawKeys() input.RawKeys {
+    return scriptedRaw();
 }
 
 fn deltaTimeImpl() f64 {
@@ -60,25 +68,20 @@ fn drawTextImpl(text: []const u8, x: i32, y: i32, color: backend.Color) void {
     _ = x;
     _ = y;
     _ = color;
-    if (frame_count % 30 == 1) {
-        std.debug.print("[hud] {s}\n", .{text});
-    }
+    if (frame_count % 30 == 1) std.debug.print("[hud] {s}\n", .{text});
 }
 
 fn clearImpl(color: backend.Color) void {
     _ = color;
 }
-
 fn setCameraImpl(c: backend.Camera) void {
     cam = c;
 }
-
 fn drawGroundImpl(size: f32, color: backend.Color) void {
     _ = size;
     _ = color;
     ground_drawn = true;
 }
-
 fn drawBoxImpl(pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Color) void {
     _ = pos;
     _ = w;
@@ -86,7 +89,6 @@ fn drawBoxImpl(pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Color) 
     _ = d;
     _ = color;
 }
-
 fn drawPlayerProxyImpl(pos: backend.Vec3, facing_yaw: f32, color: backend.Color) void {
     _ = facing_yaw;
     _ = color;
@@ -99,37 +101,14 @@ fn printAsciiScene() void {
     var row: usize = 0;
     while (row < MAP_H) : (row += 1) {
         var col: usize = 0;
-        while (col < MAP_W) : (col += 1) {
-            grid[row][col] = if (ground_drawn) '.' else ' ';
-        }
+        while (col < MAP_W) : (col += 1) grid[row][col] = if (ground_drawn) '.' else ' ';
     }
-
     const px = @as(i32, @intFromFloat(player_x)) + @as(i32, MAP_W / 2);
     const pz = @as(i32, @intFromFloat(player_z)) + @as(i32, MAP_H / 2);
-    if (px >= 0 and px < MAP_W and pz >= 0 and pz < MAP_H) {
-        grid[@intCast(pz)][@intCast(px)] = '@';
-    }
-
-    const buildings = [_][2]i32{ .{ 5, 3 }, .{ -8, 6 }, .{ 12, -4 }, .{ -3, -7 } };
-    for (buildings) |b| {
-        const bx = b[0] + @as(i32, MAP_W / 2);
-        const bz = b[1] + @as(i32, MAP_H / 2);
-        if (bx >= 0 and bx < MAP_W and bz >= 0 and bz < MAP_H) {
-            grid[@intCast(bz)][@intCast(bx)] = '#';
-        }
-    }
-
-    std.debug.print("\n--- scene (top-down) frame {d} ---\n", .{frame_count});
-    std.debug.print("cam eye=({d:.1},{d:.1},{d:.1}) target=({d:.1},{d:.1},{d:.1})\n", .{
-        cam.position.x, cam.position.y, cam.position.z,
-        cam.target.x,   cam.target.y,   cam.target.z,
-    });
-    std.debug.print("player @ ({d:.1}, {d:.1})  legend: @ player  # building  . ground\n", .{ player_x, player_z });
+    if (px >= 0 and px < MAP_W and pz >= 0 and pz < MAP_H) grid[@intCast(pz)][@intCast(px)] = '@';
+    std.debug.print("\n--- scene frame {d} player ({d:.1},{d:.1}) ---\n", .{ frame_count, player_x, player_z });
     row = 0;
-    while (row < MAP_H) : (row += 1) {
-        std.debug.print("{s}\n", .{grid[row][0..MAP_W]});
-    }
-    std.debug.print("-----------------------------\n");
+    while (row < MAP_H) : (row += 1) std.debug.print("{s}\n", .{grid[row][0..MAP_W]});
 }
 
 pub fn getBackend() backend.Backend {

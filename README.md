@@ -26,20 +26,24 @@ Real-time continuous simulation. Pause for empire management; the world can keep
 ## Art policy
 
 **Public-domain / free historical sources first** (LOC, NYPL, Wikimedia Commons PD, Internet Archive).  
-1930s photography often usable after rights check; 1980s usually needs original or licensed assets.  
 See `docs/ART_SOURCES.md`. Placeholders first, PD art as appropriate.
 
 ---
 
 ## Where we are
 
-- **Simulation foundation (Phases 6–10):** complete (economy, crew, rackets, police, vehicles, missions, eras…)
-- **Step 1:** Engine backend interface + NullBackend ✅
-- **Step 2:** Continuous frame loop driving simulation ✅
-- **Step 3:** Minimal scene — camera, ground, player proxy, blocks ✅
+- **Simulation foundation (Phases 6–10):** complete
+- **Step 1–3:** Backend, frame loop, minimal scene ✅
+- **Step 4:** Input mapper + controller (WASD/pad → move, district) ✅
 
-Next: Step 4 real input → district HUD → empire UI → vehicles.  
+Next: Step 5 district HUD → empire pause UI → vehicles.  
 Full list: `docs/NEXT10.md`
+
+---
+
+## Controls (Step 4)
+
+`WASD` / arrows move · `E` interact · `F` attack · `Esc` / `Space` pause
 
 ---
 
@@ -48,8 +52,6 @@ Full list: `docs/NEXT10.md`
 ```bash
 zig build run
 ```
-
-Headless loop runs ~90 frames then exits. Swap `null_backend` for a real Magister/Arcis/RealCity backend when ready — gameplay code stays the same.
 
 ---
 

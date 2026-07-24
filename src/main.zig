@@ -12,13 +12,15 @@ const empire_mod = @import("game/empire.zig");
 const backend_mod = @import("engine/backend.zig");
 const null_backend = @import("engine/null_backend.zig");
 const scene = @import("engine/scene.zig");
+const input = @import("engine/input.zig");
+const controller = @import("engine/controller.zig");
 
 pub fn main() !void {
-    std.debug.print("Empire & Kin – Step 3: Minimal scene (camera, ground, player proxy)\n\n", .{});
+    std.debug.print("Empire & Kin – Step 4: Input → player controller\n\n", .{});
+    std.debug.print("Bindings: {s}\n\n", .{input.bindingHelp()});
 
     const selected_era = era_mod.Era.nyc_1930s;
-    std.debug.print("Era: {s}\n", .{era_mod.name(selected_era)});
-    std.debug.print("Art: placeholder colors; PD historical refs later (docs/ART_SOURCES.md)\n\n", .{});
+    std.debug.print("Era: {s}\n\n", .{era_mod.name(selected_era)});
 
     const gfx = null_backend.getBackend();
     try gfx.init("Empire & Kin", 1280, 720);
@@ -38,19 +40,17 @@ pub fn main() !void {
 
     var streets: living.StreetLife = .{};
     var police: living.PoliceState = .{};
-    var paused = false;
+    var ctrl: controller.Controller = .{};
 
     while (!gfx.shouldClose()) {
         gfx.beginFrame();
         const dt = gfx.deltaTime();
-        const input = gfx.pollInput();
 
-        if (input.pause) paused = !paused;
+        const raw = null_backend.pollRawKeys();
+        const state = ctrl.tick(raw, &boss, dt);
 
-        if (!paused) {
+        if (!ctrl.paused) {
             clock.tick(dt);
-            player.move(&boss, input.move_x, input.move_y, dt);
-            world.updatePlayerDistrict(&boss);
             economy.tick(&eco, &districts, &the_kin, dt * clock.time_scale);
 
             const period = living.currentPeriod(clock);
@@ -59,18 +59,21 @@ pub fn main() !void {
             living.updatePolice(&police, districts[0].heat, boss.wanted_level, period, clock.elapsed);
         }
 
+        if (ctrl.district_changed) {
+            std.debug.print("[district] entered {s}\n", .{world.districtName(boss.current_district)});
+        }
+
         const period_now = living.currentPeriod(clock);
         scene.drawMinimalScene(gfx, boss, period_now);
 
-        var line_buf: [160]u8 = undefined;
-        const line = std.fmt.bufPrint(&line_buf, "{s} | Day {d} {d:0>2}:{d:0>2} | {s} | pos ({d:.1},{d:.1}) | ${d}", .{
+        var line_buf: [192]u8 = undefined;
+        const line = std.fmt.bufPrint(&line_buf, "{s} | {s} | pos ({d:.1},{d:.1}) | move ({d:.1},{d:.1}) | ${d}", .{
             world.districtName(boss.current_district),
-            clock.day,
-            clock.hour(),
-            clock.minute(),
-            if (paused) "PAUSED" else living.periodName(period_now),
+            if (ctrl.paused) "PAUSED" else living.periodName(period_now),
             boss.x,
             boss.y,
+            state.move_x,
+            state.move_y,
             eco.treasury,
         }) catch "status";
         gfx.drawText(line, 10, 10, backend_mod.Color.rgb(220, 220, 200));
@@ -80,6 +83,6 @@ pub fn main() !void {
 
     save.saveGame(eco, the_kin, clock);
     gfx.shutdown();
-    std.debug.print("\nStep 3 complete. Scene API ready for real GPU backend.\n", .{});
+    std.debug.print("\nStep 4 complete. Input mapper + controller ready for real devices.\n", .{});
     _ = emp;
 }

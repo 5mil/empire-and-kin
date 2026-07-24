@@ -1,14 +1,14 @@
 const std = @import("std");
 const city = @import("city.zig");
 
-/// Simple free-roam player. In a real build this becomes a Magister entity.
 pub const Player = struct {
     name: []const u8,
     x: f32 = 0.0,
     y: f32 = 0.0,
-    speed: f32 = 4.5, // units per second
+    speed: f32 = 4.5,
+    facing_yaw: f32 = 0,
     current_district: city.DistrictType = .little_italy,
-    wanted_level: u8 = 0, // 0-5
+    wanted_level: u8 = 0,
     health: u8 = 100,
 };
 
@@ -21,11 +21,13 @@ pub fn create(name: []const u8) Player {
     };
 }
 
-/// Move the player. dx/dy are input axes (-1..1).
 pub fn move(p: *Player, dx: f32, dy: f32, dt: f64) void {
     const dist = @as(f32, @floatCast(dt)) * p.speed;
     p.x += dx * dist;
     p.y += dy * dist;
+    if (dx * dx + dy * dy > 0.01) {
+        p.facing_yaw = std.math.atan2(dy, dx);
+    }
 }
 
 pub fn setDistrict(p: *Player, d: city.DistrictType) void {

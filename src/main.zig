@@ -8,82 +8,79 @@ const player = @import("game/player.zig");
 const world = @import("game/world.zig");
 const era_mod = @import("game/era.zig");
 const living = @import("game/living.zig");
-const empire = @import("game/empire.zig");
-const action = @import("game/action.zig");
-const missions = @import("game/missions.zig");
-const combat = @import("game/combat.zig");
+const empire_mod = @import("game/empire.zig");
+const backend_mod = @import("engine/backend.zig");
+const null_backend = @import("engine/null_backend.zig");
 
-pub fn main() void {
-    std.debug.print("Empire & Kin – Phase 10 Action Integration\n", .{});
-    std.debug.print("Open-world missions, real-time combat, vehicles & chases\n\n", .{});
+pub fn main() !void {
+    std.debug.print("Empire & Kin – Steps 1–2: Engine backend + frame loop\n\n", .{});
 
     const selected_era = era_mod.Era.nyc_1930s;
-    std.debug.print("Era: {s}\n\n", .{era_mod.name(selected_era)});
+    std.debug.print("Era: {s}\n", .{era_mod.name(selected_era)});
+    std.debug.print("Art policy: public-domain historical sources preferred (see docs/ART_SOURCES.md)\n\n", .{});
 
-    var clock = time.Clock{ .time_scale = 30.0 };
+    // --- Backend (Null for now → swap for Magister/Arcis/RealCity later) ---
+    const gfx = null_backend.getBackend();
+    try gfx.init("Empire & Kin", 1280, 720);
+
+    // --- Simulation ---
+    var clock = time.Clock{ .time_scale = 20.0 };
     var the_kin = crew.createStarterCrew();
     var eco = economy.init();
     var boss = player.create("Vinnie \"The Chin\"");
-    var emp: empire.Empire = .{};
+    var emp: empire_mod.Empire = .{};
+    _ = empire_mod.addRacket(&emp, .speakeasy, .little_italy);
 
-    // --- Vehicle ---
-    var car = action.spawnVehicle(.sedan, boss.x + 2, boss.y);
-    action.enterVehicle(&car, &boss);
-    std.debug.print("Entered {s} at ({d:.1}, {d:.1})\n", .{ action.vehicleName(car.vtype), car.x, car.y });
-
-    // Drive a bit
-    var i: u32 = 0;
-    while (i < 4) : (i += 1) {
-        action.drive(&car, &boss, 1.0, 0.1, 1.0);
-    }
-    std.debug.print("Drove to ({d:.1}, {d:.1})  speed {d:.1}\n", .{ car.x, car.y, car.speed });
-
-    // --- Open-world mission marker ---
-    var world_job = action.WorldMission{
-        .mission = missions.generateMission(101, .bootlegging),
-        .x = car.x + 5,
-        .y = car.y,
-        .radius = 10.0,
+    var districts = [_]city.District{
+        city.createDistrict(.little_italy),
+        city.createDistrict(.hells_kitchen),
+        city.createDistrict(.brooklyn_waterfront),
     };
-    // Move close enough
-    boss.x = world_job.x;
-    boss.y = world_job.y;
-    if (action.canStartMission(world_job, boss)) {
-        const payout = missions.completeMission(&world_job.mission);
-        eco.treasury += payout;
-        std.debug.print("\nStarted & finished open-world job: '{s}' → ${d}\n", .{ world_job.mission.name, payout });
+
+    var streets: living.StreetLife = .{};
+    var police: living.PoliceState = .{};
+    var paused = false;
+
+    // --- Frame loop (Step 2) ---
+    while (!gfx.shouldClose()) {
+        gfx.beginFrame();
+        const dt = gfx.deltaTime();
+        const input = gfx.pollInput();
+
+        if (input.pause) paused = !paused;
+
+        if (!paused) {
+            clock.tick(dt);
+            player.move(&boss, input.move_x, input.move_y, dt);
+            world.updatePlayerDistrict(&boss);
+            economy.tick(&eco, &districts, &the_kin, dt * clock.time_scale);
+
+            const period = living.currentPeriod(clock);
+            living.spawnStreetLife(&streets, living.activityLevel(period));
+            living.tickStreetLife(&streets, dt * clock.time_scale);
+            living.updatePolice(&police, districts[0].heat, boss.wanted_level, period, clock.elapsed);
+        }
+
+        // Debug “draw” via backend
+        gfx.clear(backend_mod.Color.rgb(20, 20, 30));
+        var line_buf: [128]u8 = undefined;
+        const line = std.fmt.bufPrint(&line_buf, "{s} | Day {d} {d:0>2}:{d:0>2} | {s} | ${d}", .{
+            world.districtName(boss.current_district),
+            clock.day,
+            clock.hour(),
+            clock.minute(),
+            if (paused) "PAUSED" else living.periodName(living.currentPeriod(clock)),
+            eco.treasury,
+        }) catch "status";
+        gfx.drawText(line, 10, 10, backend_mod.Color.rgb(220, 220, 200));
+
+        gfx.endFrame();
     }
 
-    // --- Street combat ---
-    var fight: action.Encounter = .{};
-    action.startEncounter(&fight, "Rival Enforcer", 30, 11, 4);
-    std.debug.print("\nStreet fight vs {s} (HP {d})\n", .{ fight.enemy.name, fight.enemy.hp });
-    action.combatTick(&fight, &boss, 0.7, true);
-    std.debug.print("After player hit → enemy HP {d} | Boss health {d}\n", .{ fight.enemy.hp, boss.health });
-    if (!fight.active) {
-        std.debug.print("Enemy down.\n", .{});
-    }
-
-    // --- Chase ---
-    var chase: action.ChaseState = .{};
-    boss.wanted_level = 3;
-    action.startChase(&chase, boss.wanted_level);
-    std.debug.print("\nChase started! Distance {d:.0} | Heat {d}\n", .{ chase.distance, chase.pursuit_heat });
-    // Floor it
-    car.speed = car.max_speed;
-    var t: u32 = 0;
-    while (t < 6 and chase.active) : (t += 1) {
-        action.tickChase(&chase, car.speed, 1.0);
-        std.debug.print("  ... distance now {d:.0}\n", .{chase.distance});
-    }
-    if (chase.escaped) {
-        std.debug.print("Escaped the heat.\n", .{});
-        boss.wanted_level = 1;
-    } else if (chase.caught) {
-        std.debug.print("Caught!\n", .{});
-    }
-
-    std.debug.print("\nTreasury: ${d} | Wanted: {d} | Health: {d}\n", .{ eco.treasury, boss.wanted_level, boss.health });
     save.saveGame(eco, the_kin, clock);
-    std.debug.print("State saved. Phase 10 systems online.\n", .{});
+    gfx.shutdown();
+    std.debug.print("\nLoop ended. District={s} Influence setup ready. Save written.\n", .{
+        world.districtName(boss.current_district),
+    });
+    _ = emp;
 }

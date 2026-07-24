@@ -8,46 +8,37 @@ GTA-style free-roam action + Sims-style living crew + continuous city/empire sim
 
 ## Eras
 
-| Era | Setting | Flavor |
-|-----|---------|--------|
-| **1930s NYC** | Post-Prohibition, early Commission | Luciano, Lansky, Anastasia, Dutch Schultz, Owney Madden, Harlem numbers, Chinatown tongs |
-| **1980s NYC** | Commission still strong | Gambino, Genovese, Lucchese, Bonanno, Colombo, The Westies, Ghost Shadows, Brighton Beach Russians |
+| Era | Setting |
+|-----|---------|
+| **1930s NYC** | Post-Prohibition, early Commission |
+| **1980s NYC** | Commission era + Westies, tongs, Brighton Beach |
 
 ---
 
 ## Design Philosophy
 
-Real-time continuous simulation. The city lives whether you are looking or not.
+Real-time continuous simulation. Pause for empire management; the world can keep living underneath.
 
-**Stack**: Zig · Magister · Arcis · RealCity
-
----
-
-## Current Systems
-
-| System            | Status | Notes                                      |
-|-------------------|--------|--------------------------------------------|
-| Era Select        | Done   | 1930s or 1980s NYC                         |
-| Multi-ethnic Orgs | Done   | Italian, Jewish, Irish, Chinese, Black, Russian |
-| All prior systems | Done   | Healing, combat, missions, city, crew…     |
-| Rackets / Orders  | Done   | Empire layer                               |
-| Day/Night + Police| Done   | Living world                               |
-| Vehicles          | Done   | Sedan, truck, motorcycle, taxi             |
-| Chases            | Done   | Pursuit distance, escape / caught          |
-| Open-world Missions| Done  | Location-triggered jobs                    |
-| RT Combat Encounter| Done  | Street fights tied to player               |
+**Stack**: Zig · Magister · Arcis · RealCity (target) · thin `engine.Backend` abstraction now
 
 ---
 
-## Roadmap
+## Art policy
 
-### Phases 6–10 ✅ (foundation complete)
+**Public-domain / free historical sources first** (LOC, NYPL, Wikimedia Commons PD, Internet Archive).  
+1930s photography often usable after rights check; 1980s usually needs original or licensed assets.  
+See `docs/ART_SOURCES.md`. Placeholders first, PD art as appropriate.
 
-**Next directions**
-- Wire into actual Magister / Arcis rendering
-- Real input + camera
-- Full map / streaming
-- Audio, UI polish, save to disk
+---
+
+## Where we are
+
+- **Simulation foundation (Phases 6–10):** complete (economy, crew, rackets, police, vehicles, missions, eras…)
+- **Step 1:** Engine backend interface + NullBackend ✅
+- **Step 2:** Continuous frame loop driving simulation ✅ (headless)
+
+Next: real window backend → visible player → input → UI → vertical slice.  
+Full list: `docs/NEXT10.md`
 
 ---
 
@@ -56,6 +47,8 @@ Real-time continuous simulation. The city lives whether you are looking or not.
 ```bash
 zig build run
 ```
+
+Headless loop runs ~90 frames then exits. Swap `null_backend` for a real Magister/Arcis/RealCity backend when ready — gameplay code stays the same.
 
 ---
 

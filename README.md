@@ -29,43 +29,25 @@ Real-time continuous simulation. The city lives whether you are looking or not.
 |-------------------|--------|--------------------------------------------|
 | Era Select        | Done   | 1930s or 1980s NYC                         |
 | Multi-ethnic Orgs | Done   | Italian, Jewish, Irish, Chinese, Black, Russian |
-| Healing           | Done   | Safehouses, food, entertainment            |
-| Combat            | Done   | Basic fighter resolution                   |
-| Missions          | Done   | Bootlegging, protection, hits, heists…     |
-| City              | Done   | 6 districts with control & heat            |
-| Crew              | Done   | Roles, loyalty, morale, fatigue            |
-| Economy           | Done   | Real-time income & upkeep                  |
-| Events            | Done   | Police raids, informants, lucky breaks…    |
-| Rivals            | Done   | Era-specific real-world inspired rosters   |
-| Save/Load         | Done   | In-memory slot                             |
-| Simulation Clock  | Done   | Continuous game time + time scale          |
-| Player Controller | Done   | Position, movement, health, wanted         |
-| District Awareness| Done   | Location → current district                |
-| Empire Menu       | Done   | Pauseable overview                         |
-| Day / Night       | Done   | Periods + activity levels                  |
-| Street Life       | Done   | Pedestrians & traffic density              |
-| Dynamic Police    | Done   | Responds to heat + wanted + time of day    |
-| Rackets           | Done   | Types, levels, crew assignment             |
-| Crew Orders       | Done   | Collect, rest, enforce, scout, guard       |
-| Influence / Rep   | Done   | Influence points + reputation scale        |
+| All prior systems | Done   | Healing, combat, missions, city, crew…     |
+| Rackets / Orders  | Done   | Empire layer                               |
+| Day/Night + Police| Done   | Living world                               |
+| Vehicles          | Done   | Sedan, truck, motorcycle, taxi             |
+| Chases            | Done   | Pursuit distance, escape / caught          |
+| Open-world Missions| Done  | Location-triggered jobs                    |
+| RT Combat Encounter| Done  | Street fights tied to player               |
 
 ---
 
 ## Roadmap
 
-### Phase 6 – Simulation Core ✅
-### Phase 7 – Free-Roam Skeleton ✅
-### Phase 7.5 – Era + Multi-Ethnic Underworld ✅
-### Phase 8 – Living World ✅
-### Phase 9 – Empire Layer ✅
-- Racket assignment
-- Crew orders
-- Influence & reputation
+### Phases 6–10 ✅ (foundation complete)
 
-### Phase 10 – Action Integration
-- Open-world missions
-- Real-time combat
-- Vehicles & chases
+**Next directions**
+- Wire into actual Magister / Arcis rendering
+- Real input + camera
+- Full map / streaming
+- Audio, UI polish, save to disk
 
 ---
 
@@ -74,8 +56,6 @@ Real-time continuous simulation. The city lives whether you are looking or not.
 ```bash
 zig build run
 ```
-
-Phase 9 demo builds rackets, assigns crew, issues orders, upgrades, and tracks influence/reputation.
 
 ---
 

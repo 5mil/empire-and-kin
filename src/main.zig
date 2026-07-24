@@ -9,66 +9,81 @@ const world = @import("game/world.zig");
 const era_mod = @import("game/era.zig");
 const living = @import("game/living.zig");
 const empire = @import("game/empire.zig");
+const action = @import("game/action.zig");
+const missions = @import("game/missions.zig");
+const combat = @import("game/combat.zig");
 
 pub fn main() void {
-    std.debug.print("Empire & Kin – Phase 9 Empire Layer\n", .{});
-    std.debug.print("Rackets, crew orders, influence & reputation\n\n", .{});
+    std.debug.print("Empire & Kin – Phase 10 Action Integration\n", .{});
+    std.debug.print("Open-world missions, real-time combat, vehicles & chases\n\n", .{});
 
     const selected_era = era_mod.Era.nyc_1930s;
     std.debug.print("Era: {s}\n\n", .{era_mod.name(selected_era)});
 
-    var clock = time.Clock{ .time_scale = 60.0 };
+    var clock = time.Clock{ .time_scale = 30.0 };
     var the_kin = crew.createStarterCrew();
     var eco = economy.init();
     var boss = player.create("Vinnie \"The Chin\"");
     var emp: empire.Empire = .{};
 
-    var districts = [_]city.District{
-        city.createDistrict(.little_italy),
-        city.createDistrict(.hells_kitchen),
-        city.createDistrict(.brooklyn_waterfront),
+    // --- Vehicle ---
+    var car = action.spawnVehicle(.sedan, boss.x + 2, boss.y);
+    action.enterVehicle(&car, &boss);
+    std.debug.print("Entered {s} at ({d:.1}, {d:.1})\n", .{ action.vehicleName(car.vtype), car.x, car.y });
+
+    // Drive a bit
+    var i: u32 = 0;
+    while (i < 4) : (i += 1) {
+        action.drive(&car, &boss, 1.0, 0.1, 1.0);
+    }
+    std.debug.print("Drove to ({d:.1}, {d:.1})  speed {d:.1}\n", .{ car.x, car.y, car.speed });
+
+    // --- Open-world mission marker ---
+    var world_job = action.WorldMission{
+        .mission = missions.generateMission(101, .bootlegging),
+        .x = car.x + 5,
+        .y = car.y,
+        .radius = 10.0,
     };
+    // Move close enough
+    boss.x = world_job.x;
+    boss.y = world_job.y;
+    if (action.canStartMission(world_job, boss)) {
+        const payout = missions.completeMission(&world_job.mission);
+        eco.treasury += payout;
+        std.debug.print("\nStarted & finished open-world job: '{s}' → ${d}\n", .{ world_job.mission.name, payout });
+    }
 
-    // --- Build the empire ---
-    _ = empire.addRacket(&emp, .speakeasy, .little_italy);
-    _ = empire.addRacket(&emp, .numbers, .little_italy);
-    _ = empire.addRacket(&emp, .protection, .hells_kitchen);
-    _ = empire.addRacket(&emp, .smuggling, .brooklyn_waterfront);
+    // --- Street combat ---
+    var fight: action.Encounter = .{};
+    action.startEncounter(&fight, "Rival Enforcer", 30, 11, 4);
+    std.debug.print("\nStreet fight vs {s} (HP {d})\n", .{ fight.enemy.name, fight.enemy.hp });
+    action.combatTick(&fight, &boss, 0.7, true);
+    std.debug.print("After player hit → enemy HP {d} | Boss health {d}\n", .{ fight.enemy.hp, boss.health });
+    if (!fight.active) {
+        std.debug.print("Enemy down.\n", .{});
+    }
 
-    // Assign crew
-    _ = empire.assignCrewToRacket(&emp, 0, 1); // Tony on speakeasy
-    _ = empire.assignCrewToRacket(&emp, 1, 3); // Mickey on numbers
-    _ = empire.assignCrewToRacket(&emp, 2, 2); // Sal on protection
+    // --- Chase ---
+    var chase: action.ChaseState = .{};
+    boss.wanted_level = 3;
+    action.startChase(&chase, boss.wanted_level);
+    std.debug.print("\nChase started! Distance {d:.0} | Heat {d}\n", .{ chase.distance, chase.pursuit_heat });
+    // Floor it
+    car.speed = car.max_speed;
+    var t: u32 = 0;
+    while (t < 6 and chase.active) : (t += 1) {
+        action.tickChase(&chase, car.speed, 1.0);
+        std.debug.print("  ... distance now {d:.0}\n", .{chase.distance});
+    }
+    if (chase.escaped) {
+        std.debug.print("Escaped the heat.\n", .{});
+        boss.wanted_level = 1;
+    } else if (chase.caught) {
+        std.debug.print("Caught!\n", .{});
+    }
 
-    empire.printEmpireStatus(emp, the_kin);
-
-    // --- Issue orders ---
-    std.debug.print("--- Crew Orders ---\n", .{});
-    const collected = empire.issueOrder(&the_kin, 1, .collect, &emp, &districts[0]);
-    eco.treasury += collected;
-    std.debug.print("Tony collected ${d} from the rackets.\n", .{collected});
-
-    _ = empire.issueOrder(&the_kin, 2, .enforce, &emp, &districts[1]);
-    std.debug.print("Sal enforced in Hell's Kitchen → control now {d}%\n", .{districts[1].control});
-
-    _ = empire.issueOrder(&the_kin, 3, .scout, &emp, &districts[0]);
-    std.debug.print("Mickey scouted Little Italy → heat now {d}\n", .{districts[0].heat});
-
-    _ = empire.issueOrder(&the_kin, 0, .rest, &emp, &districts[0]);
-    std.debug.print("Boss rested. Morale: {d}\n", .{the_kin.morale});
-
-    // Upgrade a racket
-    _ = empire.upgradeRacket(&emp, 0);
-    std.debug.print("\nUpgraded Speakeasy to level {d}\n", .{emp.rackets[0].level});
-
-    empire.changeReputation(&emp, 15);
-    empire.addInfluence(&emp, 25);
-
-    empire.printEmpireStatus(emp, the_kin);
-
-    std.debug.print("Reputation: {s}\n", .{empire.reputationLabel(emp)});
-    std.debug.print("Treasury: ${d}\n", .{eco.treasury});
-
+    std.debug.print("\nTreasury: ${d} | Wanted: {d} | Health: {d}\n", .{ eco.treasury, boss.wanted_level, boss.health });
     save.saveGame(eco, the_kin, clock);
-    std.debug.print("\nState saved.\n", .{});
+    std.debug.print("State saved. Phase 10 systems online.\n", .{});
 }

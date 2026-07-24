@@ -8,4 +8,6 @@ Prohibition NYC mob game. GTA action + Sims life + City Builder.
 
 **Phase 3**: Combat system + Missions (bootlegging, protection, hits, heists, smuggling).
 
-Next: Phase 4 (city districts, crew management UI, economy loop).
+**Phase 4**: City districts, crew management, economy loop.
+
+Next: Phase 5 (events, police raids, rival families, save/load).

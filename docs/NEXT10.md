@@ -19,9 +19,9 @@ Never ship copyrighted third-party game assets or non-PD modern photos without a
 
 | # | Step | Goal |
 |---|------|------|
-| 1 | **Lock engine path** | Renderer-agnostic backend interface; Magister/Arcis/RealCity as target, null/console backend now |
-| 2 | **Window + main loop** | Real frame loop + dt (or headless fixed step until window backend exists) |
-| 3 | **Minimal scene** | Camera + ground + player proxy visible in chosen backend |
+| 1 | **Lock engine path** | ✅ Backend interface + NullBackend |
+| 2 | **Window + main loop** | ✅ Continuous loop + dt (headless) |
+| 3 | **Minimal scene** | ✅ Camera follow, ground, player proxy, building boxes |
 | 4 | **Input → controller** | Keys/pad move the existing `player` and update district |
 | 5 | **District debug view** | On-screen district name, heat, control |
 | 6 | **Empire pause UI** | Overlay for rackets, crew orders, influence |

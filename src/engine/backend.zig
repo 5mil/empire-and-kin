@@ -9,14 +9,14 @@ pub const Key = enum {
     a,
     s,
     d,
-    e, // interact / enter vehicle
-    f, // attack
-    escape, // pause
+    e,
+    f,
+    escape,
     space,
 };
 
 pub const InputState = struct {
-    move_x: f32 = 0, // -1 .. 1
+    move_x: f32 = 0,
     move_y: f32 = 0,
     interact: bool = false,
     attack: bool = false,
@@ -34,6 +34,20 @@ pub const Color = struct {
     }
 };
 
+pub const Vec3 = struct {
+    x: f32 = 0,
+    y: f32 = 0,
+    z: f32 = 0,
+};
+
+/// Third-person style camera (look-at).
+pub const Camera = struct {
+    position: Vec3 = .{ .x = 0, .y = 12, .z = -16 },
+    target: Vec3 = .{ .x = 0, .y = 0, .z = 0 },
+    up: Vec3 = .{ .x = 0, .y = 1, .z = 0 },
+    fov_deg: f32 = 55,
+};
+
 /// What a backend must provide.
 pub const VTable = struct {
     init: *const fn (title: []const u8, width: u32, height: u32) anyerror!void,
@@ -41,12 +55,15 @@ pub const VTable = struct {
     beginFrame: *const fn () void,
     endFrame: *const fn () void,
     pollInput: *const fn () InputState,
-    /// dt in real seconds since last frame (0 if unknown)
     deltaTime: *const fn () f64,
     shouldClose: *const fn () bool,
-    /// Debug draw — enough for early steps
     drawText: *const fn (text: []const u8, x: i32, y: i32, color: Color) void,
     clear: *const fn (color: Color) void,
+    /// Step 3 scene primitives
+    setCamera: *const fn (cam: Camera) void,
+    drawGround: *const fn (size: f32, color: Color) void,
+    drawBox: *const fn (pos: Vec3, w: f32, h: f32, d: f32, color: Color) void,
+    drawPlayerProxy: *const fn (pos: Vec3, facing_yaw: f32, color: Color) void,
 };
 
 pub const Backend = struct {
@@ -78,5 +95,17 @@ pub const Backend = struct {
     }
     pub fn clear(self: Backend, color: Color) void {
         self.vtable.clear(color);
+    }
+    pub fn setCamera(self: Backend, cam: Camera) void {
+        self.vtable.setCamera(cam);
+    }
+    pub fn drawGround(self: Backend, size: f32, color: Color) void {
+        self.vtable.drawGround(size, color);
+    }
+    pub fn drawBox(self: Backend, pos: Vec3, w: f32, h: f32, d: f32, color: Color) void {
+        self.vtable.drawBox(pos, w, h, d, color);
+    }
+    pub fn drawPlayerProxy(self: Backend, pos: Vec3, facing_yaw: f32, color: Color) void {
+        self.vtable.drawPlayerProxy(pos, facing_yaw, color);
     }
 };

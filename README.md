@@ -35,9 +35,10 @@ See `docs/ART_SOURCES.md`. Placeholders first, PD art as appropriate.
 
 - **Simulation foundation (Phases 6–10):** complete (economy, crew, rackets, police, vehicles, missions, eras…)
 - **Step 1:** Engine backend interface + NullBackend ✅
-- **Step 2:** Continuous frame loop driving simulation ✅ (headless)
+- **Step 2:** Continuous frame loop driving simulation ✅
+- **Step 3:** Minimal scene — camera, ground, player proxy, blocks ✅
 
-Next: real window backend → visible player → input → UI → vertical slice.  
+Next: Step 4 real input → district HUD → empire UI → vehicles.  
 Full list: `docs/NEXT10.md`
 
 ---

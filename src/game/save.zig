@@ -1,12 +1,14 @@
 const std = @import("std");
 const economy = @import("economy.zig");
 const crew = @import("crew.zig");
+const time = @import("time.zig");
 
-// Simple in-memory save slot for now (Phase 5 stub).
+// Simple in-memory save slot.
 // Later this can write to a real file or use a proper serializer.
 
 pub const SaveData = struct {
     day: u32,
+    time_of_day: f64,
     treasury: u32,
     influence: u32,
     crew_cash: u32,
@@ -17,6 +19,7 @@ pub const SaveData = struct {
 
 var slot: SaveData = .{
     .day = 0,
+    .time_of_day = 0,
     .treasury = 0,
     .influence = 0,
     .crew_cash = 0,
@@ -25,9 +28,10 @@ var slot: SaveData = .{
     .valid = false,
 };
 
-pub fn saveGame(eco: economy.Economy, c: crew.Crew) void {
+pub fn saveGame(eco: economy.Economy, c: crew.Crew, clock: time.Clock) void {
     slot = .{
-        .day = eco.day,
+        .day = clock.day,
+        .time_of_day = clock.time_of_day,
         .treasury = eco.treasury,
         .influence = eco.total_influence,
         .crew_cash = c.cash,

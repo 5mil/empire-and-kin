@@ -8,50 +8,64 @@ const economy = @import("game/economy.zig");
 const events = @import("game/events.zig");
 const rivals = @import("game/rivals.zig");
 const save = @import("game/save.zig");
+const time = @import("game/time.zig");
 
 pub fn main() void {
-    std.debug.print("Empire & Kin - Phase 5 Ready\n", .{});
-    std.debug.print("Systems: Healing | Combat | Missions | City | Crew | Economy | Events | Rivals | Save\n\n", .{});
+    std.debug.print("Empire & Kin – Real-Time Core Ready\n", .{});
+    std.debug.print("Philosophy: Continuous simulation (GTA action + Sims life + living city)\n\n", .{});
+
+    // --- Clock (real-time simulation) ---
+    var clock = time.Clock{
+        .time_scale = 120.0, // 1 real second ≈ 2 game minutes for the demo
+    };
 
     // --- Crew ---
     var the_kin = crew.createStarterCrew();
-    std.debug.print("Crew: {s} ({d} members) | Loyalty avg: {d}\n", .{ the_kin.name, the_kin.count, crew.averageLoyalty(the_kin) });
+    std.debug.print("Crew: {s} ({d} members) | Avg Loyalty: {d}\n", .{ the_kin.name, the_kin.count, crew.averageLoyalty(the_kin) });
 
-    // --- City Districts ---
+    // --- City ---
     var districts = [_]city.District{
         city.createDistrict(.little_italy),
         city.createDistrict(.hells_kitchen),
         city.createDistrict(.brooklyn_waterfront),
     };
 
-    // --- Economy ---
+    // --- Economy & Rivals ---
     var eco = economy.init();
-    economy.dailyTick(&eco, &districts, &the_kin);
-
-    // --- Rivals ---
     var rival_families = rivals.createRivals();
-    std.debug.print("\nRival Families:\n", .{});
+
+    std.debug.print("\n--- Simulating 10 real seconds of world time ---\n", .{});
+
+    // Simple fixed-step simulation loop (in a real engine this would be per-frame)
+    const steps: u32 = 10;
+    const dt_real: f64 = 1.0; // 1 real second per step for the demo
+
+    var i: u32 = 0;
+    while (i < steps) : (i += 1) {
+        clock.tick(dt_real);
+        economy.tick(&eco, &districts, &the_kin, dt_real * clock.time_scale);
+
+        // Occasional event (very rough)
+        if (i == 5) {
+            const ev = events.rollEvent(@intFromFloat(clock.elapsed));
+            std.debug.print("\n[Event] {s}: {s}\n", .{ ev.title, ev.description });
+            events.applyEvent(ev, &districts, &the_kin, &eco.treasury);
+        }
+    }
+
+    // --- Status ---
+    economy.statusReport(eco, the_kin, clock.day, clock.hour(), clock.minute());
+
+    // --- Rivals snapshot ---
+    std.debug.print("\nRival pressure:\n", .{});
     for (rival_families) |r| {
-        const status = if (rivals.isWar(r)) "AT WAR" else "tense";
-        std.debug.print("  - {s} (Boss: {s}) | Strength {d} | Hostility {d} [{s}]\n", .{ r.name, r.boss, r.strength, r.hostility, status });
+        const war = if (rivals.isWar(r)) "WAR" else "cold";
+        std.debug.print("  {s} – hostility {d} [{s}]\n", .{ r.name, r.hostility, war });
     }
 
-    // Provoke one rival a bit
-    rivals.provoke(&rival_families[1], 25);
-    std.debug.print("\nProvoked {s} \u2192 hostility now {d}\n", .{ rival_families[1].name, rival_families[1].hostility });
+    // --- Save ---
+    save.saveGame(eco, the_kin, clock);
+    std.debug.print("\nState saved (in-memory slot).\n", .{});
 
-    // --- Random Event ---
-    const ev = events.rollEvent(eco.day + 17);
-    std.debug.print("\nEVENT: {s}\n  {s}\n", .{ ev.title, ev.description });
-    events.applyEvent(ev, &districts, &the_kin, &eco.treasury);
-
-    // --- Save / Load demo ---
-    save.saveGame(eco, the_kin);
-    std.debug.print("\nGame saved.\n", .{});
-
-    if (save.loadGame()) |loaded| {
-        std.debug.print("Loaded \u2192 Day {d} | Treasury ${d} | Influence {d} | Crew morale {d}\n", .{ loaded.day, loaded.treasury, loaded.influence, loaded.crew_morale });
-    }
-
-    economy.statusReport(eco, the_kin);
+    std.debug.print("\nCore systems are continuous. Ready for real-time free-roam integration.\n", .{});
 }

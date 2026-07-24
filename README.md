@@ -13,19 +13,11 @@ GTA-style free-roam action + Sims-style living crew + continuous city/empire sim
 | **1930s NYC** | Post-Prohibition, early Commission | Luciano, Lansky, Anastasia, Dutch Schultz, Owney Madden, Harlem numbers, Chinatown tongs |
 | **1980s NYC** | Commission still strong | Gambino, Genovese, Lucchese, Bonanno, Colombo, The Westies, Ghost Shadows, Brighton Beach Russians |
 
-Player can select either era. Rival organizations, bosses, and ethnic makeup change accordingly.
-
 ---
 
 ## Design Philosophy
 
-This is **not** a turn-based strategy game.
-
-- Time flows continuously.
-- Rackets generate money every second.
-- Crew needs, loyalty, fatigue and heat change in real time.
-- You can pause for management, but the world is always alive.
-- Combat, driving and missions happen in the same continuous world.
+Real-time continuous simulation. The city lives whether you are looking or not.
 
 **Stack**: Zig · Magister · Arcis · RealCity
 
@@ -50,6 +42,9 @@ This is **not** a turn-based strategy game.
 | Player Controller | Done   | Position, movement, health, wanted         |
 | District Awareness| Done   | Location → current district                |
 | Empire Menu       | Done   | Pauseable overview                         |
+| Day / Night       | Done   | Periods + activity levels                  |
+| Street Life       | Done   | Pedestrians & traffic density              |
+| Dynamic Police    | Done   | Responds to heat + wanted + time of day    |
 
 ---
 
@@ -58,9 +53,8 @@ This is **not** a turn-based strategy game.
 ### Phase 6 – Simulation Core ✅
 ### Phase 7 – Free-Roam Skeleton ✅
 ### Phase 7.5 – Era + Multi-Ethnic Underworld ✅
-
-### Phase 8 – Living World
-- Pedestrian & traffic AI
+### Phase 8 – Living World ✅
+- Pedestrian & traffic AI (stubs)
 - Dynamic police response to heat
 - Day/night cycle
 
@@ -82,7 +76,7 @@ This is **not** a turn-based strategy game.
 zig build run
 ```
 
-Change `selected_era` in `src/main.zig` between `.nyc_1930s` and `.nyc_1980s` to switch the underworld roster.
+Phase 8 demo advances the clock through day → night, scales street activity, and shows police escalating when heat and wanted rise.
 
 ---
 

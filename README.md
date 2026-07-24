@@ -22,7 +22,7 @@ Think *GTA* + *The Sims* + a living 1920s New York that reacts to your empire.
 
 ---
 
-## Current Systems (Foundation)
+## Current Systems
 
 | System            | Status | Notes                                      |
 |-------------------|--------|--------------------------------------------|
@@ -31,22 +31,24 @@ Think *GTA* + *The Sims* + a living 1920s New York that reacts to your empire.
 | Missions          | Done   | Bootlegging, protection, hits, heists…     |
 | City              | Done   | 6 districts with control & heat            |
 | Crew              | Done   | Roles, loyalty, morale, fatigue            |
-| Economy           | Done   | **Real-time** income & upkeep (per second) |
+| Economy           | Done   | Real-time income & upkeep (per second)     |
 | Events            | Done   | Police raids, informants, lucky breaks…    |
 | Rivals            | Done   | Maranzano, Masseria, Irish Mob             |
 | Save/Load         | Done   | In-memory slot (file later)                |
 | Simulation Clock  | Done   | Continuous game time + time scale          |
+| Player Controller | Done   | Position, movement, health, wanted level   |
+| District Awareness| Done   | Location → current district                |
+| Empire Menu       | Done   | Pauseable overview (text stub)             |
 
 ---
 
 ## Roadmap (Real-Time Focus)
 
-### Phase 6 – Simulation Core (current)
+### Phase 6 – Simulation Core ✅
 - Continuous clock & delta-time economy
-- Heat / control / morale decay & growth over time
-- Basic event triggers based on world state
+- Heat / control / morale over time
 
-### Phase 7 – Free-Roam Skeleton
+### Phase 7 – Free-Roam Skeleton ✅
 - Player controller (placeholder → Magister/Arcis)
 - Simple district streaming / location awareness
 - Pause menu for empire management
@@ -79,7 +81,7 @@ Think *GTA* + *The Sims* + a living 1920s New York that reacts to your empire.
 zig build run
 ```
 
-The current `main` demonstrates a short real-time simulation burst so you can see income, events and the clock advancing.
+Phase 7 demo walks the player across district boundaries and opens the pauseable empire menu.
 
 ---
 

@@ -1,8 +1,19 @@
 # Empire & Kin
 
-**Prohibition-era New York City mob life simulator.**
+**New York City mob life simulator** — choose your era.
 
 GTA-style free-roam action + Sims-style living crew + continuous city/empire simulation.
+
+---
+
+## Eras
+
+| Era | Setting | Flavor |
+|-----|---------|--------|
+| **1930s NYC** | Post-Prohibition, early Commission | Luciano, Lansky, Anastasia, Dutch Schultz, Owney Madden, Harlem numbers, Chinatown tongs |
+| **1980s NYC** | Commission still strong | Gambino, Genovese, Lucchese, Bonanno, Colombo, The Westies, Ghost Shadows, Brighton Beach Russians |
+
+Player can select either era. Rival organizations, bosses, and ethnic makeup change accordingly.
 
 ---
 
@@ -16,8 +27,6 @@ This is **not** a turn-based strategy game.
 - You can pause for management, but the world is always alive.
 - Combat, driving and missions happen in the same continuous world.
 
-Think *GTA* + *The Sims* + a living 1920s New York that reacts to your empire.
-
 **Stack**: Zig · Magister · Arcis · RealCity
 
 ---
@@ -26,52 +35,44 @@ Think *GTA* + *The Sims* + a living 1920s New York that reacts to your empire.
 
 | System            | Status | Notes                                      |
 |-------------------|--------|--------------------------------------------|
+| Era Select        | Done   | 1930s or 1980s NYC                         |
+| Multi-ethnic Orgs | Done   | Italian, Jewish, Irish, Chinese, Black, Russian |
 | Healing           | Done   | Safehouses, food, entertainment            |
 | Combat            | Done   | Basic fighter resolution                   |
 | Missions          | Done   | Bootlegging, protection, hits, heists…     |
 | City              | Done   | 6 districts with control & heat            |
 | Crew              | Done   | Roles, loyalty, morale, fatigue            |
-| Economy           | Done   | Real-time income & upkeep (per second)     |
+| Economy           | Done   | Real-time income & upkeep                  |
 | Events            | Done   | Police raids, informants, lucky breaks…    |
-| Rivals            | Done   | Maranzano, Masseria, Irish Mob             |
-| Save/Load         | Done   | In-memory slot (file later)                |
+| Rivals            | Done   | Era-specific real-world inspired rosters   |
+| Save/Load         | Done   | In-memory slot                             |
 | Simulation Clock  | Done   | Continuous game time + time scale          |
-| Player Controller | Done   | Position, movement, health, wanted level   |
+| Player Controller | Done   | Position, movement, health, wanted         |
 | District Awareness| Done   | Location → current district                |
-| Empire Menu       | Done   | Pauseable overview (text stub)             |
+| Empire Menu       | Done   | Pauseable overview                         |
 
 ---
 
-## Roadmap (Real-Time Focus)
+## Roadmap
 
 ### Phase 6 – Simulation Core ✅
-- Continuous clock & delta-time economy
-- Heat / control / morale over time
-
 ### Phase 7 – Free-Roam Skeleton ✅
-- Player controller (placeholder → Magister/Arcis)
-- Simple district streaming / location awareness
-- Pause menu for empire management
+### Phase 7.5 – Era + Multi-Ethnic Underworld ✅
 
 ### Phase 8 – Living World
 - Pedestrian & traffic AI
 - Dynamic police response to heat
-- Day/night cycle affecting gameplay
+- Day/night cycle
 
 ### Phase 9 – Empire Layer
 - Full racket assignment UI
-- Crew orders (send to district, rest, collect)
-- Influence & reputation systems
+- Crew orders
+- Influence & reputation
 
 ### Phase 10 – Action Integration
-- Seamless mission start from the open world
-- Real-time combat with cover / guns / melee
-- Vehicle & chase systems
-
-### Later
-- Rival AI that expands territory in real time
-- Multiple endings / empire collapse
-- Multiplayer or co-op crew (stretch)
+- Open-world missions
+- Real-time combat
+- Vehicles & chases
 
 ---
 
@@ -81,7 +82,7 @@ Think *GTA* + *The Sims* + a living 1920s New York that reacts to your empire.
 zig build run
 ```
 
-Phase 7 demo walks the player across district boundaries and opens the pauseable empire menu.
+Change `selected_era` in `src/main.zig` between `.nyc_1930s` and `.nyc_1980s` to switch the underworld roster.
 
 ---
 

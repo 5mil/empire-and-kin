@@ -9,10 +9,18 @@ const time = @import("game/time.zig");
 const player = @import("game/player.zig");
 const world = @import("game/world.zig");
 const ui = @import("game/ui.zig");
+const era_mod = @import("game/era.zig");
 
 pub fn main() void {
-    std.debug.print("Empire & Kin – Phase 7 Free-Roam Skeleton\n", .{});
-    std.debug.print("Player controller + district awareness + pauseable empire menu\n\n", .{});
+    std.debug.print("Empire & Kin – Era Select + Multi-Ethnic Underworld\n\n", .{});
+
+    // === ERA SELECTION (demo both) ===
+    // In a real build this would be a title-screen choice.
+    const selected_era = era_mod.Era.nyc_1930s; // change to .nyc_1980s to switch
+    // const selected_era = era_mod.Era.nyc_1980s;
+
+    std.debug.print("Selected Era: {s}\n", .{era_mod.name(selected_era)});
+    std.debug.print("{s}\n\n", .{era_mod.description(selected_era)});
 
     // --- Core systems ---
     var clock = time.Clock{ .time_scale = 60.0 };
@@ -28,40 +36,33 @@ pub fn main() void {
         city.createDistrict(.lower_east_side),
     };
 
-    // --- Simulate a short free-roam session ---
-    std.debug.print("--- Free-roam demo (moving through the city) ---\n", .{});
+    // --- Load era-specific rivals ---
+    var org_buf: [rivals.MAX_RIVALS]rivals.RivalOrg = undefined;
+    const rival_count = rivals.getRivalsForEra(selected_era, &org_buf);
+    rivals.printRoster(org_buf[0..rival_count], rival_count);
 
-    // Step 1: start in Little Italy
+    // --- Short free-roam demo ---
+    std.debug.print("\n--- Free-roam (district awareness) ---\n", .{});
     world.updatePlayerDistrict(&boss);
-    std.debug.print("[{d:0>2}:{d:0>2}] {s} is in {s}  (x={d:.1}, y={d:.1})\n", .{
-        clock.hour(), clock.minute(), boss.name, world.districtName(boss.current_district), boss.x, boss.y,
-    });
+    std.debug.print("{s} starts in {s}\n", .{ boss.name, world.districtName(boss.current_district) });
 
-    // Move east toward Hell's Kitchen
     var i: u32 = 0;
-    while (i < 8) : (i += 1) {
+    while (i < 5) : (i += 1) {
         const dt: f64 = 1.0;
         clock.tick(dt);
-        player.move(&boss, 1.0, 0.3, dt); // walk east-northeast
+        player.move(&boss, 1.0, 0.2, dt);
         world.updatePlayerDistrict(&boss);
         economy.tick(&eco, &districts, &the_kin, dt * clock.time_scale);
-
-        std.debug.print("[{d:0>2}:{d:0>2}] Moved → {s}  (x={d:.1}, y={d:.1})\n", .{
-            clock.hour(), clock.minute(), world.districtName(boss.current_district), boss.x, boss.y,
-        });
     }
+    std.debug.print("After moving → now in {s}\n", .{world.districtName(boss.current_district)});
 
-    // Open the empire management menu (pauses the world)
+    // Empire menu
     ui.toggle(&menu);
     if (menu.open) {
         ui.drawEmpireOverview(boss, the_kin, eco, &districts, clock);
     }
-
-    // Close menu and continue
     ui.toggle(&menu);
-    std.debug.print("Menu closed – world continues.\n", .{});
 
-    // Quick save
     save.saveGame(eco, the_kin, clock);
-    std.debug.print("State saved.\n", .{});
+    std.debug.print("Era: {s} | State saved.\n", .{era_mod.shortLabel(selected_era)});
 }

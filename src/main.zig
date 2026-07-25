@@ -14,7 +14,6 @@ const properties = @import("game/properties.zig");
 const garage = @import("game/garage.zig");
 const era_mod = @import("game/era.zig");
 const balance = @import("game/balance.zig");
-const null_backend = @import("engine/null_backend.zig");
 const scene = @import("engine/scene.zig");
 const input = @import("engine/input.zig");
 const controller = @import("engine/controller.zig");

@@ -1,10 +1,10 @@
 const std = @import("std");
 
 pub const Fighter = struct {
-    name: []const u8,
-    hp: u8,
-    attack: u8,
-    defense: u8,
+    name: []const u8 = "",
+    hp: u8 = 0,
+    attack: u8 = 0,
+    defense: u8 = 0,
 };
 
 pub fn resolveHit(attacker: Fighter, defender: Fighter) u8 {

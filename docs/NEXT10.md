@@ -1,18 +1,12 @@
-# Next 10 Steps
+# Next 10 Steps — COMPLETE
 
 | # | Step | Status |
 |---|------|--------|
-| 1–8 | Backend → wanted/police | ✅ |
-| 9 | Mission markers + first job | ✅ |
-| 10 | Vertical slice + disk save | Next |
+| 1–9 | Backend through missions | ✅ |
+| 10 | Vertical slice + disk save | ✅ expanded |
 
-## Step 9
-- World marker at job location
-- Enter radius → `[E] Job: …`
-- E starts → progress → cash + heat + optional wanted
-- Starter: Speakeasy Delivery near spawn
+Details: `docs/STEP10_VERTICAL_SLICE.md`
 
-## Step 10
-- Full short playable loop
-- Save/load to disk
-- Demo-ready vertical slice
+## After the 10
+Wire Magister / Arcis / RealCity to `engine.Backend`.
+PD historical art: `docs/ART_SOURCES.md`.

@@ -11,9 +11,11 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .name = "empire",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     exe.root_module.addOptions("build_options", options);
 
@@ -51,16 +53,21 @@ pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Run with GPU (SDL2+OpenGL)");
     run_step.dependOn(&run_cmd.step);
 
+    // Headless
     const headless_opts = b.addOptions();
     headless_opts.addOption(bool, "enable_gpu", false);
+
     const headless = b.addExecutable(.{
         .name = "empire-headless",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     headless.root_module.addOptions("build_options", headless_opts);
     b.installArtifact(headless);
+
     const run_h = b.addRunArtifact(headless);
     run_h.step.dependOn(b.getInstallStep());
     const run_headless = b.step("run-headless", "Run NullBackend (no GPU)");

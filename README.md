@@ -4,24 +4,36 @@
 
 Real-time free-roam + living crew + empire management.
 
-**Stack**: Zig · Magister · Arcis · RealCity (target) · `engine.Backend` abstraction
+**Version:** `0.1.0-alpha`  
+**Stack:** Zig · Magister · Arcis · RealCity (target) · `engine.Backend`
 
 ## Art
 Public-domain historical sources preferred — `docs/ART_SOURCES.md`.
 
-## Progress
-**Steps 1–10 complete** (vertical slice + disk save).
-See `docs/NEXT10.md` and `docs/STEP10_VERTICAL_SLICE.md`.
+## Status
+**Alpha track complete (A1–A10).**  
+Roadmap: `docs/ALPHA_ROADMAP.md` · Checklist: `docs/ALPHA_CHECKLIST.md`
 
-## Controls
+## Play (headless demo)
+
+```bash
+zig build run
+```
+
+Boot → **[1] New Game** → pick era **[Enter]** → free-roam.
+
 | Key | Action |
 |-----|--------|
 | WASD | Move / drive |
 | E | Job or vehicle |
 | Esc | Empire menu |
-| **F5** | Quick-save to `empire_save.txt` |
-| **F9** | Quick-load |
+| F | Attack (in fight) |
+| F5 / F9 | Quick-save / load |
+| H / X | Next tip / dismiss tips |
+| Tab | Empire panels |
+| 1–5 | Crew orders (paused) |
 
-```bash
-zig build run
-```
+## Docs
+- `docs/ALPHA_ROADMAP.md`
+- `docs/RELEASE_NOTES_ALPHA.md`
+- `docs/ALPHA_CHECKLIST.md`

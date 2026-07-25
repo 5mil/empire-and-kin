@@ -17,9 +17,10 @@ const input = @import("engine/input.zig");
 const controller = @import("engine/controller.zig");
 const hud = @import("engine/hud.zig");
 const empire_ui = @import("engine/empire_ui.zig");
+const wanted_ui = @import("engine/wanted_ui.zig");
 
 pub fn main() !void {
-    std.debug.print("Empire & Kin – Pause menu: Properties + Vehicles\n\n", .{});
+    std.debug.print("Empire & Kin – Step 8: Wanted stars + police pursuit\n\n", .{});
     const gfx = null_backend.getBackend();
     try gfx.init("Empire & Kin", 1280, 720);
 
@@ -32,17 +33,22 @@ pub fn main() !void {
 
     var emp: empire_mod.Empire = .{};
     _ = empire_mod.addRacket(&emp, .speakeasy, .little_italy);
-    _ = empire_mod.addRacket(&emp, .numbers, .little_italy);
     _ = empire_mod.addRacket(&emp, .protection, .hells_kitchen);
-    _ = empire_mod.assignCrewToRacket(&emp, 0, 1);
 
     var portfolio = properties.createStarterPortfolio();
     var fleet = garage.createStarterFleet();
     _ = garage.setActive(&fleet, 0);
 
-    var districts = [_]city.District{ city.createDistrict(.little_italy), city.createDistrict(.hells_kitchen), city.createDistrict(.brooklyn_waterfront) };
+    var districts = [_]city.District{
+        city.createDistrict(.little_italy),
+        city.createDistrict(.hells_kitchen),
+        city.createDistrict(.brooklyn_waterfront),
+    };
+    districts[0].heat = 55;
+
     var streets: living.StreetLife = .{};
     var police: living.PoliceState = .{};
+    var chase: action.ChaseState = .{};
     var ctrl: controller.Controller = .{};
     var menu: empire_ui.EmpireMenu = .{};
 
@@ -54,6 +60,7 @@ pub fn main() !void {
     var edge_r: input.ButtonEdge = .{};
     var edge_f: input.ButtonEdge = .{};
     var edge_veh_e: input.ButtonEdge = .{};
+    var heat_event_done = false;
 
     while (!gfx.shouldClose()) {
         gfx.beginFrame();
@@ -61,6 +68,7 @@ pub fn main() !void {
         const raw = null_backend.pollRawKeys();
         const car_ptr = garage.activeVehicle(&fleet);
         const in_car = if (car_ptr) |v| v.occupied else false;
+        const speed: f32 = if (car_ptr) |v| v.speed else boss.speed;
         _ = ctrl.tick(raw, &boss, if (in_car) 0 else dt);
 
         if (ctrl.paused) {
@@ -78,11 +86,6 @@ pub fn main() !void {
                 .tertiary = edge_f.pressed(raw.f),
             };
             empire_ui.handleMenu(keys, &emp, &the_kin, &portfolio, &fleet, districts[0..], &menu, boss.x, boss.y);
-            if (menu.slow_world_tick) {
-                const sdt = dt * 0.15;
-                clock.tick(sdt);
-                economy.tick(&eco, &districts, &the_kin, sdt * clock.time_scale);
-            }
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
             scene.drawMinimalScene(gfx, boss, living.currentPeriod(clock), car_opt);
             empire_ui.draw(gfx, emp, the_kin, portfolio, fleet, &districts, menu);
@@ -103,13 +106,25 @@ pub fn main() !void {
             const period = living.currentPeriod(clock);
             living.spawnStreetLife(&streets, living.activityLevel(period));
             living.tickStreetLife(&streets, dt * clock.time_scale);
-            living.updatePolice(&police, districts[0].heat, boss.wanted_level, period, clock.elapsed);
+
+            if (!heat_event_done and clock.elapsed > 8.0) {
+                districts[0].heat = 85;
+                wanted_ui.addWanted(&boss, 3);
+                heat_event_done = true;
+                std.debug.print("[heat] Raid blowback — wanted raised\n", .{});
+            }
+
+            wanted_ui.tickWanted(&boss, &police, &chase, districts[0].heat, period, speed, dt, clock.elapsed);
+
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
             scene.drawMinimalScene(gfx, boss, period, car_opt);
             hud.drawDistrictDebug(gfx, boss, &districts, clock, eco, period, false, police.alert_level);
+            wanted_ui.drawStars(gfx, boss.wanted_level, 10, 248);
+            wanted_ui.drawPoliceBanner(gfx, police, chase, 266);
         }
         gfx.endFrame();
     }
     save.saveGame(eco, the_kin, clock);
     gfx.shutdown();
+    std.debug.print("\nStep 8 complete.\n", .{});
 }

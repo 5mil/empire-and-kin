@@ -21,7 +21,9 @@ const wanted_ui = @import("engine/wanted_ui.zig");
 const mission_ui = @import("engine/mission_ui.zig");
 
 pub fn main() !void {
-    std.debug.print("Empire & Kin – Step 9: Mission markers + first job\n\n", .{});
+    std.debug.print("Empire & Kin – Step 10 VERTICAL SLICE (disk save)\n\n", .{});
+    std.debug.print("F5 quick-save  |  F9 quick-load  |  Esc empire  |  E job/vehicle\n\n", .{});
+
     const gfx = null_backend.getBackend();
     try gfx.init("Empire & Kin", 1280, 720);
 
@@ -34,6 +36,10 @@ pub fn main() !void {
 
     var emp: empire_mod.Empire = .{};
     _ = empire_mod.addRacket(&emp, .speakeasy, .little_italy);
+    _ = empire_mod.addRacket(&emp, .protection, .hells_kitchen);
+    _ = empire_mod.assignCrewToRacket(&emp, 0, 1);
+    empire_mod.addInfluence(&emp, 10);
+
     var portfolio = properties.createStarterPortfolio();
     var fleet = garage.createStarterFleet();
     _ = garage.setActive(&fleet, 0);
@@ -44,8 +50,14 @@ pub fn main() !void {
         city.createDistrict(.brooklyn_waterfront),
     };
 
-    var job = mission_ui.spawnJob(201, .bootlegging, 16.0, 22.0);
+    if (try save.readFromDisk()) |data| {
+        save.applyTo(data, &eco, &the_kin, &clock, &boss, districts[0..]);
+        std.debug.print("[save] Loaded {s} — treasury ${d}\n", .{ save.SAVE_PATH, eco.treasury });
+    } else {
+        std.debug.print("[save] No {s} — fresh start\n", .{save.SAVE_PATH});
+    }
 
+    var job = mission_ui.spawnJob(301, .bootlegging, 16.0, 22.0);
     var streets: living.StreetLife = .{};
     var police: living.PoliceState = .{};
     var chase: action.ChaseState = .{};
@@ -60,11 +72,26 @@ pub fn main() !void {
     var edge_r: input.ButtonEdge = .{};
     var edge_f: input.ButtonEdge = .{};
     var edge_interact: input.ButtonEdge = .{};
+    var edge_f5: input.ButtonEdge = .{};
+    var edge_f9: input.ButtonEdge = .{};
 
     while (!gfx.shouldClose()) {
         gfx.beginFrame();
         const dt = gfx.deltaTime();
         const raw = null_backend.pollRawKeys();
+
+        if (edge_f5.pressed(raw.f5)) {
+            const snap = save.capture(eco, the_kin, clock, boss, &districts);
+            save.writeToDisk(snap) catch {};
+            std.debug.print("[save] F5 → {s} (${d})\n", .{ save.SAVE_PATH, eco.treasury });
+        }
+        if (edge_f9.pressed(raw.f9)) {
+            if (try save.readFromDisk()) |data| {
+                save.applyTo(data, &eco, &the_kin, &clock, &boss, districts[0..]);
+                std.debug.print("[save] F9 loaded ${d}\n", .{eco.treasury});
+            }
+        }
+
         const car_ptr = garage.activeVehicle(&fleet);
         const in_car = if (car_ptr) |v| v.occupied else false;
         const speed: f32 = if (car_ptr) |v| v.speed else boss.speed;
@@ -116,12 +143,9 @@ pub fn main() !void {
             const period = living.currentPeriod(clock);
             living.spawnStreetLife(&streets, living.activityLevel(period));
             living.tickStreetLife(&streets, dt * clock.time_scale);
-
             const payout = mission_ui.tickJob(&job, &boss, &eco, &districts[0], dt);
-            if (payout > 0) std.debug.print("[job] Completed: {s} → ${d}\n", .{ job.world.mission.name, payout });
-
+            if (payout > 0) std.debug.print("[job] Done +${d}\n", .{payout});
             wanted_ui.tickWanted(&boss, &police, &chase, districts[0].heat, period, speed, dt, clock.elapsed);
-
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
             scene.drawMinimalScene(gfx, boss, period, car_opt);
             hud.drawDistrictDebug(gfx, boss, &districts, clock, eco, period, false, police.alert_level);
@@ -132,7 +156,10 @@ pub fn main() !void {
         }
         gfx.endFrame();
     }
-    save.saveGame(eco, the_kin, clock);
+
+    const final_snap = save.capture(eco, the_kin, clock, boss, &districts);
+    save.writeToDisk(final_snap) catch {};
     gfx.shutdown();
-    std.debug.print("\nStep 9 complete. Treasury ${d}\n", .{eco.treasury});
+    std.debug.print("\n=== VERTICAL SLICE COMPLETE ===\n", .{});
+    std.debug.print("Saved {s} | Treasury ${d}\n", .{ save.SAVE_PATH, eco.treasury });
 }

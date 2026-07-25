@@ -11,6 +11,8 @@ const empire_mod = @import("game/empire.zig");
 const action = @import("game/action.zig");
 const properties = @import("game/properties.zig");
 const garage = @import("game/garage.zig");
+const era_mod = @import("game/era.zig");
+const balance = @import("game/balance.zig");
 const null_backend = @import("engine/null_backend.zig");
 const scene = @import("engine/scene.zig");
 const input = @import("engine/input.zig");
@@ -19,17 +21,23 @@ const hud = @import("engine/hud.zig");
 const empire_ui = @import("engine/empire_ui.zig");
 const wanted_ui = @import("engine/wanted_ui.zig");
 const mission_ui = @import("engine/mission_ui.zig");
+const boot_mod = @import("engine/boot.zig");
+const world_sim = @import("engine/world_sim.zig");
+const hints = @import("engine/hints.zig");
+const combat_ui = @import("engine/combat_ui.zig");
 
 pub fn main() !void {
-    std.debug.print("Empire & Kin – Step 10 VERTICAL SLICE (disk save)\n\n", .{});
-    std.debug.print("F5 quick-save  |  F9 quick-load  |  Esc empire  |  E job/vehicle\n\n", .{});
-
+    std.debug.print("Empire & Kin – ALPHA track (A1–A10)\n\n", .{});
     const gfx = null_backend.getBackend();
     try gfx.init("Empire & Kin", 1280, 720);
+
+    var boot: boot_mod.BootState = .{};
+    boot.has_save = (try save.readFromDisk()) != null;
 
     var clock = time.Clock{ .time_scale = 20.0 };
     var the_kin = crew.createStarterCrew();
     var eco = economy.init();
+    eco.treasury = balance.STARTING_TREASURY;
     var boss = player.create("Vinnie \"The Chin\"");
     boss.x = 10;
     boss.y = 20;
@@ -38,7 +46,6 @@ pub fn main() !void {
     _ = empire_mod.addRacket(&emp, .speakeasy, .little_italy);
     _ = empire_mod.addRacket(&emp, .protection, .hells_kitchen);
     _ = empire_mod.assignCrewToRacket(&emp, 0, 1);
-    empire_mod.addInfluence(&emp, 10);
 
     var portfolio = properties.createStarterPortfolio();
     var fleet = garage.createStarterFleet();
@@ -50,19 +57,25 @@ pub fn main() !void {
         city.createDistrict(.brooklyn_waterfront),
     };
 
-    if (try save.readFromDisk()) |data| {
-        save.applyTo(data, &eco, &the_kin, &clock, &boss, districts[0..]);
-        std.debug.print("[save] Loaded {s} — treasury ${d}\n", .{ save.SAVE_PATH, eco.treasury });
-    } else {
-        std.debug.print("[save] No {s} — fresh start\n", .{save.SAVE_PATH});
-    }
+    var jobs = [_]mission_ui.ActiveJob{
+        mission_ui.spawnJob(401, .bootlegging, 16.0, 22.0),
+        mission_ui.spawnJob(402, .protection, 8.0, 28.0),
+        mission_ui.spawnJob(403, .smuggling, 22.0, 12.0),
+    };
+    jobs[0].duration = balance.BOOTLEG_DURATION;
+    jobs[1].duration = balance.PROTECTION_DURATION;
+    jobs[2].duration = balance.SMUGGLING_DURATION;
 
-    var job = mission_ui.spawnJob(301, .bootlegging, 16.0, 22.0);
     var streets: living.StreetLife = .{};
     var police: living.PoliceState = .{};
     var chase: action.ChaseState = .{};
     var ctrl: controller.Controller = .{};
     var menu: empire_ui.EmpireMenu = .{};
+    var ws: world_sim.WorldSim = .{};
+    var tip: hints.Hints = .{};
+    var cui: combat_ui.CombatUI = .{};
+    var selected_era: era_mod.Era = .nyc_1930s;
+    var world_ready = false;
 
     var edge_ord: [5]input.ButtonEdge = .{ .{}, .{}, .{}, .{}, .{} };
     var edge_tab: input.ButtonEdge = .{};
@@ -74,23 +87,49 @@ pub fn main() !void {
     var edge_interact: input.ButtonEdge = .{};
     var edge_f5: input.ButtonEdge = .{};
     var edge_f9: input.ButtonEdge = .{};
+    var edge_1: input.ButtonEdge = .{};
+    var edge_2: input.ButtonEdge = .{};
+    var edge_h: input.ButtonEdge = .{};
+    var edge_x: input.ButtonEdge = .{};
+    var frame_seed: u32 = 0;
 
     while (!gfx.shouldClose()) {
         gfx.beginFrame();
         const dt = gfx.deltaTime();
         const raw = null_backend.pollRawKeys();
+        frame_seed +%= 1;
+
+        if (boot.phase != .playing) {
+            boot_mod.handle(&boot, raw, &edge_1, &edge_2, &edge_enter);
+            boot_mod.draw(gfx, boot);
+            gfx.endFrame();
+            if (boot.phase == .playing and !world_ready) {
+                selected_era = boot.selected_era;
+                world_sim.init(&ws, selected_era);
+                ws.event_interval = balance.EVENT_INTERVAL;
+                ws.rival_interval = balance.RIVAL_INTERVAL;
+                if (boot.load_on_start) {
+                    if (try save.readFromDisk()) |data| {
+                        save.applyTo(data, &eco, &the_kin, &clock, &boss, districts[0..]);
+                    }
+                }
+                std.debug.print("[alpha] Era: {s}\n", .{era_mod.name(selected_era)});
+                world_ready = true;
+            }
+            continue;
+        }
 
         if (edge_f5.pressed(raw.f5)) {
             const snap = save.capture(eco, the_kin, clock, boss, &districts);
             save.writeToDisk(snap) catch {};
-            std.debug.print("[save] F5 → {s} (${d})\n", .{ save.SAVE_PATH, eco.treasury });
         }
         if (edge_f9.pressed(raw.f9)) {
             if (try save.readFromDisk()) |data| {
                 save.applyTo(data, &eco, &the_kin, &clock, &boss, districts[0..]);
-                std.debug.print("[save] F9 loaded ${d}\n", .{eco.treasury});
             }
         }
+
+        hints.handle(&tip, raw, &edge_h, &edge_x);
 
         const car_ptr = garage.activeVehicle(&fleet);
         const in_car = if (car_ptr) |v| v.occupied else false;
@@ -118,10 +157,12 @@ pub fn main() !void {
         } else {
             if (edge_interact.pressed(raw.e)) {
                 var used = false;
-                if (mission_ui.nearMarker(job, boss) and job.state == .available) {
-                    if (mission_ui.tryStart(&job, boss)) {
-                        std.debug.print("[job] Started: {s}\n", .{job.world.mission.name});
-                        used = true;
+                for (&jobs) |*j| {
+                    if (mission_ui.nearMarker(j.*, boss) and j.state == .available) {
+                        if (mission_ui.tryStart(j, boss)) {
+                            used = true;
+                            break;
+                        }
                     }
                 }
                 if (!used) {
@@ -139,20 +180,28 @@ pub fn main() !void {
                 }
             }
             clock.tick(dt);
-            economy.tick(&eco, &districts, &the_kin, dt * clock.time_scale);
+            const sim_dt = dt * clock.time_scale;
+            economy.tick(&eco, &districts, &the_kin, sim_dt);
             const period = living.currentPeriod(clock);
             living.spawnStreetLife(&streets, living.activityLevel(period));
-            living.tickStreetLife(&streets, dt * clock.time_scale);
-            const payout = mission_ui.tickJob(&job, &boss, &eco, &districts[0], dt);
-            if (payout > 0) std.debug.print("[job] Done +${d}\n", .{payout});
+            living.tickStreetLife(&streets, sim_dt);
+            world_sim.tick(&ws, sim_dt, districts[0..], &the_kin, &eco, &boss);
+            for (&jobs) |*j| {
+                _ = mission_ui.tickJob(j, &boss, &eco, &districts[0], dt);
+            }
+            combat_ui.maybeSpawn(&cui, boss, districts[0].heat, frame_seed);
+            combat_ui.tick(&cui, &boss, dt, edge_f.pressed(raw.f) and cui.encounter.active);
             wanted_ui.tickWanted(&boss, &police, &chase, districts[0].heat, period, speed, dt, clock.elapsed);
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
             scene.drawMinimalScene(gfx, boss, period, car_opt);
             hud.drawDistrictDebug(gfx, boss, &districts, clock, eco, period, false, police.alert_level);
             wanted_ui.drawStars(gfx, boss.wanted_level, 10, 248);
             wanted_ui.drawPoliceBanner(gfx, police, chase, 266);
-            mission_ui.drawMarker(gfx, job, boss);
-            mission_ui.drawMinimapHint(gfx, job, boss);
+            for (jobs) |j| mission_ui.drawMarker(gfx, j, boss);
+            mission_ui.drawMinimapHint(gfx, jobs[0], boss);
+            world_sim.drawBanner(gfx, ws);
+            hints.draw(gfx, tip);
+            combat_ui.draw(gfx, cui);
         }
         gfx.endFrame();
     }
@@ -160,6 +209,9 @@ pub fn main() !void {
     const final_snap = save.capture(eco, the_kin, clock, boss, &districts);
     save.writeToDisk(final_snap) catch {};
     gfx.shutdown();
-    std.debug.print("\n=== VERTICAL SLICE COMPLETE ===\n", .{});
-    std.debug.print("Saved {s} | Treasury ${d}\n", .{ save.SAVE_PATH, eco.treasury });
+    std.debug.print("\n=== ALPHA SLICE EXIT ===\nSaved {s} | ${d} | Era {s}\n", .{
+        save.SAVE_PATH,
+        eco.treasury,
+        era_mod.name(selected_era),
+    });
 }

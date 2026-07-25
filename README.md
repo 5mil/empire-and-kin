@@ -1,22 +1,28 @@
 # Empire & Kin
 
-**New York City mob life simulator** — choose your era.
+**New York City mob life simulator** — 1930s or 1980s.
 
-GTA-style free-roam action + Sims-style living crew + continuous city/empire simulation.
+Real-time free-roam + living crew + empire management.
 
 **Stack**: Zig · Magister · Arcis · RealCity (target) · `engine.Backend` abstraction
 
-## Art policy
-Public-domain historical sources first — see `docs/ART_SOURCES.md`.
+## Art
+Public-domain historical sources preferred — `docs/ART_SOURCES.md`.
 
 ## Progress
-- Phases 6–10 simulation foundation ✅
-- Steps 1–5: backend, loop, scene, input, **district HUD** ✅
+- Simulation foundation (Phases 6–10) ✅  
+- Steps 1–6 ✅ — backend, loop, scene, input, district HUD, **empire pause UI**
 
-Next: Step 6 empire pause UI. Full list: `docs/NEXT10.md`
+Next: Step 7 vehicles on screen. See `docs/NEXT10.md`.
 
 ## Controls
-WASD/Arrows move · E interact · F attack · Esc/Space pause
+| Input | Action |
+|-------|--------|
+| WASD / Arrows | Move |
+| E | Interact |
+| F | Attack |
+| Esc / Space | Pause / empire menu |
+| 1–5 (while paused) | Crew orders: Collect, Rest, Enforce, Scout, Guard |
 
 ```bash
 zig build run

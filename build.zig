@@ -4,7 +4,9 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const gpu = b.option(bool, "gpu", "Enable SDL2+OpenGL GPU backend") orelse true;
+    // Default false so headless / CI works without SDL2 installed.
+    // Use: zig build run -Dgpu=true
+    const gpu = b.option(bool, "gpu", "Enable SDL2+OpenGL GPU backend") orelse false;
 
     const options = b.addOptions();
     options.addOption(bool, "enable_gpu", gpu);
@@ -50,10 +52,10 @@ pub fn build(b: *std.Build) void {
         run_cmd.addArgs(args);
     }
 
-    const run_step = b.step("run", "Run with GPU (SDL2+OpenGL)");
+    const run_step = b.step("run", "Run (use -Dgpu=true for SDL2+OpenGL)");
     run_step.dependOn(&run_cmd.step);
 
-    // Headless (never links GPU libs)
+    // Dedicated headless binary (always no GPU libs)
     const headless_opts = b.addOptions();
     headless_opts.addOption(bool, "enable_gpu", false);
 
@@ -69,7 +71,9 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(headless);
 
     const run_h = b.addRunArtifact(headless);
-    run_h.step.dependOn(b.getInstallStep());
+    // Only depend on headless install, not the full install graph
+    const headless_install = b.addInstallArtifact(headless, .{});
+    run_h.step.dependOn(&headless_install.step);
     const run_headless = b.step("run-headless", "Run NullBackend (no GPU)");
     run_headless.dependOn(&run_h.step);
 }

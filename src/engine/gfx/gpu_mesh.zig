@@ -8,7 +8,7 @@ pub const GpuMesh = struct {
     ebo: gl.GLuint = 0,
     index_count: gl.GLsizei = 0,
 
-    pub fn create(data: mesh.MeshData) GpuMesh {
+    pub fn create(data: mesh.Mesh) GpuMesh {
         var m: GpuMesh = .{};
         gl.glGenVertexArrays(1, &m.vao);
         gl.glGenBuffers(1, &m.vbo);

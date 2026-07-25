@@ -21,12 +21,19 @@ pub const SaveData = struct {
     player_wanted: u8 = 0,
     district_heat0: u8 = 0,
     district_control0: u8 = 0,
+    era_id: u8 = 0,
     valid: bool = false,
 };
 
 var slot: SaveData = .{};
 
-pub fn capture(eco: economy.Economy, c: crew.Crew, clock: time.Clock, p: player.Player, districts: []const city.District) SaveData {
+pub fn capture(
+    eco: economy.Economy,
+    c: crew.Crew,
+    clock: time.Clock,
+    p: player.Player,
+    districts: []const city.District,
+) SaveData {
     var s: SaveData = .{
         .day = clock.day,
         .time_of_day = clock.time_of_day,
@@ -49,10 +56,25 @@ pub fn capture(eco: economy.Economy, c: crew.Crew, clock: time.Clock, p: player.
 }
 
 pub fn saveGame(eco: economy.Economy, c: crew.Crew, clock: time.Clock) void {
-    slot = .{ .day = clock.day, .time_of_day = clock.time_of_day, .treasury = eco.treasury, .influence = eco.total_influence, .crew_cash = c.cash, .crew_morale = c.morale, .crew_count = c.count, .valid = true };
+    slot = .{
+        .day = clock.day,
+        .time_of_day = clock.time_of_day,
+        .treasury = eco.treasury,
+        .influence = eco.total_influence,
+        .crew_cash = c.cash,
+        .crew_morale = c.morale,
+        .crew_count = c.count,
+        .valid = true,
+    };
 }
 
-pub fn saveFull(eco: economy.Economy, c: crew.Crew, clock: time.Clock, p: player.Player, districts: []const city.District) void {
+pub fn saveFull(
+    eco: economy.Economy,
+    c: crew.Crew,
+    clock: time.Clock,
+    p: player.Player,
+    districts: []const city.District,
+) void {
     slot = capture(eco, c, clock, p, districts);
 }
 
@@ -74,8 +96,38 @@ pub fn writeToDisk(data: SaveData) !void {
     defer file.close();
     var buf: [512]u8 = undefined;
     const body = try std.fmt.bufPrint(&buf,
-        \\# Empire & Kin save\nday={d}\ntime_of_day={d}\ntreasury={d}\ninfluence={d}\ncrew_cash={d}\ncrew_morale={d}\ncrew_count={d}\nplayer_x={d}\nplayer_y={d}\nplayer_health={d}\nplayer_wanted={d}\ndistrict_heat0={d}\ndistrict_control0={d}\n
-    , .{ data.day, data.time_of_day, data.treasury, data.influence, data.crew_cash, data.crew_morale, data.crew_count, data.player_x, data.player_y, data.player_health, data.player_wanted, data.district_heat0, data.district_control0 });
+        \\# Empire & Kin save
+        \\day={d}
+        \\time_of_day={d}
+        \\treasury={d}
+        \\influence={d}
+        \\crew_cash={d}
+        \\crew_morale={d}
+        \\crew_count={d}
+        \\player_x={d}
+        \\player_y={d}
+        \\player_health={d}
+        \\player_wanted={d}
+        \\district_heat0={d}
+        \\district_control0={d}
+        \\era_id={d}
+        \\
+    , .{
+        data.day,
+        data.time_of_day,
+        data.treasury,
+        data.influence,
+        data.crew_cash,
+        data.crew_morale,
+        data.crew_count,
+        data.player_x,
+        data.player_y,
+        data.player_health,
+        data.player_wanted,
+        data.district_heat0,
+        data.district_control0,
+        data.era_id,
+    });
     try file.writeAll(body);
     slot = data;
     slot.valid = true;
@@ -87,6 +139,7 @@ pub fn readFromDisk() !?SaveData {
     var buf: [1024]u8 = undefined;
     const n = try file.readAll(&buf);
     const text = buf[0..n];
+
     var data: SaveData = .{ .valid = true };
     var lines = std.mem.splitScalar(u8, text, '\n');
     while (lines.next()) |line| {
@@ -107,13 +160,21 @@ pub fn readFromDisk() !?SaveData {
             if (std.mem.eql(u8, key, "player_wanted")) data.player_wanted = std.fmt.parseInt(u8, val, 10) catch data.player_wanted;
             if (std.mem.eql(u8, key, "district_heat0")) data.district_heat0 = std.fmt.parseInt(u8, val, 10) catch data.district_heat0;
             if (std.mem.eql(u8, key, "district_control0")) data.district_control0 = std.fmt.parseInt(u8, val, 10) catch data.district_control0;
+            if (std.mem.eql(u8, key, "era_id")) data.era_id = std.fmt.parseInt(u8, val, 10) catch data.era_id;
         }
     }
     slot = data;
     return data;
 }
 
-pub fn applyTo(data: SaveData, eco: *economy.Economy, c: *crew.Crew, clock: *time.Clock, p: *player.Player, districts: []city.District) void {
+pub fn applyTo(
+    data: SaveData,
+    eco: *economy.Economy,
+    c: *crew.Crew,
+    clock: *time.Clock,
+    p: *player.Player,
+    districts: []city.District,
+) void {
     clock.day = data.day;
     clock.time_of_day = data.time_of_day;
     eco.treasury = data.treasury;

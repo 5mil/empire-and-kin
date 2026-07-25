@@ -58,6 +58,20 @@ pub fn enterVehicle(v: *Vehicle, p: *player.Player) void {
     p.y = v.y;
 }
 
+pub fn exitVehicle(v: *Vehicle, p: *player.Player) void {
+    v.occupied = false;
+    v.speed = 0;
+    // leave player at vehicle position
+    p.x = v.x;
+    p.y = v.y;
+}
+
+pub fn nearVehicle(v: Vehicle, p: player.Player, radius: f32) bool {
+    const dx = p.x - v.x;
+    const dy = p.y - v.y;
+    return (dx * dx + dy * dy) <= (radius * radius);
+}
+
 pub fn drive(v: *Vehicle, p: *player.Player, dx: f32, dy: f32, dt: f64) void {
     if (!v.occupied) return;
     const accel = @as(f32, @floatCast(dt)) * 8.0;

@@ -13,7 +13,7 @@ pub const lit_vert =
     \\void main() {
     \\    vec4 world = uModel * vec4(aPos, 1.0);
     \\    vWorldPos = world.xyz;
-    \\    vNormal = mat3(uModel) * aNormal;
+    \\    vNormal = mat3(transpose(inverse(uModel))) * aNormal;
     \\    vColor = aColor;
     \\    gl_Position = uMVP * vec4(aPos, 1.0);
     \\}
@@ -26,12 +26,15 @@ pub const lit_frag =
     \\in vec3 vWorldPos;
     \\uniform vec3 uLightDir;
     \\uniform vec3 uAmbient;
+    \\uniform vec4 uTint;
     \\out vec4 FragColor;
     \\void main() {
     \\    vec3 n = normalize(vNormal);
     \\    float ndl = max(dot(n, normalize(-uLightDir)), 0.0);
-    \\    vec3 lit = vColor.rgb * (uAmbient + vec3(ndl));
-    \\    FragColor = vec4(lit, vColor.a);
+    \\    float half_lambert = ndl * 0.5 + 0.5;
+    \\    vec3 base = vColor.rgb * uTint.rgb;
+    \\    vec3 lit = base * (uAmbient + vec3(half_lambert * 0.85));
+    \\    FragColor = vec4(lit, vColor.a * uTint.a);
     \\}
 ;
 

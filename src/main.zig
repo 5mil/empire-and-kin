@@ -9,14 +9,14 @@ const world = @import("game/world.zig");
 const era_mod = @import("game/era.zig");
 const living = @import("game/living.zig");
 const empire_mod = @import("game/empire.zig");
-const backend_mod = @import("engine/backend.zig");
 const null_backend = @import("engine/null_backend.zig");
 const scene = @import("engine/scene.zig");
 const input = @import("engine/input.zig");
 const controller = @import("engine/controller.zig");
+const hud = @import("engine/hud.zig");
 
 pub fn main() !void {
-    std.debug.print("Empire & Kin – Step 4: Input → player controller\n\n", .{});
+    std.debug.print("Empire & Kin – Step 5: District debug HUD\n\n", .{});
     std.debug.print("Bindings: {s}\n\n", .{input.bindingHelp()});
 
     const selected_era = era_mod.Era.nyc_1930s;
@@ -29,6 +29,7 @@ pub fn main() !void {
     var the_kin = crew.createStarterCrew();
     var eco = economy.init();
     var boss = player.create("Vinnie \"The Chin\"");
+    boss.wanted_level = 1;
     var emp: empire_mod.Empire = .{};
     _ = empire_mod.addRacket(&emp, .speakeasy, .little_italy);
 
@@ -36,6 +37,7 @@ pub fn main() !void {
         city.createDistrict(.little_italy),
         city.createDistrict(.hells_kitchen),
         city.createDistrict(.brooklyn_waterfront),
+        city.createDistrict(.lower_east_side),
     };
 
     var streets: living.StreetLife = .{};
@@ -47,7 +49,7 @@ pub fn main() !void {
         const dt = gfx.deltaTime();
 
         const raw = null_backend.pollRawKeys();
-        const state = ctrl.tick(raw, &boss, dt);
+        _ = ctrl.tick(raw, &boss, dt);
 
         if (!ctrl.paused) {
             clock.tick(dt);
@@ -66,23 +68,22 @@ pub fn main() !void {
         const period_now = living.currentPeriod(clock);
         scene.drawMinimalScene(gfx, boss, period_now);
 
-        var line_buf: [192]u8 = undefined;
-        const line = std.fmt.bufPrint(&line_buf, "{s} | {s} | pos ({d:.1},{d:.1}) | move ({d:.1},{d:.1}) | ${d}", .{
-            world.districtName(boss.current_district),
-            if (ctrl.paused) "PAUSED" else living.periodName(period_now),
-            boss.x,
-            boss.y,
-            state.move_x,
-            state.move_y,
-            eco.treasury,
-        }) catch "status";
-        gfx.drawText(line, 10, 10, backend_mod.Color.rgb(220, 220, 200));
+        hud.drawDistrictDebug(
+            gfx,
+            boss,
+            &districts,
+            clock,
+            eco,
+            period_now,
+            ctrl.paused,
+            police.alert_level,
+        );
 
         gfx.endFrame();
     }
 
     save.saveGame(eco, the_kin, clock);
     gfx.shutdown();
-    std.debug.print("\nStep 4 complete. Input mapper + controller ready for real devices.\n", .{});
+    std.debug.print("\nStep 5 complete. District HUD (heat/control bars) online.\n", .{});
     _ = emp;
 }

@@ -4,55 +4,20 @@
 
 GTA-style free-roam action + Sims-style living crew + continuous city/empire simulation.
 
----
-
-## Eras
-
-| Era | Setting |
-|-----|---------|
-| **1930s NYC** | Post-Prohibition, early Commission |
-| **1980s NYC** | Commission era + Westies, tongs, Brighton Beach |
-
----
-
-## Design Philosophy
-
-Real-time continuous simulation. Pause for empire management; the world can keep living underneath.
-
-**Stack**: Zig · Magister · Arcis · RealCity (target) · thin `engine.Backend` abstraction now
-
----
+**Stack**: Zig · Magister · Arcis · RealCity (target) · `engine.Backend` abstraction
 
 ## Art policy
+Public-domain historical sources first — see `docs/ART_SOURCES.md`.
 
-**Public-domain / free historical sources first** (LOC, NYPL, Wikimedia Commons PD, Internet Archive).  
-See `docs/ART_SOURCES.md`. Placeholders first, PD art as appropriate.
+## Progress
+- Phases 6–10 simulation foundation ✅
+- Steps 1–5: backend, loop, scene, input, **district HUD** ✅
 
----
+Next: Step 6 empire pause UI. Full list: `docs/NEXT10.md`
 
-## Where we are
-
-- **Simulation foundation (Phases 6–10):** complete
-- **Step 1–3:** Backend, frame loop, minimal scene ✅
-- **Step 4:** Input mapper + controller (WASD/pad → move, district) ✅
-
-Next: Step 5 district HUD → empire pause UI → vehicles.  
-Full list: `docs/NEXT10.md`
-
----
-
-## Controls (Step 4)
-
-`WASD` / arrows move · `E` interact · `F` attack · `Esc` / `Space` pause
-
----
-
-## Running
+## Controls
+WASD/Arrows move · E interact · F attack · Esc/Space pause
 
 ```bash
 zig build run
 ```
-
----
-
-*Built for a living city, not a board game.*

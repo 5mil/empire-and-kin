@@ -2,6 +2,7 @@ const std = @import("std");
 const backend = @import("backend.zig");
 const player = @import("../game/player.zig");
 const living = @import("../game/living.zig");
+const action = @import("../game/action.zig");
 
 pub fn followCamera(p: player.Player, height: f32, back: f32) backend.Camera {
     return .{
@@ -12,7 +13,7 @@ pub fn followCamera(p: player.Player, height: f32, back: f32) backend.Camera {
     };
 }
 
-pub fn drawMinimalScene(gfx: backend.Backend, p: player.Player, period: living.Period) void {
+pub fn drawMinimalScene(gfx: backend.Backend, p: player.Player, period: living.Period, car: ?action.Vehicle) void {
     const clear_col = switch (period) {
         .night => backend.Color.rgb(8, 10, 22),
         .dawn => backend.Color.rgb(40, 35, 55),
@@ -27,5 +28,12 @@ pub fn drawMinimalScene(gfx: backend.Backend, p: player.Player, period: living.P
     gfx.drawBox(.{ .x = -8, .y = 3, .z = 6 }, 5, 6, 4, backend.Color.rgb(70, 75, 80));
     gfx.drawBox(.{ .x = 12, .y = 2.5, .z = -4 }, 6, 5, 5, backend.Color.rgb(85, 70, 65));
     gfx.drawBox(.{ .x = -3, .y = 2, .z = -7 }, 3, 4, 3, backend.Color.rgb(60, 65, 70));
+
+    // Simple vehicle proxy (box) when present
+    if (car) |v| {
+        const col = if (v.occupied) backend.Color.rgb(40, 120, 200) else backend.Color.rgb(80, 80, 90);
+        gfx.drawBox(.{ .x = v.x, .y = 0.6, .z = v.y }, 2.2, 1.2, 4.0, col);
+    }
+
     gfx.drawPlayerProxy(.{ .x = p.x, .y = 1.0, .z = p.y }, p.facing_yaw, backend.Color.rgb(200, 180, 60));
 }

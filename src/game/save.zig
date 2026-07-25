@@ -91,9 +91,11 @@ pub fn clearSave() void {
     slot.valid = false;
 }
 
-pub fn writeToDisk(data: SaveData) !void {
-    const file = try std.fs.cwd().createFile(SAVE_PATH, .{});
-    defer file.close();
+pub fn writeToDisk(io: std.Io, data: SaveData) !void {
+    const cwd = std.Io.Dir.cwd();
+    const file = try cwd.createFile(io, SAVE_PATH, .{});
+    defer file.close(io);
+
     var buf: [512]u8 = undefined;
     const body = try std.fmt.bufPrint(&buf,
         \\# Empire & Kin save
@@ -128,17 +130,21 @@ pub fn writeToDisk(data: SaveData) !void {
         data.district_control0,
         data.era_id,
     });
-    try file.writeAll(body);
+
+    // Simple whole-buffer write via File writer
+    var wbuf: [512]u8 = undefined;
+    var writer = file.writer(io, &wbuf);
+    try writer.interface.writeAll(body);
+    try writer.interface.flush();
+
     slot = data;
     slot.valid = true;
 }
 
-pub fn readFromDisk() !?SaveData {
-    const file = std.fs.cwd().openFile(SAVE_PATH, .{}) catch return null;
-    defer file.close();
+pub fn readFromDisk(io: std.Io) !?SaveData {
+    const cwd = std.Io.Dir.cwd();
     var buf: [1024]u8 = undefined;
-    const n = try file.readAll(&buf);
-    const text = buf[0..n];
+    const text = cwd.readFile(io, SAVE_PATH, &buf) catch return null;
 
     var data: SaveData = .{ .valid = true };
     var lines = std.mem.splitScalar(u8, text, '\n');

@@ -13,7 +13,7 @@ pub const RacketType = enum {
     gambling,
     loan_sharking,
     smuggling,
-    union,
+    labor_union, // was "union" — reserved keyword in Zig
 };
 
 pub fn racketName(r: RacketType) []const u8 {
@@ -24,7 +24,7 @@ pub fn racketName(r: RacketType) []const u8 {
         .gambling => "Gambling Den",
         .loan_sharking => "Loan Sharking",
         .smuggling => "Smuggling",
-        .union => "Union Racketeering",
+        .labor_union => "Union Racketeering",
     };
 }
 

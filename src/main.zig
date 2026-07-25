@@ -18,9 +18,10 @@ const controller = @import("engine/controller.zig");
 const hud = @import("engine/hud.zig");
 const empire_ui = @import("engine/empire_ui.zig");
 const wanted_ui = @import("engine/wanted_ui.zig");
+const mission_ui = @import("engine/mission_ui.zig");
 
 pub fn main() !void {
-    std.debug.print("Empire & Kin – Step 8: Wanted stars + police pursuit\n\n", .{});
+    std.debug.print("Empire & Kin – Step 9: Mission markers + first job\n\n", .{});
     const gfx = null_backend.getBackend();
     try gfx.init("Empire & Kin", 1280, 720);
 
@@ -33,8 +34,6 @@ pub fn main() !void {
 
     var emp: empire_mod.Empire = .{};
     _ = empire_mod.addRacket(&emp, .speakeasy, .little_italy);
-    _ = empire_mod.addRacket(&emp, .protection, .hells_kitchen);
-
     var portfolio = properties.createStarterPortfolio();
     var fleet = garage.createStarterFleet();
     _ = garage.setActive(&fleet, 0);
@@ -44,7 +43,8 @@ pub fn main() !void {
         city.createDistrict(.hells_kitchen),
         city.createDistrict(.brooklyn_waterfront),
     };
-    districts[0].heat = 55;
+
+    var job = mission_ui.spawnJob(201, .bootlegging, 16.0, 22.0);
 
     var streets: living.StreetLife = .{};
     var police: living.PoliceState = .{};
@@ -55,12 +55,11 @@ pub fn main() !void {
     var edge_ord: [5]input.ButtonEdge = .{ .{}, .{}, .{}, .{}, .{} };
     var edge_tab: input.ButtonEdge = .{};
     var edge_q: input.ButtonEdge = .{};
-    var edge_e: input.ButtonEdge = .{};
+    var edge_nav_e: input.ButtonEdge = .{};
     var edge_enter: input.ButtonEdge = .{};
     var edge_r: input.ButtonEdge = .{};
     var edge_f: input.ButtonEdge = .{};
-    var edge_veh_e: input.ButtonEdge = .{};
-    var heat_event_done = false;
+    var edge_interact: input.ButtonEdge = .{};
 
     while (!gfx.shouldClose()) {
         gfx.beginFrame();
@@ -80,7 +79,7 @@ pub fn main() !void {
                 .order_guard = edge_ord[4].pressed(raw.key_5),
                 .panel_next = edge_tab.pressed(raw.tab),
                 .nav_prev = edge_q.pressed(raw.q),
-                .nav_next = edge_e.pressed(raw.e),
+                .nav_next = edge_nav_e.pressed(raw.e),
                 .primary = edge_enter.pressed(raw.enter),
                 .secondary = edge_r.pressed(raw.r),
                 .tertiary = edge_f.pressed(raw.f),
@@ -90,11 +89,22 @@ pub fn main() !void {
             scene.drawMinimalScene(gfx, boss, living.currentPeriod(clock), car_opt);
             empire_ui.draw(gfx, emp, the_kin, portfolio, fleet, &districts, menu);
         } else {
-            if (car_ptr) |car| {
-                if (edge_veh_e.pressed(raw.e)) {
-                    if (car.occupied) action.exitVehicle(car, &boss)
-                    else if (action.nearVehicle(car.*, boss, 4.0)) action.enterVehicle(car, &boss);
+            if (edge_interact.pressed(raw.e)) {
+                var used = false;
+                if (mission_ui.nearMarker(job, boss) and job.state == .available) {
+                    if (mission_ui.tryStart(&job, boss)) {
+                        std.debug.print("[job] Started: {s}\n", .{job.world.mission.name});
+                        used = true;
+                    }
                 }
+                if (!used) {
+                    if (car_ptr) |car| {
+                        if (car.occupied) action.exitVehicle(car, &boss)
+                        else if (action.nearVehicle(car.*, boss, 4.0)) action.enterVehicle(car, &boss);
+                    }
+                }
+            }
+            if (car_ptr) |car| {
                 if (car.occupied) {
                     const st = ctrl.mapper.map(raw);
                     action.drive(car, &boss, st.move_x, st.move_y, dt);
@@ -107,12 +117,8 @@ pub fn main() !void {
             living.spawnStreetLife(&streets, living.activityLevel(period));
             living.tickStreetLife(&streets, dt * clock.time_scale);
 
-            if (!heat_event_done and clock.elapsed > 8.0) {
-                districts[0].heat = 85;
-                wanted_ui.addWanted(&boss, 3);
-                heat_event_done = true;
-                std.debug.print("[heat] Raid blowback — wanted raised\n", .{});
-            }
+            const payout = mission_ui.tickJob(&job, &boss, &eco, &districts[0], dt);
+            if (payout > 0) std.debug.print("[job] Completed: {s} → ${d}\n", .{ job.world.mission.name, payout });
 
             wanted_ui.tickWanted(&boss, &police, &chase, districts[0].heat, period, speed, dt, clock.elapsed);
 
@@ -121,10 +127,12 @@ pub fn main() !void {
             hud.drawDistrictDebug(gfx, boss, &districts, clock, eco, period, false, police.alert_level);
             wanted_ui.drawStars(gfx, boss.wanted_level, 10, 248);
             wanted_ui.drawPoliceBanner(gfx, police, chase, 266);
+            mission_ui.drawMarker(gfx, job, boss);
+            mission_ui.drawMinimapHint(gfx, job, boss);
         }
         gfx.endFrame();
     }
     save.saveGame(eco, the_kin, clock);
     gfx.shutdown();
-    std.debug.print("\nStep 8 complete.\n", .{});
+    std.debug.print("\nStep 9 complete. Treasury ${d}\n", .{eco.treasury});
 }

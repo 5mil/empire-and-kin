@@ -2,17 +2,17 @@
 
 | # | Step | Status |
 |---|------|--------|
-| 1–7 | Backend → vehicles | ✅ |
-| 8 | Wanted / police feedback | ✅ |
-| 9 | Mission markers + first job | Next |
-| 10 | Vertical slice + disk save | |
+| 1–8 | Backend → wanted/police | ✅ |
+| 9 | Mission markers + first job | ✅ |
+| 10 | Vertical slice + disk save | Next |
 
-## Step 8
-- Wanted stars HUD
-- Police / pursuit banner
-- Chase at 3+ stars; escape or bust outcomes
+## Step 9
+- World marker at job location
+- Enter radius → `[E] Job: …`
+- E starts → progress → cash + heat + optional wanted
+- Starter: Speakeasy Delivery near spawn
 
-## Step 9 (next)
-- World mission marker
-- Enter radius → start & complete job
-- Payout + heat/wanted effects
+## Step 10
+- Full short playable loop
+- Save/load to disk
+- Demo-ready vertical slice

@@ -3,43 +3,42 @@ const backend = @import("backend.zig");
 const input = @import("input.zig");
 
 var frame_count: u64 = 0;
-var close_after_frames: u64 = 90;
+var close_after_frames: u64 = 200;
 var cam: backend.Camera = .{};
 var player_x: f32 = 0;
 var player_z: f32 = 0;
 var ground_drawn: bool = false;
 var mapper: input.Mapper = .{};
 
-const MAP_W: usize = 41;
-const MAP_H: usize = 21;
-
 fn initImpl(title: []const u8, width: u32, height: u32) !void {
     _ = width;
     _ = height;
-    std.debug.print("[NullBackend] init: {s} (Step 6 empire UI)\n", .{title});
+    std.debug.print("[NullBackend] {s} (alpha demo)\n", .{title});
     frame_count = 0;
     mapper = .{};
 }
 fn shutdownImpl() void {
-    std.debug.print("[NullBackend] shutdown after {d} frames\n", .{frame_count});
+    std.debug.print("[NullBackend] frames={d}\n", .{frame_count});
 }
 fn beginFrameImpl() void {
     frame_count += 1;
     ground_drawn = false;
 }
 fn endFrameImpl() void {
-    if (frame_count % 30 == 0) printAsciiScene();
+    if (frame_count % 40 == 0) std.debug.print("--- frame {d} ---\n", .{frame_count});
 }
 fn scriptedRaw() input.RawKeys {
     var raw: input.RawKeys = .{};
-    if (frame_count < 30) {
+    if (frame_count == 5 or frame_count == 6) raw.key_1 = true;
+    if (frame_count == 12 or frame_count == 13) raw.enter = true;
+    if (frame_count > 20 and frame_count < 55) {
         raw.d = true;
         raw.w = true;
     }
-    if (frame_count == 35 or frame_count == 36) raw.escape = true;
-    if (frame_count == 45 or frame_count == 46) raw.key_3 = true;
-    if (frame_count == 55 or frame_count == 56) raw.key_1 = true;
-    if (frame_count == 70 or frame_count == 71) raw.escape = true;
+    if (frame_count == 60 or frame_count == 61) raw.e = true;
+    if (frame_count == 70 or frame_count == 71) raw.h = true;
+    if (frame_count == 120 or frame_count == 121) raw.f5 = true;
+    if (frame_count == 140 or frame_count == 141) raw.f = true;
     return raw;
 }
 fn pollInputImpl() backend.InputState {
@@ -58,7 +57,7 @@ fn drawTextImpl(text: []const u8, x: i32, y: i32, color: backend.Color) void {
     _ = x;
     _ = y;
     _ = color;
-    if (frame_count % 30 == 1) std.debug.print("[hud] {s}\n", .{text});
+    if (frame_count % 40 == 1) std.debug.print("[draw] {s}\n", .{text});
 }
 fn clearImpl(color: backend.Color) void {
     _ = color;
@@ -83,9 +82,6 @@ fn drawPlayerProxyImpl(pos: backend.Vec3, facing_yaw: f32, color: backend.Color)
     _ = color;
     player_x = pos.x;
     player_z = pos.z;
-}
-fn printAsciiScene() void {
-    std.debug.print("--- frame {d} player ({d:.1},{d:.1}) ---\n", .{ frame_count, player_x, player_z });
 }
 pub fn getBackend() backend.Backend {
     return .{

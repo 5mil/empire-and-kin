@@ -26,13 +26,15 @@ const world_sim = @import("engine/world_sim.zig");
 const hints = @import("engine/hints.zig");
 const combat_ui = @import("engine/combat_ui.zig");
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+
     std.debug.print("Empire & Kin – ALPHA track (A1–A10)\n\n", .{});
     const gfx = null_backend.getBackend();
     try gfx.init("Empire & Kin", 1280, 720);
 
     var boot: boot_mod.BootState = .{};
-    boot.has_save = (try save.readFromDisk()) != null;
+    boot.has_save = (try save.readFromDisk(io)) != null;
 
     var clock = time.Clock{ .time_scale = 20.0 };
     var the_kin = crew.createStarterCrew();
@@ -109,7 +111,7 @@ pub fn main() !void {
                 ws.event_interval = balance.EVENT_INTERVAL;
                 ws.rival_interval = balance.RIVAL_INTERVAL;
                 if (boot.load_on_start) {
-                    if (try save.readFromDisk()) |data| {
+                    if (try save.readFromDisk(io)) |data| {
                         save.applyTo(data, &eco, &the_kin, &clock, &boss, districts[0..]);
                     }
                 }
@@ -121,10 +123,10 @@ pub fn main() !void {
 
         if (edge_f5.pressed(raw.f5)) {
             const snap = save.capture(eco, the_kin, clock, boss, &districts);
-            save.writeToDisk(snap) catch {};
+            save.writeToDisk(io, snap) catch {};
         }
         if (edge_f9.pressed(raw.f9)) {
-            if (try save.readFromDisk()) |data| {
+            if (try save.readFromDisk(io)) |data| {
                 save.applyTo(data, &eco, &the_kin, &clock, &boss, districts[0..]);
             }
         }
@@ -207,7 +209,7 @@ pub fn main() !void {
     }
 
     const final_snap = save.capture(eco, the_kin, clock, boss, &districts);
-    save.writeToDisk(final_snap) catch {};
+    save.writeToDisk(io, final_snap) catch {};
     gfx.shutdown();
     std.debug.print("\n=== ALPHA SLICE EXIT ===\nSaved {s} | ${d} | Era {s}\n", .{
         save.SAVE_PATH,

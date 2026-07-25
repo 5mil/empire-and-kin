@@ -51,10 +51,10 @@ pub const c = struct {
     pub extern fn glfwGetTime() f64;
     pub extern fn glfwSwapInterval(interval: c_int) void;
     pub extern fn glfwGetProcAddress(procname: [*:0]const u8) ?*anyopaque;
-    pub extern fn glfwSetErrorCallback(cb: ?*const fn (c_int, [*:0]const u8) callconv(.C) void) ?*const fn (c_int, [*:0]const u8) callconv(.C) void;
+    pub extern fn glfwSetErrorCallback(cb: ?*const fn (c_int, [*:0]const u8) callconv(.c) void) ?*const fn (c_int, [*:0]const u8) callconv(.c) void;
 };
 
-fn errorCallback(code: c_int, desc: [*:0]const u8) callconv(.C) void {
+fn errorCallback(code: c_int, desc: [*:0]const u8) callconv(.c) void {
     std.debug.print("[GLFW] error {d}: {s}\n", .{ code, desc });
 }
 

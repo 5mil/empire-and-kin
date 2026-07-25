@@ -73,12 +73,12 @@ pub const Renderer = struct {
     }
 
     pub fn beginFrame(self: *Renderer, color: backend.Color) void {
+        _ = self;
         const r = @as(f32, @floatFromInt(color.r)) / 255.0;
         const g = @as(f32, @floatFromInt(color.g)) / 255.0;
         const b = @as(f32, @floatFromInt(color.b)) / 255.0;
         gl.glClearColor(r, g, b, 1);
         gl.glClear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        _ = self;
     }
 
     pub fn setCamera(self: *Renderer, cam: backend.Camera) void {
@@ -166,14 +166,9 @@ pub const Renderer = struct {
         gl.glBindVertexArray(self.ui_vao);
         gl.glBindBuffer(gl.ARRAY_BUFFER, self.ui_vbo);
         gl.glBufferData(gl.ARRAY_BUFFER, @intCast(verts.len * @sizeOf(f32)), &verts, gl.DYNAMIC_DRAW);
-        gl.glDrawElements(gl.TRIANGLES, 0, gl.UNSIGNED_INT, null); // fallback: use arrays path
-        // Draw with glDrawArrays equivalent via elements count 0 — use non-indexed draw:
-        // Our loader has no glDrawArrays; emulate with 6 verts as two tris already expanded.
-        // Add drawArrays in gl.zig if needed; for now bind and use DrawElements on a tiny EBO is heavy.
-        // Simpler: expand and call glDrawElements only if we had indices — skip and use buffer as triangles via DrawElements 0.
-        _ = verts;
+        gl.glDrawArrays(gl.TRIANGLES, 0, 6);
+        gl.glBindVertexArray(0);
         gl.glEnable(gl.DEPTH_TEST);
-        _ = self;
     }
 };
 

@@ -5,19 +5,20 @@
 Real-time free-roam + living crew + empire management.
 
 **Version:** `0.1.0-alpha`  
-**Stack:** Zig · Magister · Arcis · RealCity (target) · `engine.Backend`
+**Stack:** Zig · SDL2 + OpenGL 3.3 · `engine.Backend` (Magister/Arcis/RealCity target)
 
 ## Art
 Public-domain historical sources preferred — `docs/ART_SOURCES.md`.
 
 ## Status
-**Alpha track complete (A1–A10).**  
-Roadmap: `docs/ALPHA_ROADMAP.md` · Checklist: `docs/ALPHA_CHECKLIST.md`
+**Alpha track complete (A1–A10)** + GPU infrastructure.  
+**Full handover:** [`docs/HANDOVER.md`](docs/HANDOVER.md)
 
-## Play (headless demo)
+## Play
 
 ```bash
-zig build run
+zig build run              # GPU (SDL2 + OpenGL)
+zig build run-headless     # NullBackend
 ```
 
 Boot → **[1] New Game** → pick era **[Enter]** → free-roam.
@@ -34,6 +35,7 @@ Boot → **[1] New Game** → pick era **[Enter]** → free-roam.
 | 1–5 | Crew orders (paused) |
 
 ## Docs
-- `docs/ALPHA_ROADMAP.md`
+- **`docs/HANDOVER.md`** — architecture, instructions, full future plan
+- `docs/ALPHA_ROADMAP.md` · `docs/ALPHA_CHECKLIST.md`
+- `docs/GFX_ARCHITECTURE.md` · `docs/ART_SOURCES.md`
 - `docs/RELEASE_NOTES_ALPHA.md`
-- `docs/ALPHA_CHECKLIST.md`

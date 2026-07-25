@@ -1,5 +1,4 @@
-//! GPU-resident mesh (VAO + VBO + EBO).
-
+//! GPU mesh (VAO / VBO / EBO).
 const gl = @import("gl.zig");
 const mesh = @import("mesh.zig");
 
@@ -9,20 +8,18 @@ pub const GpuMesh = struct {
     ebo: gl.GLuint = 0,
     index_count: gl.GLsizei = 0,
 
-    pub fn create(cpu: mesh.Mesh) GpuMesh {
-        var vao: gl.GLuint = 0;
-        var vbo: gl.GLuint = 0;
-        var ebo: gl.GLuint = 0;
-        gl.glGenVertexArrays(1, &vao);
-        gl.glGenBuffers(1, &vbo);
-        gl.glGenBuffers(1, &ebo);
-        gl.glBindVertexArray(vao);
-        gl.glBindBuffer(gl.ARRAY_BUFFER, vbo);
-        const vsize: gl.GLsizeiptr = @intCast(cpu.vertices.len * @sizeOf(mesh.Vertex));
-        gl.glBufferData(gl.ARRAY_BUFFER, vsize, cpu.vertices.ptr, gl.STATIC_DRAW);
-        gl.glBindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
-        const isize: gl.GLsizeiptr = @intCast(cpu.indices.len * @sizeOf(u32));
-        gl.glBufferData(gl.ELEMENT_ARRAY_BUFFER, isize, cpu.indices.ptr, gl.STATIC_DRAW);
+    pub fn create(data: mesh.MeshData) GpuMesh {
+        var m: GpuMesh = .{};
+        gl.glGenVertexArrays(1, &m.vao);
+        gl.glGenBuffers(1, &m.vbo);
+        gl.glGenBuffers(1, &m.ebo);
+        gl.glBindVertexArray(m.vao);
+        gl.glBindBuffer(gl.ARRAY_BUFFER, m.vbo);
+        const vsize: gl.GLsizeiptr = @intCast(data.vertices.len * @sizeOf(mesh.Vertex));
+        gl.glBufferData(gl.ARRAY_BUFFER, vsize, data.vertices.ptr, gl.STATIC_DRAW);
+        gl.glBindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.ebo);
+        const isize: gl.GLsizeiptr = @intCast(data.indices.len * @sizeOf(u32));
+        gl.glBufferData(gl.ELEMENT_ARRAY_BUFFER, isize, data.indices.ptr, gl.STATIC_DRAW);
         const stride: gl.GLsizei = @sizeOf(mesh.Vertex);
         gl.glEnableVertexAttribArray(0);
         gl.glVertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, stride, @ptrFromInt(0));
@@ -31,7 +28,8 @@ pub const GpuMesh = struct {
         gl.glEnableVertexAttribArray(2);
         gl.glVertexAttribPointer(2, 4, gl.FLOAT, gl.FALSE, stride, @ptrFromInt(24));
         gl.glBindVertexArray(0);
-        return .{ .vao = vao, .vbo = vbo, .ebo = ebo, .index_count = @intCast(cpu.indices.len) };
+        m.index_count = @intCast(data.indices.len);
+        return m;
     }
 
     pub fn draw(self: GpuMesh) void {

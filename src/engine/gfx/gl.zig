@@ -71,7 +71,7 @@ pub var glUniform3f: *const fn (GLint, GLfloat, GLfloat, GLfloat) callconv(.c) v
 pub var glUniform4f: *const fn (GLint, GLfloat, GLfloat, GLfloat, GLfloat) callconv(.c) void = undefined;
 pub var glUniform2f: *const fn (GLint, GLfloat, GLfloat) callconv(.c) void = undefined;
 
-const GetProc = *const fn (procname: [*:0]const u8) ?*anyopaque;
+pub const GetProc = *const fn (procname: [*:0]const u8) callconv(.c) ?*anyopaque;
 
 fn loadFn(comptime T: type, get: GetProc, name: [*:0]const u8) !T {
     const p = get(name) orelse return error.MissingGlProc;

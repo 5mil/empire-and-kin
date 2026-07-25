@@ -130,7 +130,7 @@ pub fn canStartMission(wm: WorldMission, p: player.Player) bool {
 // ---------------------------------------------------------------------------
 
 pub const Encounter = struct {
-    enemy: combat.Fighter,
+    enemy: combat.Fighter = .{},
     active: bool = false,
     player_cooldown: f64 = 0,
 };

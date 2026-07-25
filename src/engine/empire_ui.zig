@@ -3,94 +3,22 @@ const backend = @import("backend.zig");
 const empire = @import("../game/empire.zig");
 const crew = @import("../game/crew.zig");
 const city = @import("../game/city.zig");
-const input = @import("input.zig");
+const world = @import("../game/world.zig");
+const properties = @import("../game/properties.zig");
+const garage = @import("../game/garage.zig");
+const action = @import("../game/action.zig");
 
-pub const ORDER_KEYS =
-    \\[1] Collect  [2] Rest  [3] Enforce  [4] Scout  [5] Guard
-;
+pub const Panel = enum { rackets, crew, properties, vehicles };
 
 pub const EmpireMenu = struct {
-    selected_member: u8 = 1,
+    panel: Panel = .rackets,
     selected_racket: u8 = 0,
-    last_order_msg: []const u8 = "",
+    selected_member: u8 = 1,
+    selected_property: u8 = 0,
+    selected_vehicle: u8 = 0,
+    last_msg: []const u8 = "",
+    slow_world_tick: bool = true,
 };
-
-pub fn draw(
-    gfx: backend.Backend,
-    emp: empire.Empire,
-    c: crew.Crew,
-    districts: []const city.District,
-    menu: EmpireMenu,
-) void {
-    const title = backend.Color.rgb(255, 210, 120);
-    const white = backend.Color.rgb(230, 230, 220);
-    const dim = backend.Color.rgb(150, 150, 145);
-    const accent = backend.Color.rgb(120, 200, 160);
-
-    var y: i32 = 10;
-    gfx.drawText("======== EMPIRE (PAUSED) ========", 280, y, title);
-    y += 22;
-
-    var buf: [96]u8 = undefined;
-    const inf = std.fmt.bufPrint(&buf, "Influence {d}   Reputation {d} ({s})", .{
-        emp.influence,
-        emp.reputation,
-        empire.reputationLabel(emp),
-    }) catch "";
-    gfx.drawText(inf, 280, y, accent);
-    y += 20;
-
-    const take = std.fmt.bufPrint(&buf, "Est. racket take ${d}/day   Rackets {d}", .{
-        empire.totalRacketIncome(emp),
-        emp.racket_count,
-    }) catch "";
-    gfx.drawText(take, 280, y, white);
-    y += 28;
-
-    gfx.drawText("--- Rackets ---", 280, y, title);
-    y += 18;
-    var i: u8 = 0;
-    while (i < emp.racket_count) : (i += 1) {
-        const r = emp.rackets[i];
-        const who = if (r.assigned_member) |m| c.members[m].name else "unassigned";
-        const line = std.fmt.bufPrint(&buf, "{s}{d} {s:<16} Lv{d}  {s}", .{
-            if (i == menu.selected_racket) ">" else " ",
-            i,
-            empire.racketName(r.rtype),
-            r.level,
-            who,
-        }) catch "";
-        gfx.drawText(line, 280, y, if (i == menu.selected_racket) white else dim);
-        y += 16;
-    }
-
-    y += 12;
-    gfx.drawText("--- Crew ---", 280, y, title);
-    y += 18;
-    i = 0;
-    while (i < c.count) : (i += 1) {
-        const m = c.members[i];
-        const line = std.fmt.bufPrint(&buf, "{s}{d} {s:<20} loy {d} fat {d}", .{
-            if (i == menu.selected_member) ">" else " ",
-            i,
-            m.name,
-            m.loyalty,
-            m.fatigue,
-        }) catch "";
-        gfx.drawText(line, 280, y, if (i == menu.selected_member) white else dim);
-        y += 16;
-    }
-
-    y += 14;
-    gfx.drawText(ORDER_KEYS, 280, y, accent);
-    y += 18;
-    if (menu.last_order_msg.len > 0) {
-        gfx.drawText(menu.last_order_msg, 280, y, white);
-    }
-    y += 24;
-    gfx.drawText("Esc/Space resume", 280, y, dim);
-    _ = districts;
-}
 
 pub const MenuKeys = struct {
     order_collect: bool = false,
@@ -98,33 +26,211 @@ pub const MenuKeys = struct {
     order_enforce: bool = false,
     order_scout: bool = false,
     order_guard: bool = false,
+    panel_next: bool = false,
+    panel_prev: bool = false,
+    nav_prev: bool = false,
+    nav_next: bool = false,
+    primary: bool = false,
+    secondary: bool = false,
+    tertiary: bool = false,
 };
 
-pub fn handleOrders(
-    keys: MenuKeys,
-    emp: *empire.Empire,
-    c: *crew.Crew,
-    districts: []city.District,
-    menu: *EmpireMenu,
-) void {
-    if (districts.len == 0) return;
-    const d = &districts[0];
-    const mid = menu.selected_member;
+pub fn panelName(p: Panel) []const u8 {
+    return switch (p) {
+        .rackets => "Rackets",
+        .crew => "Crew",
+        .properties => "Properties",
+        .vehicles => "Vehicles",
+    };
+}
 
-    if (keys.order_collect) {
-        _ = empire.issueOrder(c, mid, .collect, emp, d);
-        menu.last_order_msg = "Order: Collect";
-    } else if (keys.order_rest) {
-        _ = empire.issueOrder(c, mid, .rest, emp, d);
-        menu.last_order_msg = "Order: Rest";
-    } else if (keys.order_enforce) {
-        _ = empire.issueOrder(c, mid, .enforce, emp, d);
-        menu.last_order_msg = "Order: Enforce (+control, +rep)";
-    } else if (keys.order_scout) {
-        _ = empire.issueOrder(c, mid, .scout, emp, d);
-        menu.last_order_msg = "Order: Scout (-heat)";
-    } else if (keys.order_guard) {
-        _ = empire.issueOrder(c, mid, .guard, emp, d);
-        menu.last_order_msg = "Order: Guard";
+pub fn draw(
+    gfx: backend.Backend,
+    emp: empire.Empire,
+    c: crew.Crew,
+    pf: properties.Portfolio,
+    fleet: garage.Fleet,
+    districts: []const city.District,
+    menu: EmpireMenu,
+) void {
+    const title = backend.Color.rgb(255, 210, 120);
+    const white = backend.Color.rgb(230, 230, 220);
+    const dim = backend.Color.rgb(150, 150, 145);
+    const accent = backend.Color.rgb(120, 200, 160);
+    const focus_col = backend.Color.rgb(255, 180, 80);
+    const danger = backend.Color.rgb(220, 90, 70);
+    var buf: [128]u8 = undefined;
+    var y: i32 = 8;
+
+    gfx.drawText("======== EMPIRE MENU (PAUSED) ========", 260, y, title);
+    y += 18;
+    const tabs = std.fmt.bufPrint(&buf, "[ {s} ]  Rackets | Crew | Properties | Vehicles   (Tab)", .{panelName(menu.panel)}) catch "";
+    gfx.drawText(tabs, 260, y, focus_col);
+    y += 18;
+    const hdr = std.fmt.bufPrint(&buf, "Influence {d}  Rep {d} ({s})  Take ${d}/day  Prop upkeep ${d}", .{
+        emp.influence, emp.reputation, empire.reputationLabel(emp), empire.totalRacketIncome(emp), properties.totalUpkeep(pf),
+    }) catch "";
+    gfx.drawText(hdr, 260, y, accent);
+    y += 22;
+
+    switch (menu.panel) {
+        .rackets => y = drawRackets(gfx, emp, c, menu, y, white, dim, title),
+        .crew => y = drawCrew(gfx, c, menu, y, white, dim, title),
+        .properties => y = drawProperties(gfx, pf, menu, y, white, dim, title, danger),
+        .vehicles => y = drawVehicles(gfx, fleet, menu, y, white, dim, title, danger, accent),
     }
+    y += 10;
+    gfx.drawText(helpForPanel(menu.panel), 260, y, dim);
+    y += 16;
+    if (menu.last_msg.len > 0) gfx.drawText(menu.last_msg, 260, y, white);
+    _ = districts;
+}
+
+fn helpForPanel(p: Panel) []const u8 {
+    return switch (p) {
+        .rackets => "Q/E select  Enter assign crew  1-5 orders",
+        .crew => "Q/E select  1 Collect 2 Rest 3 Enforce 4 Scout 5 Guard",
+        .properties => "Q/E select  Enter upgrade  R repair",
+        .vehicles => "Q/E select  Enter deploy+activate  R repair  F store/retrieve",
+    };
+}
+
+fn drawRackets(gfx: backend.Backend, emp: empire.Empire, c: crew.Crew, menu: EmpireMenu, y0: i32, white: backend.Color, dim: backend.Color, title: backend.Color) i32 {
+    var y = y0;
+    var buf: [112]u8 = undefined;
+    gfx.drawText("--- Rackets ---", 260, y, title);
+    y += 16;
+    var i: u8 = 0;
+    while (i < emp.racket_count) : (i += 1) {
+        const r = emp.rackets[i];
+        const who = if (r.assigned_member) |m| c.members[m].name else "— unassigned —";
+        const line = std.fmt.bufPrint(&buf, "{s}{d} {s:<16} Lv{d} heat+{d}  {s}", .{ if (i == menu.selected_racket) ">" else " ", i, empire.racketName(r.rtype), r.level, r.heat_gen, who }) catch "";
+        gfx.drawText(line, 260, y, if (i == menu.selected_racket) white else dim);
+        y += 15;
+    }
+    return y;
+}
+
+fn drawCrew(gfx: backend.Backend, c: crew.Crew, menu: EmpireMenu, y0: i32, white: backend.Color, dim: backend.Color, title: backend.Color) i32 {
+    var y = y0;
+    var buf: [112]u8 = undefined;
+    gfx.drawText("--- Crew ---", 260, y, title);
+    y += 16;
+    var i: u8 = 0;
+    while (i < c.count) : (i += 1) {
+        const m = c.members[i];
+        const line = std.fmt.bufPrint(&buf, "{s}{d} {s:<18} loy {d} fat {d}", .{ if (i == menu.selected_member) ">" else " ", i, m.name, m.loyalty, m.fatigue }) catch "";
+        gfx.drawText(line, 260, y, if (i == menu.selected_member) white else dim);
+        y += 15;
+    }
+    return y;
+}
+
+fn drawProperties(gfx: backend.Backend, pf: properties.Portfolio, menu: EmpireMenu, y0: i32, white: backend.Color, dim: backend.Color, title: backend.Color, danger: backend.Color) i32 {
+    var y = y0;
+    var buf: [128]u8 = undefined;
+    gfx.drawText("--- Properties ---", 260, y, title);
+    y += 16;
+    var i: u8 = 0;
+    while (i < pf.count) : (i += 1) {
+        const p = pf.items[i];
+        const line = std.fmt.bufPrint(&buf, "{s}{d} {s:<18} {s:<12} Lv{d} cond {d} up ${d}", .{ if (i == menu.selected_property) ">" else " ", i, p.name, properties.propertyName(p.ptype), p.level, p.condition, p.monthly_upkeep }) catch "";
+        gfx.drawText(line, 260, y, if (i == menu.selected_property) white else if (p.condition < 40) danger else dim);
+        y += 15;
+        if (i == menu.selected_property) {
+            const det = std.fmt.bufPrint(&buf, "     capacity {d}  [{s}]", .{ p.capacity, world.districtName(p.district) }) catch "";
+            gfx.drawText(det, 260, y, dim);
+            y += 14;
+        }
+    }
+    return y;
+}
+
+fn drawVehicles(gfx: backend.Backend, fleet: garage.Fleet, menu: EmpireMenu, y0: i32, white: backend.Color, dim: backend.Color, title: backend.Color, danger: backend.Color, accent: backend.Color) i32 {
+    var y = y0;
+    var buf: [128]u8 = undefined;
+    gfx.drawText("--- Vehicles (Garage) ---", 260, y, title);
+    y += 16;
+    var i: u8 = 0;
+    while (i < fleet.count) : (i += 1) {
+        const ov = fleet.slots[i];
+        const active = if (fleet.active_idx) |a| a == i else false;
+        const line = std.fmt.bufPrint(&buf, "{s}{d} {s:<14} {s:<10} HP {d} {s}{s}", .{ if (i == menu.selected_vehicle) ">" else " ", i, ov.label, action.vehicleName(ov.vehicle.vtype), ov.vehicle.health, if (ov.stored) "[STORED] " else "", if (active) "[ACTIVE]" else if (ov.vehicle.occupied) "[IN USE]" else "" }) catch "";
+        gfx.drawText(line, 260, y, if (i == menu.selected_vehicle) white else if (ov.vehicle.health < 40) danger else if (active) accent else dim);
+        y += 15;
+        if (i == menu.selected_vehicle) {
+            const det = std.fmt.bufPrint(&buf, "     pos ({d:.0},{d:.0}) maxspd {d:.0}", .{ ov.vehicle.x, ov.vehicle.y, ov.vehicle.max_speed }) catch "";
+            gfx.drawText(det, 260, y, dim);
+            y += 14;
+        }
+    }
+    return y;
+}
+
+pub fn handleMenu(keys: MenuKeys, emp: *empire.Empire, c: *crew.Crew, pf: *properties.Portfolio, fleet: *garage.Fleet, districts: []city.District, menu: *EmpireMenu, player_x: f32, player_y: f32) void {
+    if (keys.panel_next) {
+        menu.panel = switch (menu.panel) { .rackets => .crew, .crew => .properties, .properties => .vehicles, .vehicles => .rackets };
+        menu.last_msg = panelName(menu.panel);
+    }
+    if (keys.panel_prev) {
+        menu.panel = switch (menu.panel) { .rackets => .vehicles, .crew => .rackets, .properties => .crew, .vehicles => .properties };
+        menu.last_msg = panelName(menu.panel);
+    }
+    if (keys.nav_prev or keys.nav_next) {
+        const dir: i32 = if (keys.nav_next) 1 else -1;
+        switch (menu.panel) {
+            .rackets => menu.selected_racket = wrap(menu.selected_racket, emp.racket_count, dir),
+            .crew => menu.selected_member = wrap(menu.selected_member, c.count, dir),
+            .properties => menu.selected_property = wrap(menu.selected_property, pf.count, dir),
+            .vehicles => menu.selected_vehicle = wrap(menu.selected_vehicle, fleet.count, dir),
+        }
+    }
+    switch (menu.panel) {
+        .rackets => {
+            if (keys.primary) {
+                menu.last_msg = if (empire.assignCrewToRacket(emp, menu.selected_racket, menu.selected_member)) "Crew assigned" else "Assign failed";
+            }
+        },
+        .crew => {
+            if (districts.len > 0) {
+                const d = &districts[0];
+                const mid = menu.selected_member;
+                if (keys.order_collect) { _ = empire.issueOrder(c, mid, .collect, emp, d); menu.last_msg = "Order: Collect"; }
+                else if (keys.order_rest) { _ = empire.issueOrder(c, mid, .rest, emp, d); menu.last_msg = "Order: Rest"; }
+                else if (keys.order_enforce) { _ = empire.issueOrder(c, mid, .enforce, emp, d); menu.last_msg = "Order: Enforce"; }
+                else if (keys.order_scout) { _ = empire.issueOrder(c, mid, .scout, emp, d); menu.last_msg = "Order: Scout"; }
+                else if (keys.order_guard) { _ = empire.issueOrder(c, mid, .guard, emp, d); menu.last_msg = "Order: Guard"; }
+            }
+        },
+        .properties => {
+            if (keys.primary) menu.last_msg = if (properties.upgradeProperty(pf, menu.selected_property)) "Property upgraded" else "Cannot upgrade";
+            if (keys.secondary) menu.last_msg = if (properties.repairProperty(pf, menu.selected_property)) "Property repaired" else "Already full condition";
+        },
+        .vehicles => {
+            if (keys.primary) {
+                if (garage.deployVehicle(fleet, menu.selected_vehicle, player_x + 2, player_y)) {
+                    _ = garage.setActive(fleet, menu.selected_vehicle);
+                    menu.last_msg = "Deployed & active";
+                } else menu.last_msg = "Deploy failed";
+            }
+            if (keys.secondary) menu.last_msg = if (garage.repairVehicle(fleet, menu.selected_vehicle)) "Vehicle repaired" else "Already full HP";
+            if (keys.tertiary) {
+                const idx = menu.selected_vehicle;
+                if (idx < fleet.count) {
+                    if (fleet.slots[idx].stored) {
+                        _ = garage.deployVehicle(fleet, idx, player_x + 2, player_y);
+                        menu.last_msg = "Retrieved from garage";
+                    } else if (garage.storeVehicle(fleet, idx)) menu.last_msg = "Stored in garage" else menu.last_msg = "Cannot store";
+                }
+            }
+        },
+    }
+}
+
+fn wrap(cur: u8, count: u8, dir: i32) u8 {
+    if (count == 0) return 0;
+    var next: i32 = @as(i32, @intCast(cur)) + dir;
+    if (next < 0) next = count - 1;
+    if (next >= count) next = 0;
+    return @intCast(next);
 }

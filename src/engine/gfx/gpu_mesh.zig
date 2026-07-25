@@ -18,8 +18,8 @@ pub const GpuMesh = struct {
         const vsize: gl.GLsizeiptr = @intCast(data.vertices.len * @sizeOf(mesh.Vertex));
         gl.glBufferData(gl.ARRAY_BUFFER, vsize, data.vertices.ptr, gl.STATIC_DRAW);
         gl.glBindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.ebo);
-        const isize: gl.GLsizeiptr = @intCast(data.indices.len * @sizeOf(u32));
-        gl.glBufferData(gl.ELEMENT_ARRAY_BUFFER, isize, data.indices.ptr, gl.STATIC_DRAW);
+        const index_bytes: gl.GLsizeiptr = @intCast(data.indices.len * @sizeOf(u32));
+        gl.glBufferData(gl.ELEMENT_ARRAY_BUFFER, index_bytes, data.indices.ptr, gl.STATIC_DRAW);
         const stride: gl.GLsizei = @sizeOf(mesh.Vertex);
         gl.glEnableVertexAttribArray(0);
         gl.glVertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, stride, @ptrFromInt(0));

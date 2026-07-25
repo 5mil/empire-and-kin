@@ -9,6 +9,7 @@ pub const RawKeys = struct {
     pad_a: bool = false, pad_b: bool = false, pad_start: bool = false,
     key_1: bool = false, key_2: bool = false, key_3: bool = false, key_4: bool = false, key_5: bool = false,
     tab: bool = false, q: bool = false, enter: bool = false, r: bool = false,
+    f5: bool = false, f9: bool = false,
 };
 
 pub const ButtonEdge = struct {
@@ -34,5 +35,5 @@ pub const Mapper = struct {
 };
 
 pub fn bindingHelp() []const u8 {
-    return "WASD move | Esc pause | Tab panels | Q/E select | Enter/R/F context | 1-5 orders";
+    return "WASD move | Esc menu | E job/vehicle | F5 save | F9 load";
 }

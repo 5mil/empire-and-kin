@@ -15,31 +15,31 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
+            .link_libc = gpu,
         }),
     });
     exe.root_module.addOptions("build_options", options);
 
     if (gpu) {
-        exe.linkSystemLibrary("SDL2");
-        exe.linkSystemLibrary("GL");
+        exe.root_module.linkSystemLibrary("SDL2", .{});
+        exe.root_module.linkSystemLibrary("GL", .{});
         if (target.result.os.tag == .linux) {
-            exe.linkSystemLibrary("pthread");
-            exe.linkSystemLibrary("dl");
-            exe.linkSystemLibrary("m");
+            exe.root_module.linkSystemLibrary("pthread", .{});
+            exe.root_module.linkSystemLibrary("dl", .{});
+            exe.root_module.linkSystemLibrary("m", .{});
         }
         if (target.result.os.tag == .macos) {
-            exe.linkFramework("OpenGL");
-            exe.linkFramework("Cocoa");
-            exe.linkFramework("IOKit");
-            exe.linkFramework("CoreVideo");
+            exe.root_module.linkFramework("OpenGL", .{});
+            exe.root_module.linkFramework("Cocoa", .{});
+            exe.root_module.linkFramework("IOKit", .{});
+            exe.root_module.linkFramework("CoreVideo", .{});
         }
         if (target.result.os.tag == .windows) {
-            exe.linkSystemLibrary("opengl32");
-            exe.linkSystemLibrary("gdi32");
-            exe.linkSystemLibrary("shell32");
-            exe.linkSystemLibrary("user32");
+            exe.root_module.linkSystemLibrary("opengl32", .{});
+            exe.root_module.linkSystemLibrary("gdi32", .{});
+            exe.root_module.linkSystemLibrary("shell32", .{});
+            exe.root_module.linkSystemLibrary("user32", .{});
         }
-        exe.linkLibC();
     }
 
     b.installArtifact(exe);
@@ -53,7 +53,7 @@ pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Run with GPU (SDL2+OpenGL)");
     run_step.dependOn(&run_cmd.step);
 
-    // Headless
+    // Headless (never links GPU libs)
     const headless_opts = b.addOptions();
     headless_opts.addOption(bool, "enable_gpu", false);
 

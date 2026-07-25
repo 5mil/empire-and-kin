@@ -1,4 +1,5 @@
 const std = @import("std");
+const build_options = @import("build_options");
 const city = @import("game/city.zig");
 const crew = @import("game/crew.zig");
 const economy = @import("game/economy.zig");
@@ -26,11 +27,16 @@ const world_sim = @import("engine/world_sim.zig");
 const hints = @import("engine/hints.zig");
 const combat_ui = @import("engine/combat_ui.zig");
 
+const gfx_mod = if (build_options.enable_gpu)
+    @import("engine/gl_backend.zig")
+else
+    @import("engine/null_backend.zig");
+
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
 
     std.debug.print("Empire & Kin – ALPHA track (A1–A10)\n\n", .{});
-    const gfx = null_backend.getBackend();
+    const gfx = gfx_mod.getBackend();
     try gfx.init("Empire & Kin", 1280, 720);
 
     var boot: boot_mod.BootState = .{};
@@ -98,7 +104,7 @@ pub fn main(init: std.process.Init) !void {
     while (!gfx.shouldClose()) {
         gfx.beginFrame();
         const dt = gfx.deltaTime();
-        const raw = null_backend.pollRawKeys();
+        const raw = gfx_mod.pollRawKeys();
         frame_seed +%= 1;
 
         if (boot.phase != .playing) {

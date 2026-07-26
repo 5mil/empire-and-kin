@@ -21,10 +21,11 @@ pub const Renderer = struct {
     view_proj: math.Mat4 = .{},
 
     pub fn init(self: *Renderer, width: u32, height: u32) !void {
-        self.width = width;
-        self.height = height;
+        self.width = if (width == 0) 1280 else width;
+        self.height = if (height == 0) 720 else height;
         self.lit_prog = try compileProgram(shaders.lit_vert, shaders.lit_frag);
         self.ui_prog = try compileProgram(shaders.ui_vert, shaders.ui_frag);
+        std.debug.print("[Renderer] shaders OK lit={d} ui={d}\n", .{ self.lit_prog, self.ui_prog });
 
         var box_v: [24]mesh.Vertex = undefined;
         var box_i: [36]u32 = undefined;
@@ -49,10 +50,15 @@ pub const Renderer = struct {
         gl.glBindVertexArray(0);
 
         gl.glEnable(gl.DEPTH_TEST);
-        gl.glEnable(gl.CULL_FACE);
+        // Cull off until winding is verified on all primitives
+        gl.glDisable(gl.CULL_FACE);
         gl.glEnable(gl.BLEND);
         gl.glBlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-        self.resize(width, height);
+        self.resize(self.width, self.height);
+
+        // Sanity clear so first frame is never undefined black
+        gl.glClearColor(0.15, 0.18, 0.28, 1);
+        gl.glClear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     }
 
     pub fn shutdown(self: *Renderer) void {
@@ -104,7 +110,8 @@ pub const Renderer = struct {
         gl.glUniformMatrix4fv(loc_mvp, 1, gl.FALSE, mvp.ptr());
         gl.glUniformMatrix4fv(loc_model, 1, gl.FALSE, model.ptr());
         gl.glUniform3f(loc_light, 0.35, -1.0, 0.25);
-        gl.glUniform3f(loc_amb, 0.25, 0.25, 0.28);
+        // Strong ambient so lit geometry is never pure black
+        gl.glUniform3f(loc_amb, 0.55, 0.55, 0.58);
         gl.glUniform4f(
             loc_tint,
             @as(f32, @floatFromInt(tint.r)) / 255.0,
@@ -141,16 +148,16 @@ pub const Renderer = struct {
         self.drawMesh(self.box, math.Mat4.mul(t, math.Mat4.mul(r, s)), color);
     }
 
-    /// One horizontal bar per text line (glyph atlas = B1).
+    /// Thick colored bars for HUD text (bitmap font = B1).
     pub fn drawTextProxy(self: *Renderer, x: i32, y: i32, len: usize, color: backend.Color) void {
-        const w: f32 = @floatFromInt(@min(len, 40) * 7);
-        const h: f32 = 12;
+        const w: f32 = @floatFromInt(@max(@min(len, 48) * 8, 24));
+        const h: f32 = 16;
         const x0: f32 = @floatFromInt(x);
         const y0: f32 = @floatFromInt(y);
         const r = @as(f32, @floatFromInt(color.r)) / 255.0;
         const g = @as(f32, @floatFromInt(color.g)) / 255.0;
         const b = @as(f32, @floatFromInt(color.b)) / 255.0;
-        const a = @as(f32, @floatFromInt(color.a)) / 255.0;
+        const a: f32 = 1.0;
         var verts = [_]f32{
             x0,     y0,     r, g, b, a,
             x0 + w, y0,     r, g, b, a,

@@ -34,12 +34,14 @@ else
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
 
-    std.debug.print("Empire & Kin – ALPHA track (A1–A10)\n\n", .{});
+    std.debug.print("Empire & Kin - ALPHA track (A1-A10)\n\n", .{});
     const gfx = gfx_mod.getBackend();
     try gfx.init("Empire & Kin", 1280, 720);
+    std.debug.print("[main] gfx.init ok\n", .{});
 
     var boot: boot_mod.BootState = .{};
-    boot.has_save = (try save.readFromDisk(io)) != null;
+    boot.has_save = (save.readFromDisk(io) catch null) != null;
+    std.debug.print("[main] save check ok has_save={}\n", .{boot.has_save});
 
     var clock = time.Clock{ .time_scale = 20.0 };
     var the_kin = crew.createStarterCrew();
@@ -100,11 +102,16 @@ pub fn main(init: std.process.Init) !void {
     var edge_x: input.ButtonEdge = .{};
     var frame_seed: u32 = 0;
 
+    std.debug.print("[main] entering loop\n", .{});
+
     while (!gfx.shouldClose()) {
         gfx.beginFrame();
         const dt = gfx.deltaTime();
         const raw = gfx_mod.pollRawKeys();
         frame_seed +%= 1;
+        if (frame_seed <= 3) {
+            std.debug.print("[main] frame {d} boot={s}\n", .{ frame_seed, @tagName(boot.phase) });
+        }
 
         if (boot.phase != .playing) {
             boot_mod.handle(&boot, raw, &edge_1, &edge_2, &edge_enter);
@@ -116,7 +123,7 @@ pub fn main(init: std.process.Init) !void {
                 ws.event_interval = balance.EVENT_INTERVAL;
                 ws.rival_interval = balance.RIVAL_INTERVAL;
                 if (boot.load_on_start) {
-                    if (try save.readFromDisk(io)) |data| {
+                    if (save.readFromDisk(io) catch null) |data| {
                         save.applyTo(data, &eco, &the_kin, &clock, &boss, districts[0..]);
                     }
                 }
@@ -131,7 +138,7 @@ pub fn main(init: std.process.Init) !void {
             save.writeToDisk(io, snap) catch {};
         }
         if (edge_f9.pressed(raw.f9)) {
-            if (try save.readFromDisk(io)) |data| {
+            if (save.readFromDisk(io) catch null) |data| {
                 save.applyTo(data, &eco, &the_kin, &clock, &boss, districts[0..]);
             }
         }

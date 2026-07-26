@@ -1,55 +1,51 @@
 # Empire & Kin
 
-**New York City mob life simulator** — 1930s or 1980s.
+**New York City mob life** — 1930s or 1980s · real-time free-roam + empire.
 
-Real-time free-roam + living crew + empire management.
-
-**Version:** `0.1.1-alpha`  
+**Version:** `0.1.2-alpha`  
 **Stack:** Zig 0.16 · GLFW + OpenGL 3.3 · `engine.Backend`
 
-## Art
-Public-domain historical sources preferred — `docs/ART_SOURCES.md`.
+## What’s in this build
 
-## Status
-**Alpha track complete (A1–A10)** + GPU path verified on Windows.  
-**B1 bitmap font** · collision · smoothed camera · job respawn · toasts  
-**Full handover:** [`docs/HANDOVER.md`](docs/HANDOVER.md)
+- Readable bitmap HUD, framed panels, status feed
+- Little Italy block: sidewalks, crosswalks, tenements, alley, safehouse
+- Ambient **pedestrians** and **traffic**
+- Jobs with **payout choice** (keep vs tithe)
+- **Safehouse** heal + **bribe** ($500)
+- Empire: street **collection**, racket **upgrade** ($800)
+- **Tiered goals** (control + cash)
+- Heat decay, reputation pay bonus, job cancel if you leave the marker
 
-## Play (Linux / WSL display)
+## Build
 
 ```bash
-# Headless (no GPU libs)
+# Headless
 zig build run-headless
 
-# GPU on Linux (needs libglfw + OpenGL)
-sudo apt install libglfw3-dev libgl1-mesa-dev
+# Linux GPU
 zig build run -Dgpu=true
-```
 
-## Windows cross-compile from WSL
-
-```bash
-# Unpack official GLFW WIN64 prebuilt, then:
+# Windows cross-compile from WSL
 export GLFW_WIN=$HOME/glfw-3.4.bin.WIN64
 zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
   -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
-# Copy zig-out/bin/empire.exe AND glfw3.dll next to each other on Windows
+# empire.exe + glfw3.dll side by side
 ```
 
-Boot → **[1] New Game** → pick era **[Enter]** → free-roam.
+## Controls
 
 | Key | Action |
 |-----|--------|
 | WASD | Move / drive |
-| E | Job or vehicle |
+| E | Job, car, safehouse |
+| R | Bribe at safehouse / collect (empire rackets) |
+| F | Attack / upgrade racket (empire) |
 | Esc | Empire menu |
-| F | Attack (in fight) |
-| F5 / F9 | Quick-save / load |
-| H / X | Next tip / dismiss tips |
+| 1 / 2 | Job payout choice |
 | Tab | Empire panels |
-| 1–5 | Crew orders (paused) |
+| F5 / F9 | Save / load |
+| H / X | Tips |
 
 ## Docs
-- **`docs/HANDOVER.md`** — architecture, instructions, full future plan
-- `docs/ALPHA_ROADMAP.md` · `docs/ALPHA_CHECKLIST.md`
-- `docs/GFX_ARCHITECTURE.md` · `docs/ART_SOURCES.md`
+
+[`docs/HANDOVER.md`](docs/HANDOVER.md)

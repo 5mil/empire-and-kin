@@ -1,30 +1,20 @@
 # Empire & Kin
 
-**New York City mob life** — 1930s / 1980s · real-time free-roam + empire.
+**NYC mob life** — 1930s / 1980s · real-time free-roam + empire.
 
-**Version:** `0.1.4-alpha`  
+**Version:** `0.1.6-alpha`  
 **Stack:** Zig 0.16 · GLFW + OpenGL 3.3
 
-## Agency map (Little Italy)
+## Snapshot
 
-| Spot | Key | Effect |
-|------|-----|--------|
-| Cyan poles | E | Jobs (stay in radius) |
-| Green club | E / R | Heal / bribe $500 |
-| Brown fence ~(24,16) | E | Cool heat / clear star |
-| Stash crate ~(4,26) | E | Bank $250 off books |
-| White Doc ~(20,26) | E | Full heal $300 |
-| Purple numbers ~(6,12) | E | Bet $100 |
-| Esc menu | 1–5 / R / F | Orders, collect, upgrade |
+Dense Little Italy block with 15+ E-key contacts, jobs, empire menu, ambush/patrol, tiered goals, expanded save.
 
-## Build (Windows from WSL)
+See [`docs/CONTROLS.md`](docs/CONTROLS.md) and [`docs/HANDOVER.md`](docs/HANDOVER.md).
+
+## Windows build (WSL)
 
 ```bash
 export GLFW_WIN=$HOME/glfw-3.4.bin.WIN64
 zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
   -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
 ```
-
-## Docs
-
-[`docs/HANDOVER.md`](docs/HANDOVER.md)

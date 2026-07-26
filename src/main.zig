@@ -36,6 +36,8 @@ const radio = @import("game/radio.zig");
 const turf = @import("game/turf.zig");
 const bartender = @import("game/bartender.zig");
 const medkit = @import("game/medkit.zig");
+const reputation_tick = @import("game/reputation_tick.zig");
+const milestone = @import("game/milestone.zig");
 const scene = @import("engine/scene.zig");
 const input = @import("engine/input.zig");
 const controller = @import("engine/controller.zig");
@@ -65,6 +67,10 @@ const morale_ui = @import("engine/morale_ui.zig");
 const loan_ui = @import("engine/loan_ui.zig");
 const reticle = @import("engine/reticle.zig");
 const debug_overlay = @import("engine/debug_overlay.zig");
+const rep_ui = @import("engine/rep_ui.zig");
+const stash_ui = @import("engine/stash_ui.zig");
+const clock_ui = @import("engine/clock_ui.zig");
+const district_label = @import("engine/district_label.zig");
 const backend = @import("engine/backend.zig");
 
 const gfx_mod = if (build_options.enable_gpu)
@@ -110,11 +116,13 @@ pub fn main(init: std.process.Init) !void {
         mission_ui.spawnJob(402, .protection, 8.0, 28.0),
         mission_ui.spawnJob(403, .smuggling, 22.0, 12.0),
         mission_ui.spawnJob(404, .protection, 12.0, 16.0),
+        mission_ui.spawnJob(405, .hit, 26.0, 18.0),
     };
     jobs[0].duration = balance.BOOTLEG_DURATION;
     jobs[1].duration = balance.PROTECTION_DURATION;
     jobs[2].duration = balance.SMUGGLING_DURATION;
     jobs[3].duration = balance.PROTECTION_DURATION;
+    jobs[4].duration = 5.0;
 
     var streets: living.StreetLife = .{};
     var police: living.PoliceState = .{};
@@ -140,6 +148,7 @@ pub fn main(init: std.process.Init) !void {
     var inv: inventory_mod.Inventory = .{};
     _ = inv.add(.medkit);
     var patrol_car: cop_car.CopCar = .{};
+    var marks: milestone.Flags = .{};
     var weather = weather_mod.Weather.clear;
     var selected_era: era_mod.Era = .nyc_1930s;
     var world_ready = false;
@@ -215,9 +224,11 @@ pub fn main(init: std.process.Init) !void {
                 toast.show(msg, 2.5);
                 feed.push(msg);
                 respect.earnStreet(&emp, 1);
+                if (milestone.markJob(&marks)) |m| feed.push(m);
                 if (goals.check(&goal, districts[0], eco)) {
                     toast.show("GOAL TIER UP", 3.5);
                     feed.push("Goal tier advanced");
+                    if (milestone.markGoal(&marks)) |m| feed.push(m);
                 }
             }
             const car_ptr0 = garage.activeVehicle(&fleet);
@@ -317,7 +328,7 @@ pub fn main(init: std.process.Init) !void {
                     }
                 }
                 if (!used) {
-                    const res = interact.tryE(&boss, &eco, &districts[0], &inv, &stash, &rival, frame_seed, &safehouse_cd);
+                    const res = interact.tryE(&boss, &eco, &districts[0], &inv, &stash, &rival, &emp, frame_seed, &safehouse_cd);
                     if (res.handled) {
                         toast.show(res.msg, 2.0);
                         feed.push(res.msg);
@@ -343,6 +354,7 @@ pub fn main(init: std.process.Init) !void {
                         boss.wanted_level = 0;
                         toast.show("Bribed cops", 2.5);
                         feed.push("Bribe paid");
+                        if (milestone.markBribe(&marks)) |m| feed.push(m);
                     }
                 } else if (bartender.near(boss)) {
                     if (bartender.buyTip(&eco, &districts[0])) {
@@ -380,6 +392,7 @@ pub fn main(init: std.process.Init) !void {
 
             if (day_cycle.crossed(&dayw, clock)) {
                 loan_mod.tickDay(&loan, &eco);
+                reputation_tick.daily(&emp, districts[0]);
                 feed.push("A new day");
                 if (loan.due > 0) feed.push("Loan still due");
             }
@@ -448,6 +461,7 @@ pub fn main(init: std.process.Init) !void {
             if (goals.check(&goal, districts[0], eco)) {
                 toast.show("GOAL TIER UP", 3.5);
                 feed.push("Goal tier up");
+                if (milestone.markGoal(&marks)) |m| feed.push(m);
             }
 
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
@@ -470,6 +484,10 @@ pub fn main(init: std.process.Init) !void {
             threat.draw(gfx, districts[0].heat, boss.wanted_level);
             morale_ui.draw(gfx, the_kin);
             loan_ui.draw(gfx, loan);
+            rep_ui.draw(gfx, emp);
+            stash_ui.draw(gfx, stash);
+            clock_ui.draw(gfx, clock);
+            district_label.draw(gfx, boss.current_district);
             reticle.draw(gfx, job_working);
             debug_overlay.draw(gfx, frame_seed, dt);
             prompt.draw(gfx, action_prompt);

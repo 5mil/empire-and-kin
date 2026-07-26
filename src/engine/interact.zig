@@ -5,6 +5,7 @@ const economy = @import("../game/economy.zig");
 const city = @import("../game/city.zig");
 const inventory = @import("../game/inventory.zig");
 const rival = @import("../game/rival.zig");
+const crew = @import("../game/crew.zig");
 const fence = @import("../game/fence.zig");
 const stash_mod = @import("../game/stash.zig");
 const doc = @import("../game/doc.zig");
@@ -18,6 +19,8 @@ const dock = @import("../game/dock.zig");
 const blackjack = @import("../game/blackjack.zig");
 const informant = @import("../game/informant.zig");
 const warehouse = @import("../game/warehouse.zig");
+const arcade = @import("../game/arcade.zig");
+const taxi = @import("../game/taxi.zig");
 const scene = @import("scene.zig");
 const balance = @import("../game/balance.zig");
 
@@ -40,6 +43,8 @@ pub fn promptNear(p: player.Player) []const u8 {
     if (blackjack.near(p)) return "[E] Gamble $100";
     if (informant.near(p)) return "[E] Informant $250";
     if (warehouse.near(p)) return "[E] Warehouse $500";
+    if (arcade.near(p)) return "[E] Arcade $10";
+    if (taxi.near(p)) return "[E] Taxi home $40";
     if (scene.nearSafehouse(p)) return "[E] heal  [R] bribe";
     return "";
 }
@@ -51,6 +56,7 @@ pub fn tryE(
     inv: *inventory.Inventory,
     stash: *stash_mod.Stash,
     riv: *rival.Rival,
+    c: *crew.Crew,
     seed: u32,
     safehouse_cd: *f64,
 ) Result {
@@ -87,10 +93,7 @@ pub fn tryE(
         return .{ .handled = true, .msg = "Need $25" };
     }
     if (newspaper.near(p.*)) {
-        if (newspaper.buyPaper(eco, seed)) |line| {
-            _ = line;
-            return .{ .handled = true, .msg = "Bought paper" };
-        }
+        if (newspaper.buyPaper(eco, seed)) |_| return .{ .handled = true, .msg = "Bought paper" };
         return .{ .handled = true, .msg = "Need $5" };
     }
     if (church.near(p.*)) {
@@ -113,8 +116,16 @@ pub fn tryE(
         return .{ .handled = true, .msg = "Need $250" };
     }
     if (warehouse.near(p.*)) {
-        if (warehouse.bigDeposit(stash, eco)) return .{ .handled = true, .msg = "Warehouse stashed $500" };
+        if (warehouse.bigDeposit(stash, eco)) return .{ .handled = true, .msg = "Warehouse $500" };
         return .{ .handled = true, .msg = "Need $500 cash" };
+    }
+    if (arcade.near(p.*)) {
+        if (arcade.play(eco, c)) return .{ .handled = true, .msg = "Arcade" };
+        return .{ .handled = true, .msg = "Need $10" };
+    }
+    if (taxi.near(p.*)) {
+        if (taxi.rideHome(p, eco)) return .{ .handled = true, .msg = "Taxi home" };
+        return .{ .handled = true, .msg = "Need $40" };
     }
     if (scene.nearSafehouse(p.*) and safehouse_cd.* <= 0) {
         player.heal(p, 25);
@@ -140,4 +151,6 @@ pub fn drawMarkers(gfx: backend.Backend) void {
     gfx.drawBox(.{ .x = blackjack.DEN_X, .y = 0.8, .z = blackjack.DEN_Z }, 2.0, 1.6, 2.0, backend.Color.rgb(80, 40, 60));
     gfx.drawBox(.{ .x = informant.INF_X, .y = 0.7, .z = informant.INF_Z }, 0.8, 1.4, 0.8, backend.Color.rgb(70, 70, 50));
     gfx.drawBox(.{ .x = warehouse.WH_X, .y = 1.5, .z = warehouse.WH_Z }, 3.5, 3.0, 3.5, backend.Color.rgb(100, 95, 85));
+    gfx.drawBox(.{ .x = arcade.ARC_X, .y = 0.6, .z = arcade.ARC_Z }, 0.8, 1.2, 0.8, backend.Color.rgb(200, 50, 80));
+    gfx.drawBox(.{ .x = taxi.TAXI_X, .y = 0.5, .z = taxi.TAXI_Z }, 1.8, 1.0, 3.0, backend.Color.rgb(220, 180, 40));
 }

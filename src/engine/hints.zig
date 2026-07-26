@@ -19,12 +19,12 @@ pub const Hints = struct {
 
 pub fn text(id: HintId) []const u8 {
     return switch (id) {
-        .move => "TIP: WASD toward cyan job poles",
-        .job => "TIP: Near a pole press E to work",
-        .choice => "TIP: After a job pick [1] keep or [2] tithe",
-        .safehouse => "TIP: Green door club - E to heal / cool heat",
-        .empire => "TIP: Esc empire, R on Rackets = collect street",
-        .goal => "TIP: Goal: raise control and stack $5000",
+        .move => "TIP: WASD toward cyan poles; stay near while working",
+        .job => "TIP: After job [1] keep cash or [2] tithe crew",
+        .choice => "TIP: Green club [E] heal  [R] bribe $500",
+        .safehouse => "TIP: Esc empire  R collect  F upgrade racket $800",
+        .empire => "TIP: Goal tiers: raise control and stack cash",
+        .goal => "TIP: Heat cools slowly when you lay low",
         .done => "",
     };
 }

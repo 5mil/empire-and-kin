@@ -25,6 +25,9 @@ const boot_mod = @import("engine/boot.zig");
 const world_sim = @import("engine/world_sim.zig");
 const hints = @import("engine/hints.zig");
 const combat_ui = @import("engine/combat_ui.zig");
+const toast_mod = @import("engine/toast.zig");
+const camera = @import("engine/camera.zig");
+const minimap = @import("engine/minimap.zig");
 
 const gfx_mod = if (build_options.enable_gpu)
     @import("engine/gl_backend.zig")
@@ -34,16 +37,14 @@ else
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
 
-    std.debug.print("Empire & Kin - ALPHA track (A1-A10)\n\n", .{});
+    std.debug.print("Empire & Kin - ALPHA\n", .{});
     const gfx = gfx_mod.getBackend();
     try gfx.init("Empire & Kin", 1280, 720);
-    std.debug.print("[main] gfx.init ok\n", .{});
 
     var boot: boot_mod.BootState = .{};
     boot.has_save = (save.readFromDisk(io) catch null) != null;
-    std.debug.print("[main] save check ok has_save={}\n", .{boot.has_save});
 
-    var clock = time.Clock{ .time_scale = 20.0 };
+    var clock = time.Clock{ .time_scale = balance.TIME_SCALE_DEMO };
     var the_kin = crew.createStarterCrew();
     var eco = economy.init();
     eco.treasury = balance.STARTING_TREASURY;
@@ -83,8 +84,11 @@ pub fn main(init: std.process.Init) !void {
     var ws: world_sim.WorldSim = .{};
     var tip: hints.Hints = .{};
     var cui: combat_ui.CombatUI = .{};
+    var toast: toast_mod.Toast = .{};
+    var follow: camera.FollowCam = .{};
     var selected_era: era_mod.Era = .nyc_1930s;
     var world_ready = false;
+    var heal_accum: f32 = 0;
 
     var edge_ord: [5]input.ButtonEdge = .{ .{}, .{}, .{}, .{}, .{} };
     var edge_tab: input.ButtonEdge = .{};
@@ -102,16 +106,12 @@ pub fn main(init: std.process.Init) !void {
     var edge_x: input.ButtonEdge = .{};
     var frame_seed: u32 = 0;
 
-    std.debug.print("[main] entering loop\n", .{});
-
     while (!gfx.shouldClose()) {
         gfx.beginFrame();
         const dt = gfx.deltaTime();
         const raw = gfx_mod.pollRawKeys();
         frame_seed +%= 1;
-        if (frame_seed <= 3) {
-            std.debug.print("[main] frame {d} boot={s}\n", .{ frame_seed, @tagName(boot.phase) });
-        }
+        toast.tick(dt);
 
         if (boot.phase != .playing) {
             boot_mod.handle(&boot, raw, &edge_1, &edge_2, &edge_enter);
@@ -136,10 +136,12 @@ pub fn main(init: std.process.Init) !void {
         if (edge_f5.pressed(raw.f5)) {
             const snap = save.capture(eco, the_kin, clock, boss, &districts);
             save.writeToDisk(io, snap) catch {};
+            toast.show("Saved.", balance.TOAST_SAVE_SEC);
         }
         if (edge_f9.pressed(raw.f9)) {
             if (save.readFromDisk(io) catch null) |data| {
                 save.applyTo(data, &eco, &the_kin, &clock, &boss, districts[0..]);
+                toast.show("Loaded.", balance.TOAST_SAVE_SEC);
             }
         }
 
@@ -149,6 +151,9 @@ pub fn main(init: std.process.Init) !void {
         const in_car = if (car_ptr) |v| v.occupied else false;
         const speed: f32 = if (car_ptr) |v| v.speed else boss.speed;
         _ = ctrl.tick(raw, &boss, if (in_car) 0 else dt);
+
+        const near_any = mission_ui.anyNear(&jobs, boss);
+        const cam = follow.update(boss, in_car, dt);
 
         if (ctrl.paused) {
             const keys = empire_ui.MenuKeys{
@@ -166,7 +171,7 @@ pub fn main(init: std.process.Init) !void {
             };
             empire_ui.handleMenu(keys, &emp, &the_kin, &portfolio, &fleet, districts[0..], &menu, boss.x, boss.y);
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
-            scene.drawMinimalScene(gfx, boss, living.currentPeriod(clock), car_opt);
+            scene.drawMinimalScene(gfx, boss, living.currentPeriod(clock), car_opt, cam, selected_era, near_any);
             empire_ui.draw(gfx, emp, the_kin, portfolio, fleet, &districts, menu);
         } else {
             if (edge_interact.pressed(raw.e)) {
@@ -175,14 +180,20 @@ pub fn main(init: std.process.Init) !void {
                     if (mission_ui.nearMarker(j.*, boss) and j.state == .available) {
                         if (mission_ui.tryStart(j, boss)) {
                             used = true;
+                            toast.show("Job started", 1.5);
                             break;
                         }
                     }
                 }
                 if (!used) {
                     if (car_ptr) |car| {
-                        if (car.occupied) action.exitVehicle(car, &boss)
-                        else if (action.nearVehicle(car.*, boss, 4.0)) action.enterVehicle(car, &boss);
+                        if (car.occupied) {
+                            action.exitVehicle(car, &boss);
+                            toast.show("Left vehicle", 1.2);
+                        } else if (action.nearVehicle(car.*, boss, 4.0)) {
+                            action.enterVehicle(car, &boss);
+                            toast.show("Entered vehicle", 1.2);
+                        }
                     }
                 }
             }
@@ -200,22 +211,42 @@ pub fn main(init: std.process.Init) !void {
             living.spawnStreetLife(&streets, living.activityLevel(period));
             living.tickStreetLife(&streets, sim_dt);
             world_sim.tick(&ws, sim_dt, districts[0..], &the_kin, &eco, &boss);
+
             for (&jobs) |*j| {
-                _ = mission_ui.tickJob(j, &boss, &eco, &districts[0], dt);
+                const pay = mission_ui.tickJob(j, &boss, &eco, &districts[0], dt);
+                if (pay > 0) {
+                    var buf: [48]u8 = undefined;
+                    const line = std.fmt.bufPrint(&buf, "Job done +${d}", .{pay}) catch "Job done";
+                    toast.show(line, balance.TOAST_JOB_SEC);
+                }
             }
+
+            // design 18: passive heal when calm
+            if (districts[0].heat < balance.HEAL_MAX_HEAT and !cui.encounter.active and boss.health < 100) {
+                heal_accum += balance.HEAL_PER_SEC * @as(f32, @floatCast(dt));
+                if (heal_accum >= 1.0) {
+                    const amt: u8 = @intFromFloat(@min(heal_accum, 5.0));
+                    player.heal(&boss, amt);
+                    heal_accum -= @as(f32, @floatFromInt(amt));
+                }
+            }
+
             combat_ui.maybeSpawn(&cui, boss, districts[0].heat, frame_seed);
             combat_ui.tick(&cui, &boss, dt, edge_f.pressed(raw.f) and cui.encounter.active);
             wanted_ui.tickWanted(&boss, &police, &chase, districts[0].heat, period, speed, dt, clock.elapsed);
+
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
-            scene.drawMinimalScene(gfx, boss, period, car_opt);
+            scene.drawMinimalScene(gfx, boss, period, car_opt, cam, selected_era, near_any);
             hud.drawDistrictDebug(gfx, boss, &districts, clock, eco, period, false, police.alert_level);
-            wanted_ui.drawStars(gfx, boss.wanted_level, 10, 248);
-            wanted_ui.drawPoliceBanner(gfx, police, chase, 266);
+            wanted_ui.drawStars(gfx, boss.wanted_level, 10, 140);
+            wanted_ui.drawPoliceBanner(gfx, police, chase, 158);
             for (jobs) |j| mission_ui.drawMarker(gfx, j, boss);
-            mission_ui.drawMinimapHint(gfx, jobs[0], boss);
+            mission_ui.drawMinimapHint(gfx, &jobs, boss);
+            minimap.draw(gfx, boss, &jobs);
             world_sim.drawBanner(gfx, ws);
             hints.draw(gfx, tip);
             combat_ui.draw(gfx, cui);
+            toast.draw(gfx);
         }
         gfx.endFrame();
     }
@@ -223,9 +254,5 @@ pub fn main(init: std.process.Init) !void {
     const final_snap = save.capture(eco, the_kin, clock, boss, &districts);
     save.writeToDisk(io, final_snap) catch {};
     gfx.shutdown();
-    std.debug.print("\n=== ALPHA SLICE EXIT ===\nSaved {s} | ${d} | Era {s}\n", .{
-        save.SAVE_PATH,
-        eco.treasury,
-        era_mod.name(selected_era),
-    });
+    std.debug.print("=== EXIT === Saved | ${d} | {s}\n", .{ eco.treasury, era_mod.name(selected_era) });
 }

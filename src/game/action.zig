@@ -3,10 +3,7 @@ const player = @import("player.zig");
 const combat = @import("combat.zig");
 const missions = @import("missions.zig");
 const city = @import("city.zig");
-
-// ---------------------------------------------------------------------------
-// Vehicles
-// ---------------------------------------------------------------------------
+const collision = @import("collision.zig");
 
 pub const VehicleType = enum {
     sedan,
@@ -36,10 +33,10 @@ pub const Vehicle = struct {
 
 pub fn spawnVehicle(vtype: VehicleType, x: f32, y: f32) Vehicle {
     const max_spd: f32 = switch (vtype) {
-        .sedan => 18.0,
-        .truck => 12.0,
-        .motorcycle => 22.0,
-        .taxi => 16.0,
+        .sedan => 16.0,
+        .truck => 11.0,
+        .motorcycle => 20.0,
+        .taxi => 15.0,
     };
     return .{
         .vtype = vtype,
@@ -61,7 +58,6 @@ pub fn enterVehicle(v: *Vehicle, p: *player.Player) void {
 pub fn exitVehicle(v: *Vehicle, p: *player.Player) void {
     v.occupied = false;
     v.speed = 0;
-    // leave player at vehicle position
     p.x = v.x;
     p.y = v.y;
 }
@@ -74,22 +70,30 @@ pub fn nearVehicle(v: Vehicle, p: player.Player, radius: f32) bool {
 
 pub fn drive(v: *Vehicle, p: *player.Player, dx: f32, dy: f32, dt: f64) void {
     if (!v.occupied) return;
-    const accel = @as(f32, @floatCast(dt)) * 8.0;
-    v.speed = @min(v.max_speed, v.speed + accel);
-    const dist = v.speed * @as(f32, @floatCast(dt));
-    v.x += dx * dist;
-    v.y += dy * dist;
+    const dt32: f32 = @floatCast(dt);
+    const input_mag = @sqrt(dx * dx + dy * dy);
+    if (input_mag > 0.15) {
+        v.speed = @min(v.max_speed, v.speed + 10.0 * dt32);
+        p.facing_yaw = std.math.atan2(dy, dx);
+    } else {
+        v.speed = @max(0, v.speed - 14.0 * dt32);
+    }
+    const dist = v.speed * dt32;
+    const mx = if (input_mag > 0.15) dx else @cos(p.facing_yaw);
+    const my = if (input_mag > 0.15) dy else @sin(p.facing_yaw);
+    const resolved = collision.resolveMove(v.x, v.y, mx * dist, my * dist, 1.1);
+    if (resolved.x == v.x and resolved.z == v.y and dist > 0.01) {
+        v.speed *= 0.4; // hit wall
+    }
+    v.x = resolved.x;
+    v.y = resolved.z;
     p.x = v.x;
     p.y = v.y;
 }
 
-// ---------------------------------------------------------------------------
-// Chase
-// ---------------------------------------------------------------------------
-
 pub const ChaseState = struct {
     active: bool = false,
-    pursuit_heat: u8 = 0, // 0-5
+    pursuit_heat: u8 = 0,
     distance: f32 = 100.0,
     escaped: bool = false,
     caught: bool = false,
@@ -107,7 +111,6 @@ pub fn startChase(c: *ChaseState, initial_heat: u8) void {
 
 pub fn tickChase(c: *ChaseState, player_speed: f32, dt: f64) void {
     if (!c.active) return;
-    // Higher speed pulls away; low speed lets cops close in
     const closing = 12.0 - player_speed * 0.4;
     c.distance += @as(f32, @floatCast(dt)) * (-closing);
     if (c.distance <= 0) {
@@ -119,10 +122,6 @@ pub fn tickChase(c: *ChaseState, player_speed: f32, dt: f64) void {
         c.active = false;
     }
 }
-
-// ---------------------------------------------------------------------------
-// Open-world mission trigger
-// ---------------------------------------------------------------------------
 
 pub const WorldMission = struct {
     mission: missions.Mission,
@@ -138,10 +137,6 @@ pub fn canStartMission(wm: WorldMission, p: player.Player) bool {
     const dy = p.y - wm.y;
     return (dx * dx + dy * dy) <= (wm.radius * wm.radius);
 }
-
-// ---------------------------------------------------------------------------
-// Real-time combat encounter
-// ---------------------------------------------------------------------------
 
 pub const Encounter = struct {
     enemy: combat.Fighter = .{},
@@ -169,7 +164,6 @@ pub fn combatTick(e: *Encounter, p: *player.Player, dt: f64, player_attacking: b
             e.active = false;
         }
     }
-    // Enemy hits back occasionally
     if (e.active and e.enemy.hp > 0) {
         if (dt > 0.5) {
             player.takeDamage(p, 2);

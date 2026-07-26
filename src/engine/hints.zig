@@ -8,6 +8,8 @@ pub const HintId = enum {
     choice,
     safehouse,
     empire,
+    fence,
+    numbers,
     goal,
     done,
 };
@@ -23,8 +25,10 @@ pub fn text(id: HintId) []const u8 {
         .job => "TIP: After job [1] keep cash or [2] tithe crew",
         .choice => "TIP: Green club [E] heal  [R] bribe $500",
         .safehouse => "TIP: Esc empire  R collect  F upgrade racket $800",
-        .empire => "TIP: Goal tiers: raise control and stack cash",
-        .goal => "TIP: Heat cools slowly when you lay low",
+        .empire => "TIP: Brown fence cools heat; stash hides cash",
+        .fence => "TIP: Doc heals full $300; purple box is numbers",
+        .numbers => "TIP: Goal tiers raise control + treasury targets",
+        .goal => "TIP: Heat cools when you lay low; watch the feed",
         .done => "",
     };
 }
@@ -35,7 +39,9 @@ pub fn advance(h: *Hints) void {
         .job => .choice,
         .choice => .safehouse,
         .safehouse => .empire,
-        .empire => .goal,
+        .empire => .fence,
+        .fence => .numbers,
+        .numbers => .goal,
         .goal => .done,
         .done => .done,
     };

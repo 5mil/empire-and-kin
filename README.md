@@ -2,14 +2,14 @@
 
 **NYC mob life** — 1930s / 1980s · real-time free-roam + empire.
 
-**Version:** `0.1.6-alpha`  
+**Version:** `0.1.8-alpha`  
 **Stack:** Zig 0.16 · GLFW + OpenGL 3.3
 
-## Snapshot
+Dense Little Italy block: 20+ contacts, 5 jobs, empire menu, ambush/patrol, goals, expanded save.
 
-Dense Little Italy block with 15+ E-key contacts, jobs, empire menu, ambush/patrol, tiered goals, expanded save.
-
-See [`docs/CONTROLS.md`](docs/CONTROLS.md) and [`docs/HANDOVER.md`](docs/HANDOVER.md).
+- [`docs/MAP.md`](docs/MAP.md) — contact coordinates  
+- [`docs/CONTROLS.md`](docs/CONTROLS.md) — bindings  
+- [`docs/HANDOVER.md`](docs/HANDOVER.md) — status
 
 ## Windows build (WSL)
 

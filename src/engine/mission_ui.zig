@@ -5,6 +5,7 @@ const missions = @import("../game/missions.zig");
 const player = @import("../game/player.zig");
 const economy = @import("../game/economy.zig");
 const city = @import("../game/city.zig");
+const empire = @import("../game/empire.zig");
 const wanted_ui = @import("wanted_ui.zig");
 
 pub const JobState = enum { available, in_progress, done };
@@ -37,6 +38,13 @@ pub fn nearMarker(job: ActiveJob, p: player.Player) bool {
     return action.canStartMission(job.world, p) and job.state == .available;
 }
 
+pub fn inRadius(job: ActiveJob, p: player.Player) bool {
+    const dx = p.x - job.world.x;
+    const dy = p.y - job.world.y;
+    const r = job.world.radius + 2.0;
+    return dx * dx + dy * dy <= r * r;
+}
+
 pub fn anyNear(jobs: []const ActiveJob, p: player.Player) bool {
     for (jobs) |j| {
         if (nearMarker(j, p) or j.state == .in_progress) return true;
@@ -52,8 +60,8 @@ pub fn tryStart(job: *ActiveJob, p: player.Player) bool {
     return true;
 }
 
-/// Returns payout when job completes; does NOT bank cash (caller choice UI does).
-pub fn tickJob(job: *ActiveJob, p: *player.Player, eco: *economy.Economy, district: *city.District, dt: f64) u32 {
+/// Returns payout when job completes. Reputation boosts pay. Leaving radius cancels.
+pub fn tickJob(job: *ActiveJob, p: *player.Player, eco: *economy.Economy, district: *city.District, emp: empire.Empire, dt: f64) u32 {
     _ = eco;
     if (job.state == .done) {
         job.respawn_timer -= @as(f32, @floatCast(dt));
@@ -66,13 +74,27 @@ pub fn tickJob(job: *ActiveJob, p: *player.Player, eco: *economy.Economy, distri
         return 0;
     }
     if (job.state != .in_progress) return 0;
+
+    // Cancel if player leaves area
+    if (!inRadius(job.*, p.*)) {
+        job.state = .available;
+        job.progress = 0;
+        job.world.active = true;
+        return 0;
+    }
+
     job.progress += @as(f32, @floatCast(dt)) / job.duration;
     if (job.progress < 1.0) return 0;
     job.progress = 1.0;
     job.state = .done;
     job.world.active = false;
     job.respawn_timer = 10.0;
-    const pay = missions.completeMission(&job.world.mission);
+    var pay = missions.completeMission(&job.world.mission);
+    // Reputation bonus up to +25%
+    if (emp.reputation > 0) {
+        const bonus = @as(u32, @intCast(@min(25, emp.reputation))) * pay / 100;
+        pay += bonus;
+    }
     const heat_add: u8 = @min(20, job.world.mission.risk * 2);
     district.heat = @min(100, district.heat + heat_add);
     if (job.world.mission.risk >= 6) wanted_ui.addWanted(p, 1);
@@ -89,7 +111,7 @@ pub fn drawMarker(gfx: backend.Backend, job: ActiveJob, p: player.Player) void {
             gfx.drawText(line, 10, 360, backend.Color.rgb(120, 230, 255));
         } else {
             const pct: u32 = @intFromFloat(@min(100.0, job.progress * 100.0));
-            const line = std.fmt.bufPrint(&buf, "Working: {s}  {d}%", .{ job.world.mission.name, pct }) catch "";
+            const line = std.fmt.bufPrint(&buf, "Working: {s}  {d}%  (stay near)", .{ job.world.mission.name, pct }) catch "";
             gfx.drawText(line, 10, 360, backend.Color.rgb(255, 210, 90));
         }
     }

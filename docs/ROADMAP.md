@@ -1,21 +1,20 @@
 # Roadmap
 
-## Done (0.1.4)
+## Done (0.1.6)
 
-- Headless + GPU Windows path
-- Agency interactables on one block
-- Empire loop, goals, expanded save
+- Dense Little Italy contact map (15+ interactables)
+- Interact hub, ambush, patrol car, turf, radio
+- HUD: threat, morale, loan, score, compass
 
 ## Next (0.2)
 
-- [ ] Compile-fix after full pull
-- [ ] Ambush / patrol visual cops
-- [ ] Second district block (Hell's Kitchen)
-- [ ] Indoor social-club scene
-- [ ] Texture atlas + better font
+- [ ] Full compile-fix after playtest
+- [ ] Wire bakery/barber/laundry/perfume into interact
+- [ ] Hell's Kitchen second block
+- [ ] Indoor social club
+- [ ] Font atlas + textures
 
 ## Later
 
-- [ ] Audio cues from soundtrack.zig
-- [ ] Multiplayer / co-op? (maybe never)
-- [ ] Steam-facing build packaging
+- [ ] Audio from soundtrack.zig
+- [ ] Packaging

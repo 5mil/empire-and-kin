@@ -58,6 +58,11 @@ fn errorCallback(code: c_int, desc: [*:0]const u8) callconv(.c) void {
     std.debug.print("[GLFW] error {d}: {s}\n", .{ code, desc });
 }
 
+fn positiveU32(v: c_int) u32 {
+    if (v <= 0) return 1;
+    return @intCast(v);
+}
+
 pub const Window = struct {
     handle: *c.GLFWwindow,
     width: u32,
@@ -80,7 +85,7 @@ pub const Window = struct {
         var fb_w: c_int = 0;
         var fb_h: c_int = 0;
         c.glfwGetFramebufferSize(win, &fb_w, &fb_h);
-        return .{ .handle = win, .width = @intCast(fb_w), .height = @intCast(fb_h) };
+        return .{ .handle = win, .width = positiveU32(fb_w), .height = positiveU32(fb_h) };
     }
 
     pub fn destroy(self: *Window) void {
@@ -93,8 +98,8 @@ pub const Window = struct {
         var fb_w: c_int = 0;
         var fb_h: c_int = 0;
         c.glfwGetFramebufferSize(self.handle, &fb_w, &fb_h);
-        self.width = @intCast(fb_w);
-        self.height = @intCast(fb_h);
+        self.width = positiveU32(fb_w);
+        self.height = positiveU32(fb_h);
     }
 
     pub fn swap(self: *Window) void {

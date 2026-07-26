@@ -9,8 +9,6 @@ const player = @import("../game/player.zig");
 const wanted_ui = @import("wanted_ui.zig");
 const backend = @import("backend.zig");
 
-/// A3 + A4 — periodic events and rival pressure
-
 pub const WorldSim = struct {
     event_timer: f64 = 0,
     event_interval: f64 = 25.0,
@@ -65,7 +63,7 @@ fn applyEvent(
 ) void {
     ws.last_event_title = ev.title;
     ws.last_event_desc = ev.description;
-    ws.banner_ttl = 8.0;
+    ws.banner_ttl = 6.0;
 
     if (districts.len > 0) {
         if (ev.heat_change > 0) {
@@ -110,13 +108,13 @@ fn applyRivalPressure(ws: *WorldSim, districts: []city.District) void {
         districts[0].control = 0;
     }
     ws.last_event_title = r.name;
-    ws.last_event_desc = "Rival pressure — control slips in your district";
+    ws.last_event_desc = "Rival pressure - control slips";
     ws.banner_ttl = 5.0;
 }
 
 pub fn drawBanner(gfx: backend.Backend, ws: WorldSim) void {
     if (ws.banner_ttl <= 0) return;
     const col = backend.Color.rgb(255, 200, 100);
-    gfx.drawText(ws.last_event_title, 10, 330, col);
-    gfx.drawText(ws.last_event_desc, 10, 348, backend.Color.rgb(200, 180, 140));
+    gfx.drawText(ws.last_event_title, 280, 560, col);
+    gfx.drawText(ws.last_event_desc, 280, 578, backend.Color.rgb(200, 180, 140));
 }

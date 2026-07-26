@@ -1,20 +1,21 @@
 # Roadmap
 
-## Done (0.1.6)
+## Done (0.1.8)
 
-- Dense Little Italy contact map (15+ interactables)
-- Interact hub, ambush, patrol car, turf, radio
-- HUD: threat, morale, loan, score, compass
+- Dense interact map (20+ contacts)
+- 5 jobs + HUD stack + expanded save
+- Ambush / patrol / turf / radio
+- Scene trees + 5 beacons
 
 ## Next (0.2)
 
-- [ ] Full compile-fix after playtest
-- [ ] Wire bakery/barber/laundry/perfume into interact
+- [ ] Compile-fix after full pull
+- [ ] Wire death/hospital, recruit, zone UI into main
 - [ ] Hell's Kitchen second block
 - [ ] Indoor social club
-- [ ] Font atlas + textures
+- [ ] Texture / font pass
 
 ## Later
 
-- [ ] Audio from soundtrack.zig
+- [ ] Audio cues
 - [ ] Packaging

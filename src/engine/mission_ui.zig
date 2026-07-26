@@ -52,8 +52,9 @@ pub fn tryStart(job: *ActiveJob, p: player.Player) bool {
     return true;
 }
 
-/// Returns payout if job just completed this tick.
+/// Returns payout when job completes; does NOT bank cash (caller choice UI does).
 pub fn tickJob(job: *ActiveJob, p: *player.Player, eco: *economy.Economy, district: *city.District, dt: f64) u32 {
+    _ = eco;
     if (job.state == .done) {
         job.respawn_timer -= @as(f32, @floatCast(dt));
         if (job.respawn_timer <= 0) {
@@ -70,10 +71,9 @@ pub fn tickJob(job: *ActiveJob, p: *player.Player, eco: *economy.Economy, distri
     job.progress = 1.0;
     job.state = .done;
     job.world.active = false;
-    job.respawn_timer = 12.0; // real-seconds until next offer
+    job.respawn_timer = 10.0;
     const pay = missions.completeMission(&job.world.mission);
-    eco.treasury += pay;
-    const heat_add: u8 = @min(25, job.world.mission.risk * 3);
+    const heat_add: u8 = @min(20, job.world.mission.risk * 2);
     district.heat = @min(100, district.heat + heat_add);
     if (job.world.mission.risk >= 6) wanted_ui.addWanted(p, 1);
     if (job.world.mission.risk >= 8) wanted_ui.addWanted(p, 1);
@@ -82,21 +82,15 @@ pub fn tickJob(job: *ActiveJob, p: *player.Player, eco: *economy.Economy, distri
 
 pub fn drawMarker(gfx: backend.Backend, job: ActiveJob, p: player.Player) void {
     if (job.state == .done) return;
-    const col = switch (job.state) {
-        .available => backend.Color.rgb(80, 200, 255),
-        .in_progress => backend.Color.rgb(255, 200, 60),
-        .done => backend.Color.rgb(80, 80, 80),
-    };
-    gfx.drawBox(.{ .x = job.world.x, .y = 1.5, .z = job.world.y }, 1.2, 2.4, 1.2, col);
     if (nearMarker(job, p) or job.state == .in_progress) {
         var buf: [96]u8 = undefined;
         if (job.state == .available) {
             const line = std.fmt.bufPrint(&buf, "[E] {s}  ${d}  risk {d}", .{ job.world.mission.name, job.world.mission.reward_cash, job.world.mission.risk }) catch "";
-            gfx.drawText(line, 10, 300, backend.Color.rgb(120, 220, 255));
+            gfx.drawText(line, 10, 360, backend.Color.rgb(120, 230, 255));
         } else {
             const pct: u32 = @intFromFloat(@min(100.0, job.progress * 100.0));
             const line = std.fmt.bufPrint(&buf, "Working: {s}  {d}%", .{ job.world.mission.name, pct }) catch "";
-            gfx.drawText(line, 10, 300, backend.Color.rgb(255, 200, 80));
+            gfx.drawText(line, 10, 360, backend.Color.rgb(255, 210, 90));
         }
     }
 }
@@ -116,9 +110,10 @@ pub fn drawMinimapHint(gfx: backend.Backend, jobs: []const ActiveJob, p: player.
     }
     if (best) |j| {
         var buf: [72]u8 = undefined;
-        const line = std.fmt.bufPrint(&buf, "Nearest job ({d:.0},{d:.0})  d={d:.0}", .{ j.world.x, j.world.y, @sqrt(best_d) }) catch "";
-        gfx.drawText(line, 10, 318, backend.Color.rgb(160, 180, 200));
+        const line = std.fmt.bufPrint(&buf, "Nearest job d={d:.0}", .{@sqrt(best_d)}) catch "";
+        gfx.drawText(line, 10, 378, backend.Color.rgb(160, 180, 200));
+        _ = j;
     } else {
-        gfx.drawText("Jobs refreshing...", 10, 318, backend.Color.rgb(120, 120, 120));
+        gfx.drawText("Jobs refreshing...", 10, 378, backend.Color.rgb(120, 120, 120));
     }
 }

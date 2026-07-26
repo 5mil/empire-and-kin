@@ -38,8 +38,6 @@ pub const Renderer = struct {
         const ground_m = mesh.buildGround(1, .{ 1, 1, 1, 1 }, &g_v, &g_i);
         self.ground = gpu_mesh.GpuMesh.create(ground_m);
 
-        // UI buffer: enough for a full line of glyph pixels as quads
-        // 96 chars * 8*8 pixels * 6 verts * 6 floats worst case is large; batch per glyph instead.
         gl.glGenVertexArrays(1, &self.ui_vao);
         gl.glGenBuffers(1, &self.ui_vbo);
         gl.glBindVertexArray(self.ui_vao);
@@ -164,7 +162,7 @@ pub const Renderer = struct {
 
     /// B1 bitmap font — readable HUD text.
     pub fn drawText(self: *Renderer, text: []const u8, x: i32, y: i32, color: backend.Color) void {
-        const scale: f32 = 2.0; // 8px glyph → 16px on screen
+        const scale: f32 = 2.0;
         const r = @as(f32, @floatFromInt(color.r)) / 255.0;
         const g = @as(f32, @floatFromInt(color.g)) / 255.0;
         const b = @as(f32, @floatFromInt(color.b)) / 255.0;
@@ -173,15 +171,14 @@ pub const Renderer = struct {
         var vert_buf: [4096]f32 = undefined;
         var vcount: usize = 0;
 
-        // Soft shadow / backdrop for readability
-        const bg_w: f32 = @as(f32, @floatFromInt(text.len)) * @as(f32, @floatFromInt(font.CELL_W)) * scale + 4;
-        const bg_h: f32 = @as(f32, @floatFromInt(font.GLYPH_H)) * scale + 4;
-        const bx: f32 = @floatFromInt(x) - 2;
-        const by: f32 = @floatFromInt(y) - 2;
+        const bg_w: f32 = @as(f32, @floatFromInt(text.len)) * @as(f32, @floatFromInt(font.CELL_W)) * scale + 4.0;
+        const bg_h: f32 = @as(f32, @floatFromInt(font.GLYPH_H)) * scale + 4.0;
+        const bx: f32 = @as(f32, @floatFromInt(x)) - 2.0;
+        const by: f32 = @as(f32, @floatFromInt(y)) - 2.0;
         emitQuad(&vert_buf, &vcount, bx, by, bx + bg_w, by + bg_h, 0.02, 0.02, 0.05, 0.65);
 
-        var cx: f32 = @floatFromInt(x);
-        const cy: f32 = @floatFromInt(y);
+        var cx: f32 = @as(f32, @floatFromInt(x));
+        const cy: f32 = @as(f32, @floatFromInt(y));
         for (text) |ch| {
             const rows = font.glyphRows(ch);
             var py: u3 = 0;
@@ -205,7 +202,7 @@ pub const Renderer = struct {
         gl.glDisable(gl.DEPTH_TEST);
         gl.glUseProgram(self.ui_prog);
         const loc = gl.glGetUniformLocation(self.ui_prog, "uScreen");
-        gl.glUniform2f(loc, @floatFromInt(self.width), @floatFromInt(self.height));
+        gl.glUniform2f(loc, @as(f32, @floatFromInt(self.width)), @as(f32, @floatFromInt(self.height)));
         gl.glBindVertexArray(self.ui_vao);
         gl.glBindBuffer(gl.ARRAY_BUFFER, self.ui_vbo);
         gl.glBufferData(gl.ARRAY_BUFFER, @intCast(vcount * @sizeOf(f32)), &vert_buf, gl.DYNAMIC_DRAW);

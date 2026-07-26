@@ -7,6 +7,7 @@ const world = @import("../game/world.zig");
 const properties = @import("../game/properties.zig");
 const garage = @import("../game/garage.zig");
 const action = @import("../game/action.zig");
+const economy = @import("../game/economy.zig");
 
 pub const Panel = enum { rackets, crew, properties, vehicles };
 
@@ -18,6 +19,7 @@ pub const EmpireMenu = struct {
     selected_vehicle: u8 = 0,
     last_msg: []const u8 = "",
     slow_world_tick: bool = true,
+    collect_cooldown: f64 = 0,
 };
 
 pub const MenuKeys = struct {
@@ -62,16 +64,18 @@ pub fn draw(
     var buf: [128]u8 = undefined;
     var y: i32 = 12;
 
-    gfx.drawText("PAUSED - EMPIRE", 280, y, title);
-    y += 20;
-    const tabs = std.fmt.bufPrint(&buf, "[{s}]  Tab=next panel", .{panelName(menu.panel)}) catch "";
-    gfx.drawText(tabs, 280, y, focus_col);
+    gfx.drawText("========================", 280, y, backend.Color.rgb(90, 95, 110));
+    y += 16;
+    gfx.drawText("  PAUSED - EMPIRE", 280, y, title);
     y += 18;
-    const hdr = std.fmt.bufPrint(&buf, "Inf {d}  Rep {d}  Take ${d}/d  Upkeep ${d}", .{
-        emp.influence, emp.reputation, empire.totalRacketIncome(emp), properties.totalUpkeep(pf),
+    const tabs = std.fmt.bufPrint(&buf, "[{s}]  Tab=next", .{panelName(menu.panel)}) catch "";
+    gfx.drawText(tabs, 280, y, focus_col);
+    y += 16;
+    const hdr = std.fmt.bufPrint(&buf, "Inf {d}  Rep {d}  ${d}/d", .{
+        emp.influence, emp.reputation, empire.totalRacketIncome(emp),
     }) catch "";
     gfx.drawText(hdr, 280, y, accent);
-    y += 22;
+    y += 20;
 
     switch (menu.panel) {
         .rackets => y = drawRackets(gfx, emp, c, menu, y, white, dim, title),
@@ -88,10 +92,10 @@ pub fn draw(
 
 fn helpForPanel(p: Panel) []const u8 {
     return switch (p) {
-        .rackets => "Q/E select  Enter assign  1-5 orders",
-        .crew => "Q/E select  1 Collect 2 Rest 3 Enforce 4 Scout 5 Guard",
-        .properties => "Q/E select  Enter upgrade  R repair",
-        .vehicles => "Q/E select  Enter deploy  R repair  F store",
+        .rackets => "Q/E select  Enter assign  R collect street",
+        .crew => "Q/E  1 Collect 2 Rest 3 Enforce 4 Scout 5 Guard",
+        .properties => "Q/E  Enter upgrade  R repair",
+        .vehicles => "Q/E  Enter deploy  R repair  F store",
     };
 }
 
@@ -104,7 +108,7 @@ fn drawRackets(gfx: backend.Backend, emp: empire.Empire, c: crew.Crew, menu: Emp
     while (i < emp.racket_count) : (i += 1) {
         const r = emp.rackets[i];
         const who = if (r.assigned_member) |m| c.members[m].name else "unassigned";
-        const line = std.fmt.bufPrint(&buf, "{s}{d} {s} Lv{d} +h{d} {s}", .{ if (i == menu.selected_racket) ">" else " ", i, empire.racketName(r.rtype), r.level, r.heat_gen, who }) catch "";
+        const line = std.fmt.bufPrint(&buf, "{s}{d} {s} Lv{d} {s}", .{ if (i == menu.selected_racket) ">" else " ", i, empire.racketName(r.rtype), r.level, who }) catch "";
         gfx.drawText(line, 280, y, if (i == menu.selected_racket) white else dim);
         y += 15;
     }
@@ -134,14 +138,9 @@ fn drawProperties(gfx: backend.Backend, pf: properties.Portfolio, menu: EmpireMe
     var i: u8 = 0;
     while (i < pf.count) : (i += 1) {
         const p = pf.items[i];
-        const line = std.fmt.bufPrint(&buf, "{s}{d} {s} Lv{d} cond{d} ${d}", .{ if (i == menu.selected_property) ">" else " ", i, p.name, p.level, p.condition, p.monthly_upkeep }) catch "";
+        const line = std.fmt.bufPrint(&buf, "{s}{d} {s} Lv{d} ${d}", .{ if (i == menu.selected_property) ">" else " ", i, p.name, p.level, p.monthly_upkeep }) catch "";
         gfx.drawText(line, 280, y, if (i == menu.selected_property) white else if (p.condition < 40) danger else dim);
         y += 15;
-        if (i == menu.selected_property) {
-            const det = std.fmt.bufPrint(&buf, "  {s} cap {d}", .{ world.districtName(p.district), p.capacity }) catch "";
-            gfx.drawText(det, 280, y, dim);
-            y += 14;
-        }
     }
     return y;
 }
@@ -155,14 +154,25 @@ fn drawVehicles(gfx: backend.Backend, fleet: garage.Fleet, menu: EmpireMenu, y0:
     while (i < fleet.count) : (i += 1) {
         const ov = fleet.slots[i];
         const active = if (fleet.active_idx) |a| a == i else false;
-        const line = std.fmt.bufPrint(&buf, "{s}{d} {s} HP{d}{s}{s}", .{ if (i == menu.selected_vehicle) ">" else " ", i, ov.label, ov.vehicle.health, if (ov.stored) " STORED" else "", if (active) " ACTIVE" else "" }) catch "";
+        const line = std.fmt.bufPrint(&buf, "{s}{d} {s} HP{d}{s}", .{ if (i == menu.selected_vehicle) ">" else " ", i, ov.label, ov.vehicle.health, if (active) " ACTIVE" else "" }) catch "";
         gfx.drawText(line, 280, y, if (i == menu.selected_vehicle) white else if (ov.vehicle.health < 40) danger else if (active) accent else dim);
         y += 15;
     }
     return y;
 }
 
-pub fn handleMenu(keys: MenuKeys, emp: *empire.Empire, c: *crew.Crew, pf: *properties.Portfolio, fleet: *garage.Fleet, districts: []city.District, menu: *EmpireMenu, player_x: f32, player_y: f32) void {
+pub fn handleMenu(
+    keys: MenuKeys,
+    emp: *empire.Empire,
+    c: *crew.Crew,
+    pf: *properties.Portfolio,
+    fleet: *garage.Fleet,
+    districts: []city.District,
+    menu: *EmpireMenu,
+    player_x: f32,
+    player_y: f32,
+    eco: *economy.Economy,
+) void {
     if (keys.panel_next) {
         menu.panel = switch (menu.panel) { .rackets => .crew, .crew => .properties, .properties => .vehicles, .vehicles => .rackets };
         menu.last_msg = panelName(menu.panel);
@@ -184,6 +194,19 @@ pub fn handleMenu(keys: MenuKeys, emp: *empire.Empire, c: *crew.Crew, pf: *prope
         .rackets => {
             if (keys.primary) {
                 menu.last_msg = if (empire.assignCrewToRacket(emp, menu.selected_racket, menu.selected_member)) "Crew assigned" else "Assign failed";
+            }
+            if (keys.secondary and districts.len > 0) {
+                if (menu.collect_cooldown > 0) {
+                    menu.last_msg = "Collectors already out";
+                } else {
+                    const take: u32 = 350 + @as(u32, emp.influence) * 5;
+                    eco.treasury += take;
+                    districts[0].heat = @min(100, districts[0].heat + 10);
+                    districts[0].control = @min(100, districts[0].control + 4);
+                    emp.influence = @min(100, emp.influence + 1);
+                    menu.collect_cooldown = 25.0;
+                    menu.last_msg = "Street collection done";
+                }
             }
         },
         .crew => {

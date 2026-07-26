@@ -92,10 +92,10 @@ pub fn draw(
 
 fn helpForPanel(p: Panel) []const u8 {
     return switch (p) {
-        .rackets => "Q/E select  Enter assign  R collect street",
-        .crew => "Q/E  1 Collect 2 Rest 3 Enforce 4 Scout 5 Guard",
-        .properties => "Q/E  Enter upgrade  R repair",
-        .vehicles => "Q/E  Enter deploy  R repair  F store",
+        .rackets => "Enter assign  R collect  F upgrade $800",
+        .crew => "1 Collect 2 Rest 3 Enforce 4 Scout 5 Guard",
+        .properties => "Enter upgrade  R repair",
+        .vehicles => "Enter deploy  R repair  F store",
     };
 }
 
@@ -208,13 +208,25 @@ pub fn handleMenu(
                     menu.last_msg = "Street collection done";
                 }
             }
+            if (keys.tertiary) {
+                const cost: u32 = 800;
+                if (eco.treasury >= cost and empire.upgradeRacket(emp, menu.selected_racket)) {
+                    eco.treasury -= cost;
+                    menu.last_msg = "Racket upgraded -$800";
+                } else {
+                    menu.last_msg = "Need $800 or max level";
+                }
+            }
         },
         .crew => {
             if (districts.len > 0) {
                 const d = &districts[0];
                 const mid = menu.selected_member;
-                if (keys.order_collect) { _ = empire.issueOrder(c, mid, .collect, emp, d); menu.last_msg = "Order: Collect"; }
-                else if (keys.order_rest) { _ = empire.issueOrder(c, mid, .rest, emp, d); menu.last_msg = "Order: Rest"; }
+                if (keys.order_collect) {
+                    const take = empire.issueOrder(c, mid, .collect, emp, d);
+                    eco.treasury += take;
+                    menu.last_msg = "Order: Collect";
+                } else if (keys.order_rest) { _ = empire.issueOrder(c, mid, .rest, emp, d); menu.last_msg = "Order: Rest"; }
                 else if (keys.order_enforce) { _ = empire.issueOrder(c, mid, .enforce, emp, d); menu.last_msg = "Order: Enforce"; }
                 else if (keys.order_scout) { _ = empire.issueOrder(c, mid, .scout, emp, d); menu.last_msg = "Order: Scout"; }
                 else if (keys.order_guard) { _ = empire.issueOrder(c, mid, .guard, emp, d); menu.last_msg = "Order: Guard"; }

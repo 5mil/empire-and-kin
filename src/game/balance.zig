@@ -32,3 +32,5 @@ pub const RACKET_UPGRADE_COST: u32 = 800;
 pub const COLLECT_BASE: u32 = 350;
 pub const DOC_COST: u32 = 300;
 pub const NUMBERS_STAKE: u32 = 100;
+pub const RECRUIT_COST: u32 = 600;
+pub const SAFEHOUSE_CD: f64 = 30.0;

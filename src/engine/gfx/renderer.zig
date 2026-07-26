@@ -42,7 +42,8 @@ pub const Renderer = struct {
         gl.glGenBuffers(1, &self.ui_vbo);
         gl.glBindVertexArray(self.ui_vao);
         gl.glBindBuffer(gl.ARRAY_BUFFER, self.ui_vbo);
-        gl.glBufferData(gl.ARRAY_BUFFER, 512 * 6 * @sizeOf(f32), null, gl.DYNAMIC_DRAW);
+        // Room for ~200 quads per upload
+        gl.glBufferData(gl.ARRAY_BUFFER, 200 * 6 * 6 * @sizeOf(f32), null, gl.DYNAMIC_DRAW);
         const stride: gl.GLsizei = 6 * @sizeOf(f32);
         gl.glEnableVertexAttribArray(0);
         gl.glVertexAttribPointer(0, 2, gl.FLOAT, gl.FALSE, stride, @ptrFromInt(0));
@@ -146,8 +147,22 @@ pub const Renderer = struct {
         self.drawMesh(self.box, math.Mat4.mul(t, math.Mat4.mul(r, s)), color);
     }
 
-    fn emitQuad(verts: []f32, base: *usize, x0: f32, y0: f32, x1: f32, y1: f32, r: f32, g: f32, b: f32, a: f32) void {
-        if (base.* + 36 > verts.len) return;
+    fn flushUi(self: *Renderer, verts: []const f32, count: usize) void {
+        if (count == 0) return;
+        gl.glDisable(gl.DEPTH_TEST);
+        gl.glUseProgram(self.ui_prog);
+        const loc = gl.glGetUniformLocation(self.ui_prog, "uScreen");
+        gl.glUniform2f(loc, @as(f32, @floatFromInt(self.width)), @as(f32, @floatFromInt(self.height)));
+        gl.glBindVertexArray(self.ui_vao);
+        gl.glBindBuffer(gl.ARRAY_BUFFER, self.ui_vbo);
+        gl.glBufferData(gl.ARRAY_BUFFER, @intCast(count * @sizeOf(f32)), verts.ptr, gl.DYNAMIC_DRAW);
+        gl.glDrawArrays(gl.TRIANGLES, 0, @intCast(count / 6));
+        gl.glBindVertexArray(0);
+        gl.glEnable(gl.DEPTH_TEST);
+    }
+
+    fn emitQuad(verts: []f32, base: *usize, x0: f32, y0: f32, x1: f32, y1: f32, r: f32, g: f32, b: f32, a: f32) bool {
+        if (base.* + 36 > verts.len) return false;
         const q = [_]f32{
             x0, y0, r, g, b, a,
             x1, y0, r, g, b, a,
@@ -158,28 +173,32 @@ pub const Renderer = struct {
         };
         @memcpy(verts[base.* .. base.* + 36], q[0..]);
         base.* += 36;
+        return true;
     }
 
-    /// B1 bitmap font — readable HUD text.
+    /// B1 bitmap font — readable HUD text (batched uploads).
     pub fn drawText(self: *Renderer, text: []const u8, x: i32, y: i32, color: backend.Color) void {
-        const scale: f32 = 2.0;
+        const scale: f32 = 1.5;
         const r = @as(f32, @floatFromInt(color.r)) / 255.0;
         const g = @as(f32, @floatFromInt(color.g)) / 255.0;
         const b = @as(f32, @floatFromInt(color.b)) / 255.0;
         const a: f32 = 1.0;
 
-        var vert_buf: [4096]f32 = undefined;
+        var vert_buf: [7200]f32 = undefined; // ~200 quads
         var vcount: usize = 0;
 
-        const bg_w: f32 = @as(f32, @floatFromInt(text.len)) * @as(f32, @floatFromInt(font.CELL_W)) * scale + 4.0;
+        const max_chars = @min(text.len, 64);
+        const bg_w: f32 = @as(f32, @floatFromInt(max_chars)) * @as(f32, @floatFromInt(font.CELL_W)) * scale + 4.0;
         const bg_h: f32 = @as(f32, @floatFromInt(font.GLYPH_H)) * scale + 4.0;
         const bx: f32 = @as(f32, @floatFromInt(x)) - 2.0;
         const by: f32 = @as(f32, @floatFromInt(y)) - 2.0;
-        emitQuad(&vert_buf, &vcount, bx, by, bx + bg_w, by + bg_h, 0.02, 0.02, 0.05, 0.65);
+        _ = emitQuad(&vert_buf, &vcount, bx, by, bx + bg_w, by + bg_h, 0.02, 0.02, 0.05, 0.7);
 
         var cx: f32 = @as(f32, @floatFromInt(x));
         const cy: f32 = @as(f32, @floatFromInt(y));
-        for (text) |ch| {
+        var ci: usize = 0;
+        while (ci < max_chars) : (ci += 1) {
+            const ch = text[ci];
             const rows = font.glyphRows(ch);
             var py: u3 = 0;
             while (true) : (py +%= 1) {
@@ -188,7 +207,11 @@ pub const Renderer = struct {
                     if (font.pixelOn(rows, px, py)) {
                         const x0 = cx + @as(f32, @floatFromInt(px)) * scale;
                         const y0 = cy + @as(f32, @floatFromInt(py)) * scale;
-                        emitQuad(&vert_buf, &vcount, x0, y0, x0 + scale, y0 + scale, r, g, b, a);
+                        if (!emitQuad(&vert_buf, &vcount, x0, y0, x0 + scale, y0 + scale, r, g, b, a)) {
+                            self.flushUi(&vert_buf, vcount);
+                            vcount = 0;
+                            _ = emitQuad(&vert_buf, &vcount, x0, y0, x0 + scale, y0 + scale, r, g, b, a);
+                        }
                     }
                     if (px == 7) break;
                 }
@@ -197,18 +220,7 @@ pub const Renderer = struct {
             cx += @as(f32, @floatFromInt(font.CELL_W)) * scale;
         }
 
-        if (vcount == 0) return;
-
-        gl.glDisable(gl.DEPTH_TEST);
-        gl.glUseProgram(self.ui_prog);
-        const loc = gl.glGetUniformLocation(self.ui_prog, "uScreen");
-        gl.glUniform2f(loc, @as(f32, @floatFromInt(self.width)), @as(f32, @floatFromInt(self.height)));
-        gl.glBindVertexArray(self.ui_vao);
-        gl.glBindBuffer(gl.ARRAY_BUFFER, self.ui_vbo);
-        gl.glBufferData(gl.ARRAY_BUFFER, @intCast(vcount * @sizeOf(f32)), &vert_buf, gl.DYNAMIC_DRAW);
-        gl.glDrawArrays(gl.TRIANGLES, 0, @intCast(vcount / 6));
-        gl.glBindVertexArray(0);
-        gl.glEnable(gl.DEPTH_TEST);
+        self.flushUi(&vert_buf, vcount);
     }
 };
 

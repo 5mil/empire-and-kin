@@ -1,50 +1,29 @@
 # Empire & Kin
 
-**New York City mob life** — 1930s or 1980s · real-time free-roam + empire.
+**New York City mob life** — 1930s / 1980s · real-time free-roam + empire.
 
-**Version:** `0.1.2-alpha`  
-**Stack:** Zig 0.16 · GLFW + OpenGL 3.3 · `engine.Backend`
+**Version:** `0.1.4-alpha`  
+**Stack:** Zig 0.16 · GLFW + OpenGL 3.3
 
-## What’s in this build
+## Agency map (Little Italy)
 
-- Readable bitmap HUD, framed panels, status feed
-- Little Italy block: sidewalks, crosswalks, tenements, alley, safehouse
-- Ambient **pedestrians** and **traffic**
-- Jobs with **payout choice** (keep vs tithe)
-- **Safehouse** heal + **bribe** ($500)
-- Empire: street **collection**, racket **upgrade** ($800)
-- **Tiered goals** (control + cash)
-- Heat decay, reputation pay bonus, job cancel if you leave the marker
+| Spot | Key | Effect |
+|------|-----|--------|
+| Cyan poles | E | Jobs (stay in radius) |
+| Green club | E / R | Heal / bribe $500 |
+| Brown fence ~(24,16) | E | Cool heat / clear star |
+| Stash crate ~(4,26) | E | Bank $250 off books |
+| White Doc ~(20,26) | E | Full heal $300 |
+| Purple numbers ~(6,12) | E | Bet $100 |
+| Esc menu | 1–5 / R / F | Orders, collect, upgrade |
 
-## Build
+## Build (Windows from WSL)
 
 ```bash
-# Headless
-zig build run-headless
-
-# Linux GPU
-zig build run -Dgpu=true
-
-# Windows cross-compile from WSL
 export GLFW_WIN=$HOME/glfw-3.4.bin.WIN64
 zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
   -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
-# empire.exe + glfw3.dll side by side
 ```
-
-## Controls
-
-| Key | Action |
-|-----|--------|
-| WASD | Move / drive |
-| E | Job, car, safehouse |
-| R | Bribe at safehouse / collect (empire rackets) |
-| F | Attack / upgrade racket (empire) |
-| Esc | Empire menu |
-| 1 / 2 | Job payout choice |
-| Tab | Empire panels |
-| F5 / F9 | Save / load |
-| H / X | Tips |
 
 ## Docs
 

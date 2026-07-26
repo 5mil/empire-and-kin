@@ -1,4 +1,4 @@
-//! Transient center-bottom messages for job complete, save, etc.
+//! Transient bottom-center messages.
 const std = @import("std");
 const backend = @import("backend.zig");
 
@@ -23,7 +23,8 @@ pub const Toast = struct {
 
     pub fn draw(self: Toast, gfx: backend.Backend) void {
         if (self.timer <= 0 or self.len == 0) return;
-        const col = backend.Color.rgb(255, 230, 140);
-        gfx.drawText(self.msg[0..self.len], 320, 640, col);
+        gfx.drawText("* * *", 560, 600, backend.Color.rgb(180, 160, 100));
+        gfx.drawText(self.msg[0..self.len], 400, 620, backend.Color.rgb(255, 235, 150));
+        gfx.drawText("* * *", 560, 640, backend.Color.rgb(180, 160, 100));
     }
 };

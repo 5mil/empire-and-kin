@@ -6,6 +6,7 @@ pub const JOB_RADIUS: f32 = 5.5;
 pub const EVENT_INTERVAL: f64 = 22.0;
 pub const RIVAL_INTERVAL: f64 = 16.0;
 pub const STREET_EVENT_INTERVAL: f64 = 45.0;
+pub const AMBUSH_CHECK_INTERVAL: f64 = 35.0;
 
 pub const BOOTLEG_DURATION: f32 = 3.0;
 pub const PROTECTION_DURATION: f32 = 2.5;
@@ -29,3 +30,5 @@ pub const STASH_CHUNK: u32 = 250;
 pub const LOAN_MAX: u32 = 1500;
 pub const RACKET_UPGRADE_COST: u32 = 800;
 pub const COLLECT_BASE: u32 = 350;
+pub const DOC_COST: u32 = 300;
+pub const NUMBERS_STAKE: u32 = 100;

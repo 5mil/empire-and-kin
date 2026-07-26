@@ -1,31 +1,34 @@
 # Empire & Kin — Handover
 
-**Version:** `0.1.6-alpha`  
+**Version:** `0.1.7-alpha`  
+**Steps complete:** ~200 design/implementation pushes on this track  
 **Repo:** https://github.com/5mil/empire-and-kin
 
-## Street contacts (E)
+## What exists
 
-Fence · Stash · Doc · Numbers · Bartender · Vendor · Phone · Paper · Church · Dock · Gamble · Informant · Warehouse · Arcade · Taxi · Safehouse
+- Playable GPU Windows path (ReleaseFast recommended)
+- Dense agency: interact hub + 15+ street contacts + jobs + empire
+- Ambush, patrol car, radio, turf, weather, news, banter
+- HUD stack: district, HP, threat, morale, loan, score, compass, minimap
+- Expanded save: goal tier, stash, reputation
+- Modules ready but not all hooked: bakery, barber, laundry, perfume, cigar, post, skirmish, milestones, difficulty
 
-## Systems
-
-- Interact hub: `src/engine/interact.zig`
-- Ambush, patrol car, radio, turf pressure
-- Threat / morale / loan / score HUD
-- Expanded save (goal, stash, rep)
-
-## Empire menu
-
-- Crew 1 loan · 2 tip · 3 turf · 5 lookout  
-- Rackets R collect · F upgrade $800
-
-## Build
+## First action when you return
 
 ```bash
-git pull && rm -rf .zig-cache zig-out
+cd ~/empire-and-kin && git pull && rm -rf .zig-cache zig-out
 export GLFW_WIN=$HOME/glfw-3.4.bin.WIN64
 zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
   -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
 ```
 
-**End of handover.**
+Paste compile errors → fix pass. Then playtest the contact map (`docs/MAP.md`).
+
+## Next product priorities
+
+1. Compile-fix  
+2. Hook remaining shops into `interact.zig`  
+3. Second district scenery  
+4. Visual pass (textures / font)
+
+**End of handover (step 200).**

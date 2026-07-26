@@ -5,7 +5,6 @@ const economy = @import("../game/economy.zig");
 const city = @import("../game/city.zig");
 const inventory = @import("../game/inventory.zig");
 const rival = @import("../game/rival.zig");
-const crew = @import("../game/crew.zig");
 const fence = @import("../game/fence.zig");
 const stash_mod = @import("../game/stash.zig");
 const doc = @import("../game/doc.zig");
@@ -56,7 +55,6 @@ pub fn tryE(
     inv: *inventory.Inventory,
     stash: *stash_mod.Stash,
     riv: *rival.Rival,
-    c: *crew.Crew,
     seed: u32,
     safehouse_cd: *f64,
 ) Result {
@@ -120,7 +118,7 @@ pub fn tryE(
         return .{ .handled = true, .msg = "Need $500 cash" };
     }
     if (arcade.near(p.*)) {
-        if (arcade.play(eco, c)) return .{ .handled = true, .msg = "Arcade" };
+        if (arcade.play(eco)) return .{ .handled = true, .msg = "Arcade" };
         return .{ .handled = true, .msg = "Need $10" };
     }
     if (taxi.near(p.*)) {

@@ -25,8 +25,6 @@ pub fn draw(gfx: backend.Backend, boot: BootState) void {
     const muted = backend.Color.rgb(100, 110, 130);
 
     gfx.clear(backend.Color.rgb(10, 12, 20));
-
-    // Decorative bars via text
     gfx.drawText("================================", 40, 28, muted);
 
     switch (boot.phase) {
@@ -41,9 +39,10 @@ pub fn draw(gfx: backend.Backend, boot: BootState) void {
                 gfx.drawText("[2]  Continue (no save yet)", 40, 175, dim);
             }
             gfx.drawText("--------------------------------", 40, 215, muted);
-            gfx.drawText("WASD walk     E job / car / club", 40, 240, dim);
-            gfx.drawText("Esc empire    F5 save   F9 load", 40, 260, dim);
+            gfx.drawText("WASD walk   E job/car/club/fence/doc", 40, 240, dim);
+            gfx.drawText("Esc empire  F5 save  F9 load  R bribe", 40, 260, dim);
             gfx.drawText("Goal: control the block & stack cash", 40, 300, backend.Color.rgb(180, 200, 220));
+            gfx.drawText("Stash hides cash  Numbers bets  Doc heals", 40, 320, dim);
         },
         .era_select => {
             gfx.drawText("CHOOSE YOUR ERA", 40, 55, title_c);
@@ -65,7 +64,7 @@ pub fn draw(gfx: backend.Backend, boot: BootState) void {
         .playing => {},
     }
     if (boot.message.len > 0) {
-        gfx.drawText(boot.message, 40, 340, accent);
+        gfx.drawText(boot.message, 40, 360, accent);
     }
 }
 

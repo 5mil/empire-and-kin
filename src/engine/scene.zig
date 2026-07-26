@@ -24,7 +24,6 @@ fn box(gfx: backend.Backend, x: f32, y: f32, z: f32, w: f32, h: f32, d: f32, col
 fn building(gfx: backend.Backend, x: f32, z: f32, w: f32, h: f32, d: f32, col: backend.Color, lit: bool) void {
     box(gfx, x, h * 0.5, z, w, h, d, col);
     box(gfx, x, h + 0.15, z, w + 0.3, 0.3, d + 0.3, backend.Color.rgb(45, 42, 40));
-    // Chimney
     box(gfx, x + w * 0.3, h + 0.7, z - d * 0.2, 0.5, 1.0, 0.5, backend.Color.rgb(60, 55, 50));
     box(gfx, x, 1.0, z + d * 0.5 - 0.05, 1.2, 2.0, 0.15, backend.Color.rgb(55, 40, 30));
     const win = if (lit) backend.Color.rgb(255, 230, 140) else backend.Color.rgb(90, 110, 140);
@@ -35,7 +34,6 @@ fn building(gfx: backend.Backend, x: f32, z: f32, w: f32, h: f32, d: f32, col: b
         box(gfx, x + w * 0.25, 5.2, z + d * 0.5 - 0.02, 0.9, 1.1, 0.12, win);
     }
     box(gfx, x, 2.3, z + d * 0.5 + 0.4, w * 0.7, 0.12, 1.2, backend.Color.rgb(140, 40, 40));
-    // Fire escape (side)
     box(gfx, x - w * 0.5 - 0.15, h * 0.45, z, 0.2, h * 0.7, 1.2, backend.Color.rgb(70, 75, 80));
 }
 
@@ -82,6 +80,13 @@ fn dumpster(gfx: backend.Backend, x: f32, z: f32) void {
     box(gfx, x, 0.6, z, 1.4, 1.2, 2.0, backend.Color.rgb(55, 70, 50));
 }
 
+fn waterTower(gfx: backend.Backend, x: f32, z: f32) void {
+    box(gfx, x, 9.0, z, 2.2, 2.5, 2.2, backend.Color.rgb(90, 95, 100));
+    box(gfx, x, 7.0, z, 0.4, 4.0, 0.4, backend.Color.rgb(70, 70, 75));
+    box(gfx, x + 0.8, 7.0, z + 0.8, 0.35, 4.0, 0.35, backend.Color.rgb(70, 70, 75));
+    box(gfx, x - 0.8, 7.0, z - 0.8, 0.35, 4.0, 0.35, backend.Color.rgb(70, 70, 75));
+}
+
 fn safehouse(gfx: backend.Backend, lit: bool) void {
     box(gfx, SAFEHOUSE_X, 2.5, SAFEHOUSE_Z, 4.5, 5.0, 4.0, backend.Color.rgb(68, 72, 78));
     box(gfx, SAFEHOUSE_X, 5.2, SAFEHOUSE_Z, 4.8, 0.35, 4.3, backend.Color.rgb(40, 40, 42));
@@ -90,7 +95,6 @@ fn safehouse(gfx: backend.Backend, lit: bool) void {
     box(gfx, SAFEHOUSE_X - 1.2, 3.4, SAFEHOUSE_Z + 2.0, 0.8, 1.0, 0.15, win);
     box(gfx, SAFEHOUSE_X + 1.2, 3.4, SAFEHOUSE_Z + 2.0, 0.8, 1.0, 0.15, win);
     box(gfx, SAFEHOUSE_X, 0.1, SAFEHOUSE_Z + 3.2, 2.0, 0.15, 1.5, backend.Color.rgb(40, 90, 55));
-    // Sign plate
     box(gfx, SAFEHOUSE_X, 3.0, SAFEHOUSE_Z + 2.1, 2.2, 0.5, 0.1, backend.Color.rgb(20, 80, 40));
 }
 
@@ -125,7 +129,6 @@ pub fn drawMinimalScene(
     box(gfx, 12, 0.03, 20, 11.0, 0.08, 72.0, backend.Color.rgb(24, 24, 26));
     box(gfx, 12, 0.03, 20, 58.0, 0.07, 11.0, backend.Color.rgb(24, 24, 26));
 
-    // Crosswalks at intersection
     crosswalk(gfx, 12, 15.2, true);
     crosswalk(gfx, 12, 24.8, true);
     crosswalk(gfx, 6.8, 20, false);
@@ -140,7 +143,6 @@ pub fn drawMinimalScene(
     sidewalk(gfx, 6.5, 20, 2.2, 55);
     sidewalk(gfx, 17.5, 20, 2.2, 55);
 
-    // Alley strip
     box(gfx, 0.5, 0.04, 20, 3.0, 0.08, 40.0, backend.Color.rgb(30, 28, 28));
     dumpster(gfx, 0.8, 17.0);
     dumpster(gfx, 0.8, 24.0);
@@ -154,6 +156,7 @@ pub fn drawMinimalScene(
     building(gfx, 19.5, 11.5, 5.2, 5.5, 4.0, backend.Color.rgb(92, 80, 72), nightish);
     building(gfx, 27.0, 11.2, 4.5, 5.8, 3.8, backend.Color.rgb(78, 68, 60), nightish);
 
+    waterTower(gfx, 11.5, 29.2);
     safehouse(gfx, nightish);
 
     lamp(gfx, 7, 20, nightish);
@@ -172,9 +175,11 @@ pub fn drawMinimalScene(
     const n1 = near_job and dist2(p.x, p.y, 16, 22) < 36;
     const n2 = near_job and dist2(p.x, p.y, 8, 28) < 36;
     const n3 = near_job and dist2(p.x, p.y, 22, 12) < 36;
+    const n4 = near_job and dist2(p.x, p.y, 12, 16) < 36;
     jobBeacon(gfx, 16.0, 22.0, n1, true);
     jobBeacon(gfx, 8.0, 28.0, n2, true);
     jobBeacon(gfx, 22.0, 12.0, n3, true);
+    jobBeacon(gfx, 12.0, 16.0, n4, true);
 
     if (car) |v| {
         const col = if (v.occupied) backend.Color.rgb(45, 130, 210) else backend.Color.rgb(70, 70, 80);

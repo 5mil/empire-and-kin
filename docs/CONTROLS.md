@@ -5,16 +5,16 @@
 | Key | Action |
 |-----|--------|
 | WASD | Move |
-| E | Interact (jobs + all street contacts) |
+| E | Interact (jobs + contacts) / Hospital when down |
 | R | Bribe / bartender tip / use medkit |
-| F | Attack in combat |
+| F | Combat attack / empty stash at safehouse |
 | Esc | Empire menu |
 | F5 / F9 | Save / Load |
 | H / X | Tips |
 
 ## Contacts (E near prop)
 
-Fence, stash, Doc, numbers, bar, vendor, phone, paper, church, dock, gamble den, informant, warehouse, arcade, taxi, safehouse.
+Fence, stash, Doc, numbers, bar, vendor, phone, paper, church, dock, gamble, informant, warehouse, arcade, taxi, bakery, barber, laundry, perfume, cigar, post, recruit corner, alley, safehouse.
 
 ## Empire (paused)
 
@@ -23,4 +23,4 @@ Fence, stash, Doc, numbers, bar, vendor, phone, paper, church, dock, gamble den,
 | Tab | Panels |
 | Q/E | Select |
 | Enter / R / F | Primary / secondary / tertiary |
-| 1–5 | Crew orders (+ tip/loan/turf/lookout) |
+| 1–5 | Crew orders (loan/tip/intimidate/lookout) |

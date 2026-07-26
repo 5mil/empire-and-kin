@@ -16,8 +16,6 @@ pub fn open(c: *Choice, pay: u32) void {
     c.pay = pay;
 }
 
-/// Returns true if a choice was resolved this frame.
-/// 1 = keep all, 2 = tithe 40% to crew (loyalty+).
 pub fn handle(
     c: *Choice,
     raw: input.RawKeys,
@@ -29,23 +27,26 @@ pub fn handle(
 ) ?[]const u8 {
     if (!c.active) return null;
     if (edge_1.pressed(raw.key_1)) {
-        // Already paid into treasury by mission; keep means no change, slight heat
-        district.heat = @min(100, district.heat + 2);
+        eco.treasury += c.pay;
+        district.heat = @min(100, district.heat + 3);
+        if (the_crew.morale > 4) the_crew.morale -= 4;
         c.active = false;
-        return "Kept the take. Crew notices.";
+        return "Kept the full take.";
     }
     if (edge_2.pressed(raw.key_2)) {
         const share = c.pay * 40 / 100;
-        if (eco.treasury >= share) eco.treasury -= share;
+        const keep = c.pay - share;
+        eco.treasury += keep;
         the_crew.cash += share;
         the_crew.morale = @min(100, the_crew.morale + 8);
         var i: u8 = 0;
         while (i < the_crew.count) : (i += 1) {
             the_crew.members[i].loyalty = @min(100, the_crew.members[i].loyalty + 3);
         }
-        if (district.heat > 5) district.heat -= 5;
+        if (district.heat > 6) district.heat -= 6 else district.heat = 0;
+        district.control = @min(100, district.control + 2);
         c.active = false;
-        return "Tithed crew. Loyalty up, heat down.";
+        return "Tithed crew. Loyalty up.";
     }
     return null;
 }
@@ -53,9 +54,11 @@ pub fn handle(
 pub fn draw(gfx: backend.Backend, c: Choice) void {
     if (!c.active) return;
     var buf: [64]u8 = undefined;
-    gfx.drawText("=== JOB PAYOUT ===", 400, 280, backend.Color.rgb(255, 220, 120));
-    const line = std.fmt.bufPrint(&buf, "Take: ${d}", .{c.pay}) catch "";
-    gfx.drawText(line, 400, 305, backend.Color.rgb(230, 230, 220));
-    gfx.drawText("[1] Keep it all  (+heat)", 400, 340, backend.Color.rgb(255, 180, 100));
-    gfx.drawText("[2] Tithe 40% to crew  (-heat +loy)", 400, 365, backend.Color.rgb(120, 220, 160));
+    gfx.drawText("====================", 380, 250, backend.Color.rgb(100, 110, 130));
+    gfx.drawText("  JOB PAYOUT", 400, 275, backend.Color.rgb(255, 220, 120));
+    const line = std.fmt.bufPrint(&buf, "  Take: ${d}", .{c.pay}) catch "";
+    gfx.drawText(line, 400, 300, backend.Color.rgb(230, 230, 220));
+    gfx.drawText("[1] Keep it all   (+heat)", 400, 340, backend.Color.rgb(255, 180, 100));
+    gfx.drawText("[2] Tithe 40% crew (-heat)", 400, 365, backend.Color.rgb(120, 220, 160));
+    gfx.drawText("====================", 380, 400, backend.Color.rgb(100, 110, 130));
 }

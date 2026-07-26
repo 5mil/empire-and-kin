@@ -15,6 +15,9 @@ const garage = @import("game/garage.zig");
 const era_mod = @import("game/era.zig");
 const balance = @import("game/balance.zig");
 const goals = @import("game/goals.zig");
+const heat = @import("game/heat.zig");
+const peds = @import("game/peds.zig");
+const traffic = @import("game/traffic.zig");
 const scene = @import("engine/scene.zig");
 const input = @import("engine/input.zig");
 const controller = @import("engine/controller.zig");
@@ -30,6 +33,8 @@ const toast_mod = @import("engine/toast.zig");
 const camera = @import("engine/camera.zig");
 const minimap = @import("engine/minimap.zig");
 const choice_mod = @import("engine/choice.zig");
+const feed_mod = @import("engine/feed.zig");
+const backend = @import("engine/backend.zig");
 
 const gfx_mod = if (build_options.enable_gpu)
     @import("engine/gl_backend.zig")
@@ -90,9 +95,14 @@ pub fn main(init: std.process.Init) !void {
     var follow: camera.FollowCam = .{};
     var choice: choice_mod.Choice = .{};
     var goal: goals.Goal = .{};
+    var feed: feed_mod.Feed = .{};
+    var street_peds: peds.StreetPeds = .{};
+    street_peds.init();
+    var cars: traffic.Traffic = .{};
     var selected_era: era_mod.Era = .nyc_1930s;
     var world_ready = false;
     var heal_accum: f32 = 0;
+    var heat_accum: f32 = 0;
     var safehouse_cd: f64 = 0;
 
     var edge_ord: [5]input.ButtonEdge = .{ .{}, .{}, .{}, .{}, .{} };
@@ -110,6 +120,8 @@ pub fn main(init: std.process.Init) !void {
     var edge_h: input.ButtonEdge = .{};
     var edge_x: input.ButtonEdge = .{};
     var frame_seed: u32 = 0;
+
+    feed.push("Welcome to Little Italy");
 
     while (!gfx.shouldClose()) {
         gfx.beginFrame();
@@ -135,23 +147,27 @@ pub fn main(init: std.process.Init) !void {
                     }
                 }
                 std.debug.print("[alpha] Era: {s}\n", .{era_mod.name(selected_era)});
+                feed.push(era_mod.name(selected_era));
                 world_ready = true;
             }
             continue;
         }
 
-        // Choice modal blocks other input
         if (choice.active) {
             if (choice_mod.handle(&choice, raw, &edge_1, &edge_2, &eco, &the_kin, &districts[0])) |msg| {
                 toast.show(msg, 2.5);
+                feed.push(msg);
                 if (goals.check(&goal, districts[0], eco)) {
-                    toast.show("GOAL COMPLETE", 4.0);
+                    toast.show("GOAL TIER UP", 3.5);
+                    feed.push("Goal tier advanced");
                 }
             }
             const car_ptr0 = garage.activeVehicle(&fleet);
             const car_opt0: ?action.Vehicle = if (car_ptr0) |v| v.* else null;
             const cam0 = follow.update(boss, false, dt);
             scene.drawMinimalScene(gfx, boss, living.currentPeriod(clock), car_opt0, cam0, selected_era, false);
+            street_peds.draw(gfx);
+            cars.draw(gfx);
             choice_mod.draw(gfx, choice);
             toast.draw(gfx);
             gfx.endFrame();
@@ -162,11 +178,13 @@ pub fn main(init: std.process.Init) !void {
             const snap = save.capture(eco, the_kin, clock, boss, &districts);
             save.writeToDisk(io, snap) catch {};
             toast.show("Saved.", balance.TOAST_SAVE_SEC);
+            feed.push("Quick-saved");
         }
         if (edge_f9.pressed(raw.f9)) {
             if (save.readFromDisk(io) catch null) |data| {
                 save.applyTo(data, &eco, &the_kin, &clock, &boss, districts[0..]);
                 toast.show("Loaded.", balance.TOAST_SAVE_SEC);
+                feed.push("Loaded save");
             }
         }
 
@@ -195,6 +213,7 @@ pub fn main(init: std.process.Init) !void {
                 .tertiary = edge_f.pressed(raw.f),
             };
             empire_ui.handleMenu(keys, &emp, &the_kin, &portfolio, &fleet, districts[0..], &menu, boss.x, boss.y, &eco);
+            if (menu.last_msg.len > 0) feed.push(menu.last_msg);
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
             scene.drawMinimalScene(gfx, boss, living.currentPeriod(clock), car_opt, cam, selected_era, near_any);
             empire_ui.draw(gfx, emp, the_kin, portfolio, fleet, &districts, menu);
@@ -206,6 +225,7 @@ pub fn main(init: std.process.Init) !void {
                         if (mission_ui.tryStart(j, boss)) {
                             used = true;
                             toast.show("Job started", 1.5);
+                            feed.push("Job started");
                             break;
                         }
                     }
@@ -215,7 +235,8 @@ pub fn main(init: std.process.Init) !void {
                     if (districts[0].heat > 12) districts[0].heat -= 12 else districts[0].heat = 0;
                     if (boss.wanted_level > 0) boss.wanted_level -= 1;
                     safehouse_cd = 30.0;
-                    toast.show("Safehouse: healed, cooled off", 2.5);
+                    toast.show("Safehouse: healed", 2.5);
+                    feed.push("Used safehouse");
                     used = true;
                 }
                 if (!used) {
@@ -230,6 +251,20 @@ pub fn main(init: std.process.Init) !void {
                     }
                 }
             }
+            // Bribe at safehouse with R
+            if (edge_r.pressed(raw.r) and scene.nearSafehouse(boss)) {
+                if (eco.treasury >= 500 and boss.wanted_level > 0) {
+                    eco.treasury -= 500;
+                    boss.wanted_level = 0;
+                    toast.show("Bribed cops -$500", 2.5);
+                    feed.push("Bribe paid");
+                } else if (boss.wanted_level == 0) {
+                    toast.show("No warrant to clear", 1.5);
+                } else {
+                    toast.show("Need $500 to bribe", 1.5);
+                }
+            }
+
             if (car_ptr) |car| {
                 if (car.occupied) {
                     const st = ctrl.mapper.map(raw);
@@ -244,11 +279,15 @@ pub fn main(init: std.process.Init) !void {
             living.spawnStreetLife(&streets, living.activityLevel(period));
             living.tickStreetLife(&streets, sim_dt);
             world_sim.tick(&ws, sim_dt, districts[0..], &the_kin, &eco, &boss);
+            heat.applyDecayAccum(&districts[0], &heat_accum, dt);
+            street_peds.tick(dt);
+            cars.tick(dt);
 
             for (&jobs) |*j| {
-                const pay = mission_ui.tickJob(j, &boss, &eco, &districts[0], dt);
+                const pay = mission_ui.tickJob(j, &boss, &eco, &districts[0], emp, dt);
                 if (pay > 0) {
                     choice_mod.open(&choice, pay);
+                    feed.push("Job finished - choose");
                 }
             }
 
@@ -264,20 +303,26 @@ pub fn main(init: std.process.Init) !void {
             combat_ui.maybeSpawn(&cui, boss, districts[0].heat, frame_seed);
             combat_ui.tick(&cui, &boss, dt, edge_f.pressed(raw.f) and cui.encounter.active);
             wanted_ui.tickWanted(&boss, &police, &chase, districts[0].heat, period, speed, dt, clock.elapsed);
-            _ = goals.check(&goal, districts[0], eco);
+            if (goals.check(&goal, districts[0], eco)) {
+                toast.show("GOAL TIER UP", 3.5);
+                feed.push("Goal tier up");
+            }
 
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
             scene.drawMinimalScene(gfx, boss, period, car_opt, cam, selected_era, near_any);
+            street_peds.draw(gfx);
+            cars.draw(gfx);
             hud.drawDistrictDebug(gfx, boss, &districts, clock, eco, period, false, police.alert_level, goal);
             wanted_ui.drawStars(gfx, boss.wanted_level, 10, 250);
             wanted_ui.drawPoliceBanner(gfx, police, chase, 268);
             for (jobs) |j| mission_ui.drawMarker(gfx, j, boss);
             mission_ui.drawMinimapHint(gfx, &jobs, boss);
             if (scene.nearSafehouse(boss)) {
-                gfx.drawText("[E] Safehouse - heal / cool heat", 10, 396, backend.Color.rgb(100, 220, 140));
+                gfx.drawText("[E] heal  [R] bribe $500", 10, 396, backend.Color.rgb(100, 220, 140));
             }
             minimap.draw(gfx, boss, &jobs);
             world_sim.drawBanner(gfx, ws);
+            feed.draw(gfx);
             hints.draw(gfx, tip);
             combat_ui.draw(gfx, cui);
             toast.draw(gfx);

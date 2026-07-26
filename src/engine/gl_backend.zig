@@ -51,7 +51,7 @@ fn endFrameImpl() void {
     var i: usize = 0;
     while (i < text_count) : (i += 1) {
         const q = text_queue[i];
-        rend.drawTextProxy(q.x, q.y, q.len, q.c);
+        rend.drawText(q.t[0..q.len], q.x, q.y, q.c);
     }
     if (window) |*w| w.swap();
 }

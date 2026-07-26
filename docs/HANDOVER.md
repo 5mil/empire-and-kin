@@ -1,28 +1,35 @@
 # Empire & Kin — Handover
 
-**Version:** `0.1.4-alpha`  
-**Repo:** https://github.com/5mil/empire-and-kin
+**Version:** `0.1.5-alpha`  
+**Repo:** https://github.com/5mil/empire-and-kin  
+**Zig:** 0.16 · GPU Windows path stable
 
-## Playable systems
+## This batch (steps ~21–100)
 
-- 4 job markers + payout choice + radius cancel  
-- Safehouse / bribe / fence / stash / Doc / numbers bank  
-- Empire: collect, upgrade ($800), crew orders, lookout, tip, loan  
-- Tiered goals + expanded save (goal/stash/rep)  
-- Weather, news, crew banter, street events, rival pressure  
-- Ambient peds + traffic, water tower, score HUD  
+Agency density on one Little Italy block:
 
-## Empire menu extras
+| System | Status |
+|--------|--------|
+| Jobs (4) + choice + radius cancel | Wired |
+| Safehouse / bribe / fence / stash | Wired |
+| Doc / numbers bank | Wired |
+| Loan / tip / lookout | Wired |
+| Street events / news / banter / weather | Wired |
+| Rival / goals / expanded save | Wired |
+| Score / compass / minimap S / HP bar | Wired |
+| Ambush / patrol / soundtrack | Modules ready |
 
-- Crew panel **2**: tip $100  
-- Crew panel **1**: borrow $1000 or repay loan  
-- Guard **5**: post lookout 20s  
+## First playtest after pull
 
-## Next priorities
+```bash
+git pull && rm -rf .zig-cache zig-out
+export GLFW_WIN=$HOME/glfw-3.4.bin.WIN64
+zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
+  -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
+```
 
-1. Compile-fix any missing imports after playtest  
-2. Ambush + reticle wiring in main  
-3. Second district scenery  
-4. Texture / audio pass  
+Paste any compile errors — fix pass is next if needed.
+
+See also: `docs/CONTROLS.md`, `docs/ROADMAP.md`.
 
 **End of handover.**

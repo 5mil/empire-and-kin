@@ -25,6 +25,14 @@ const rival_mod = @import("game/rival.zig");
 const news = @import("game/news.zig");
 const events = @import("game/events.zig");
 const respect = @import("game/respect.zig");
+const doc = @import("game/doc.zig");
+const numbers = @import("game/numbers.zig");
+const weather_mod = @import("game/weather.zig");
+const loan_mod = @import("game/loan.zig");
+const day_cycle = @import("game/day_cycle.zig");
+const crew_talk = @import("game/crew_talk.zig");
+const tipjar = @import("game/tipjar.zig");
+const inventory_mod = @import("game/inventory.zig");
 const scene = @import("engine/scene.zig");
 const input = @import("engine/input.zig");
 const controller = @import("engine/controller.zig");
@@ -45,6 +53,9 @@ const compass = @import("engine/compass.zig");
 const legend = @import("engine/legend.zig");
 const vignette = @import("engine/vignette.zig");
 const prompt = @import("engine/prompt.zig");
+const scoreboard = @import("engine/scoreboard.zig");
+const weather_ui = @import("engine/weather_ui.zig");
+const hp_bar = @import("engine/hp_bar.zig");
 const backend = @import("engine/backend.zig");
 
 const gfx_mod = if (build_options.enable_gpu)
@@ -89,10 +100,12 @@ pub fn main(init: std.process.Init) !void {
         mission_ui.spawnJob(401, .bootlegging, 16.0, 22.0),
         mission_ui.spawnJob(402, .protection, 8.0, 28.0),
         mission_ui.spawnJob(403, .smuggling, 22.0, 12.0),
+        mission_ui.spawnJob(404, .protection, 12.0, 16.0),
     };
     jobs[0].duration = balance.BOOTLEG_DURATION;
     jobs[1].duration = balance.PROTECTION_DURATION;
     jobs[2].duration = balance.SMUGGLING_DURATION;
+    jobs[3].duration = balance.PROTECTION_DURATION;
 
     var streets: living.StreetLife = .{};
     var police: living.PoliceState = .{};
@@ -113,6 +126,11 @@ pub fn main(init: std.process.Init) !void {
     var stash: stash_mod.Stash = .{};
     var lookout: lookout_mod.Lookout = .{};
     var rival: rival_mod.Rival = .{};
+    var loan: loan_mod.Loan = .{};
+    var dayw: day_cycle.DayWatch = .{};
+    var inv: inventory_mod.Inventory = .{};
+    _ = inv.add(.medkit);
+    var weather = weather_mod.Weather.clear;
     var selected_era: era_mod.Era = .nyc_1930s;
     var world_ready = false;
     var heal_accum: f32 = 0;
@@ -120,6 +138,8 @@ pub fn main(init: std.process.Init) !void {
     var safehouse_cd: f64 = 0;
     var street_event_cd: f64 = balance.STREET_EVENT_INTERVAL;
     var news_cd: f64 = 60.0;
+    var banter_cd: f64 = 40.0;
+    var weather_cd: f64 = 90.0;
 
     var edge_ord: [5]input.ButtonEdge = .{ .{}, .{}, .{}, .{}, .{} };
     var edge_tab: input.ButtonEdge = .{};
@@ -150,6 +170,8 @@ pub fn main(init: std.process.Init) !void {
         if (safehouse_cd > 0) safehouse_cd -= dt;
         if (street_event_cd > 0) street_event_cd -= dt;
         if (news_cd > 0) news_cd -= dt;
+        if (banter_cd > 0) banter_cd -= dt;
+        if (weather_cd > 0) weather_cd -= dt;
 
         if (boot.phase != .playing) {
             boot_mod.handle(&boot, raw, &edge_1, &edge_2, &edge_enter);
@@ -162,7 +184,7 @@ pub fn main(init: std.process.Init) !void {
                 ws.rival_interval = balance.RIVAL_INTERVAL;
                 if (boot.load_on_start) {
                     if (save.readFromDisk(io) catch null) |data| {
-                        save.applyTo(data, &eco, &the_kin, &clock, &boss, districts[0..]);
+                        save.applyFull(data, &eco, &the_kin, &clock, &boss, districts[0..], &goal, &stash, &emp);
                     }
                 }
                 std.debug.print("[alpha] Era: {s}\n", .{era_mod.name(selected_era)});
@@ -195,14 +217,14 @@ pub fn main(init: std.process.Init) !void {
         }
 
         if (edge_f5.pressed(raw.f5)) {
-            const snap = save.capture(eco, the_kin, clock, boss, &districts);
+            const snap = save.captureFull(eco, the_kin, clock, boss, &districts, goal, stash, emp);
             save.writeToDisk(io, snap) catch {};
             toast.show("Saved.", balance.TOAST_SAVE_SEC);
             feed.push("Quick-saved");
         }
         if (edge_f9.pressed(raw.f9)) {
             if (save.readFromDisk(io) catch null) |data| {
-                save.applyTo(data, &eco, &the_kin, &clock, &boss, districts[0..]);
+                save.applyFull(data, &eco, &the_kin, &clock, &boss, districts[0..], &goal, &stash, &emp);
                 toast.show("Loaded.", balance.TOAST_SAVE_SEC);
                 feed.push("Loaded save");
             }
@@ -232,10 +254,25 @@ pub fn main(init: std.process.Init) !void {
                 .secondary = edge_r.pressed(raw.r),
                 .tertiary = edge_f.pressed(raw.f),
             };
-            // Lookout post with order_guard when lookout selected - also F on crew for lookout
             if (keys.order_guard and lookout_mod.post(&lookout, &the_kin)) {
                 toast.show("Lookout posted 20s", 2.0);
                 feed.push("Lookout on the corner");
+            }
+            // Tip crew with 1 on rackets? Use order_rest secondary path: key_2 while rackets = tip
+            if (keys.order_rest and menu.panel == .crew) {
+                if (tipjar.tip(&eco, &the_kin, 100)) {
+                    toast.show("Tipped the boys $100", 2.0);
+                    feed.push("Crew tipped");
+                }
+            }
+            if (keys.order_collect and menu.panel == .crew) {
+                if (loan_mod.borrow(&loan, &eco, 1000)) {
+                    toast.show("Borrowed $1000", 2.0);
+                    feed.push("Loan taken");
+                } else if (loan_mod.repay(&loan, &eco)) {
+                    toast.show("Loan repaid", 2.0);
+                    feed.push("Debt cleared");
+                }
             }
             empire_ui.handleMenu(keys, &emp, &the_kin, &portfolio, &fleet, districts[0..], &menu, boss.x, boss.y, &eco);
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
@@ -290,6 +327,28 @@ pub fn main(init: std.process.Init) !void {
                     }
                     used = true;
                 }
+                if (!used and doc.near(boss)) {
+                    if (doc.heal(&boss, &eco)) {
+                        toast.show("Doc patched you up", 2.0);
+                        feed.push("Saw the Doc");
+                    } else {
+                        toast.show("Doc: $300 or already full", 1.5);
+                    }
+                    used = true;
+                }
+                if (!used and numbers.near(boss)) {
+                    const delta = numbers.play(&eco, frame_seed);
+                    if (delta > 0) {
+                        toast.show("Numbers hit!", 2.0);
+                        feed.push("Numbers win");
+                    } else if (delta < 0) {
+                        toast.show("Numbers miss", 1.5);
+                        feed.push("Numbers loss");
+                    } else {
+                        toast.show("Need $100 to play", 1.5);
+                    }
+                    used = true;
+                }
                 if (!used) {
                     if (car_ptr) |car| {
                         if (car.occupied) {
@@ -312,7 +371,9 @@ pub fn main(init: std.process.Init) !void {
             }
 
             if (fence.near(boss)) action_prompt = "[E] Fence - heat/star for cash";
-            else if (stash_mod.near(boss)) action_prompt = "[E] Stash deposit/withdraw $250";
+            else if (stash_mod.near(boss)) action_prompt = "[E] Stash $250";
+            else if (doc.near(boss)) action_prompt = "[E] Doc - full heal $300";
+            else if (numbers.near(boss)) action_prompt = "[E] Numbers - bet $100";
             else if (scene.nearSafehouse(boss)) action_prompt = "[E] heal  [R] bribe";
 
             if (car_ptr) |car| {
@@ -335,6 +396,12 @@ pub fn main(init: std.process.Init) !void {
             rival_mod.tick(&rival, &districts[0], clock.elapsed);
             lookout_mod.suppressAlert(lookout, &police);
 
+            if (day_cycle.crossed(&dayw, clock)) {
+                loan_mod.tickDay(&loan, &eco);
+                feed.push("A new day");
+                if (loan.due > 0) feed.push("Loan still due");
+            }
+
             if (street_event_cd <= 0) {
                 street_event_cd = balance.STREET_EVENT_INTERVAL;
                 const ev = events.rollEvent(frame_seed);
@@ -345,6 +412,15 @@ pub fn main(init: std.process.Init) !void {
             if (news_cd <= 0) {
                 news_cd = 75.0;
                 feed.push(news.lineForSeed(frame_seed));
+            }
+            if (banter_cd <= 0) {
+                banter_cd = 50.0;
+                feed.push(crew_talk.line(frame_seed));
+            }
+            if (weather_cd <= 0) {
+                weather_cd = 120.0;
+                weather = weather_mod.fromSeed(frame_seed);
+                feed.push(weather_mod.name(weather));
             }
 
             for (&jobs) |*j| {
@@ -375,12 +451,14 @@ pub fn main(init: std.process.Init) !void {
 
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
             scene.drawMinimalScene(gfx, boss, period, car_opt, cam, selected_era, near_any);
-            // Fence / stash markers
             gfx.drawBox(.{ .x = fence.FENCE_X, .y = 0.8, .z = fence.FENCE_Z }, 1.2, 1.6, 1.2, backend.Color.rgb(120, 90, 40));
             gfx.drawBox(.{ .x = stash_mod.STASH_X, .y = 0.4, .z = stash_mod.STASH_Z }, 1.0, 0.8, 1.0, backend.Color.rgb(60, 50, 40));
+            gfx.drawBox(.{ .x = doc.DOC_X, .y = 0.9, .z = doc.DOC_Z }, 1.4, 1.8, 1.4, backend.Color.rgb(200, 200, 210));
+            gfx.drawBox(.{ .x = numbers.BANK_X, .y = 0.7, .z = numbers.BANK_Z }, 1.5, 1.4, 1.5, backend.Color.rgb(90, 70, 110));
             street_peds.draw(gfx);
             cars.draw(gfx);
             hud.drawDistrictDebug(gfx, boss, &districts, clock, eco, period, false, police.alert_level, goal);
+            hp_bar.draw(gfx, boss.health, 10, 300);
             wanted_ui.drawStars(gfx, boss.wanted_level, 10, 250);
             wanted_ui.drawPoliceBanner(gfx, police, chase, 268);
             for (jobs) |j| mission_ui.drawMarker(gfx, j, boss);
@@ -388,6 +466,8 @@ pub fn main(init: std.process.Init) !void {
             compass.draw(gfx, boss, &jobs);
             legend.draw(gfx);
             vignette.draw(gfx, period);
+            weather_ui.draw(gfx, weather);
+            scoreboard.draw(gfx, eco, districts[0], emp);
             prompt.draw(gfx, action_prompt);
             minimap.draw(gfx, boss, &jobs);
             world_sim.drawBanner(gfx, ws);
@@ -399,7 +479,7 @@ pub fn main(init: std.process.Init) !void {
         gfx.endFrame();
     }
 
-    const final_snap = save.capture(eco, the_kin, clock, boss, &districts);
+    const final_snap = save.captureFull(eco, the_kin, clock, boss, &districts, goal, stash, emp);
     save.writeToDisk(io, final_snap) catch {};
     gfx.shutdown();
     std.debug.print("=== EXIT === Saved | ${d} | {s}\n", .{ eco.treasury, era_mod.name(selected_era) });

@@ -4,16 +4,13 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // Default false so headless / CI / cross-compile work without display libs.
     const gpu = b.option(bool, "gpu", "Enable GLFW+OpenGL GPU backend") orelse false;
 
-    // Optional prefix for cross-compiled Windows GPU builds, e.g.:
-    //   zig build -Dtarget=x86_64-windows-gnu -Dgpu=true -Dglfw_prefix=/home/you/glfw-win64
-    // Expected layout (official GLFW Windows prebuilt):
-    //   {prefix}/include/GLFW/glfw3.h
-    //   {prefix}/lib-mingw-w64/libglfw3dll.a   (or libglfw3.a)
-    //   {prefix}/lib-mingw-w64/glfw3.dll        (copy next to .exe at runtime)
+    // Windows GLFW prebuilt prefix, e.g. $HOME/glfw-3.4.bin.WIN64
     const glfw_prefix = b.option([]const u8, "glfw_prefix", "Path to Windows GLFW SDK (for cross-compile)");
+
+    // Which import lib name: "glfw3dll" (DLL) or "glfw3" (static). Default glfw3dll.
+    const glfw_lib = b.option([]const u8, "glfw_lib", "GLFW link name (glfw3dll or glfw3)") orelse "glfw3dll";
 
     const options = b.addOptions();
     options.addOption(bool, "enable_gpu", gpu);
@@ -35,14 +32,11 @@ pub fn build(b: *std.Build) void {
         if (target.result.os.tag == .windows) {
             if (glfw_prefix) |prefix| {
                 exe.root_module.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include", .{prefix}) });
-                // Official GLFW Windows zip uses lib-mingw-w64 for gnu target
+                // Official WIN64 zip: libs live in lib-mingw-w64 (gnu) or lib-vc*
                 exe.root_module.addLibraryPath(.{ .cwd_relative = b.fmt("{s}/lib-mingw-w64", .{prefix}) });
-                // Also try lib-static-ucrt / root lib if user flattened the tree
-                exe.root_module.addLibraryPath(.{ .cwd_relative = b.fmt("{s}/lib", .{prefix}) });
                 exe.root_module.addLibraryPath(.{ .cwd_relative = prefix });
             }
-            // Prefer import lib for DLL (glfw3dll); fall back name "glfw3"
-            exe.root_module.linkSystemLibrary("glfw3dll", .{});
+            exe.root_module.linkSystemLibrary(glfw_lib, .{});
             exe.root_module.linkSystemLibrary("opengl32", .{});
             exe.root_module.linkSystemLibrary("gdi32", .{});
             exe.root_module.linkSystemLibrary("shell32", .{});

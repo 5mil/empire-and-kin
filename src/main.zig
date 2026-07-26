@@ -14,6 +14,7 @@ const properties = @import("game/properties.zig");
 const garage = @import("game/garage.zig");
 const era_mod = @import("game/era.zig");
 const balance = @import("game/balance.zig");
+const goals = @import("game/goals.zig");
 const scene = @import("engine/scene.zig");
 const input = @import("engine/input.zig");
 const controller = @import("engine/controller.zig");
@@ -28,6 +29,7 @@ const combat_ui = @import("engine/combat_ui.zig");
 const toast_mod = @import("engine/toast.zig");
 const camera = @import("engine/camera.zig");
 const minimap = @import("engine/minimap.zig");
+const choice_mod = @import("engine/choice.zig");
 
 const gfx_mod = if (build_options.enable_gpu)
     @import("engine/gl_backend.zig")
@@ -86,9 +88,12 @@ pub fn main(init: std.process.Init) !void {
     var cui: combat_ui.CombatUI = .{};
     var toast: toast_mod.Toast = .{};
     var follow: camera.FollowCam = .{};
+    var choice: choice_mod.Choice = .{};
+    var goal: goals.Goal = .{};
     var selected_era: era_mod.Era = .nyc_1930s;
     var world_ready = false;
     var heal_accum: f32 = 0;
+    var safehouse_cd: f64 = 0;
 
     var edge_ord: [5]input.ButtonEdge = .{ .{}, .{}, .{}, .{}, .{} };
     var edge_tab: input.ButtonEdge = .{};
@@ -112,6 +117,8 @@ pub fn main(init: std.process.Init) !void {
         const raw = gfx_mod.pollRawKeys();
         frame_seed +%= 1;
         toast.tick(dt);
+        if (menu.collect_cooldown > 0) menu.collect_cooldown -= dt;
+        if (safehouse_cd > 0) safehouse_cd -= dt;
 
         if (boot.phase != .playing) {
             boot_mod.handle(&boot, raw, &edge_1, &edge_2, &edge_enter);
@@ -130,6 +137,24 @@ pub fn main(init: std.process.Init) !void {
                 std.debug.print("[alpha] Era: {s}\n", .{era_mod.name(selected_era)});
                 world_ready = true;
             }
+            continue;
+        }
+
+        // Choice modal blocks other input
+        if (choice.active) {
+            if (choice_mod.handle(&choice, raw, &edge_1, &edge_2, &eco, &the_kin, &districts[0])) |msg| {
+                toast.show(msg, 2.5);
+                if (goals.check(&goal, districts[0], eco)) {
+                    toast.show("GOAL COMPLETE", 4.0);
+                }
+            }
+            const car_ptr0 = garage.activeVehicle(&fleet);
+            const car_opt0: ?action.Vehicle = if (car_ptr0) |v| v.* else null;
+            const cam0 = follow.update(boss, false, dt);
+            scene.drawMinimalScene(gfx, boss, living.currentPeriod(clock), car_opt0, cam0, selected_era, false);
+            choice_mod.draw(gfx, choice);
+            toast.draw(gfx);
+            gfx.endFrame();
             continue;
         }
 
@@ -169,7 +194,7 @@ pub fn main(init: std.process.Init) !void {
                 .secondary = edge_r.pressed(raw.r),
                 .tertiary = edge_f.pressed(raw.f),
             };
-            empire_ui.handleMenu(keys, &emp, &the_kin, &portfolio, &fleet, districts[0..], &menu, boss.x, boss.y);
+            empire_ui.handleMenu(keys, &emp, &the_kin, &portfolio, &fleet, districts[0..], &menu, boss.x, boss.y, &eco);
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
             scene.drawMinimalScene(gfx, boss, living.currentPeriod(clock), car_opt, cam, selected_era, near_any);
             empire_ui.draw(gfx, emp, the_kin, portfolio, fleet, &districts, menu);
@@ -184,6 +209,14 @@ pub fn main(init: std.process.Init) !void {
                             break;
                         }
                     }
+                }
+                if (!used and scene.nearSafehouse(boss) and safehouse_cd <= 0) {
+                    player.heal(&boss, 25);
+                    if (districts[0].heat > 12) districts[0].heat -= 12 else districts[0].heat = 0;
+                    if (boss.wanted_level > 0) boss.wanted_level -= 1;
+                    safehouse_cd = 30.0;
+                    toast.show("Safehouse: healed, cooled off", 2.5);
+                    used = true;
                 }
                 if (!used) {
                     if (car_ptr) |car| {
@@ -215,13 +248,10 @@ pub fn main(init: std.process.Init) !void {
             for (&jobs) |*j| {
                 const pay = mission_ui.tickJob(j, &boss, &eco, &districts[0], dt);
                 if (pay > 0) {
-                    var buf: [48]u8 = undefined;
-                    const line = std.fmt.bufPrint(&buf, "Job done +${d}", .{pay}) catch "Job done";
-                    toast.show(line, balance.TOAST_JOB_SEC);
+                    choice_mod.open(&choice, pay);
                 }
             }
 
-            // design 18: passive heal when calm
             if (districts[0].heat < balance.HEAL_MAX_HEAT and !cui.encounter.active and boss.health < 100) {
                 heal_accum += balance.HEAL_PER_SEC * @as(f32, @floatCast(dt));
                 if (heal_accum >= 1.0) {
@@ -234,14 +264,18 @@ pub fn main(init: std.process.Init) !void {
             combat_ui.maybeSpawn(&cui, boss, districts[0].heat, frame_seed);
             combat_ui.tick(&cui, &boss, dt, edge_f.pressed(raw.f) and cui.encounter.active);
             wanted_ui.tickWanted(&boss, &police, &chase, districts[0].heat, period, speed, dt, clock.elapsed);
+            _ = goals.check(&goal, districts[0], eco);
 
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
             scene.drawMinimalScene(gfx, boss, period, car_opt, cam, selected_era, near_any);
-            hud.drawDistrictDebug(gfx, boss, &districts, clock, eco, period, false, police.alert_level);
-            wanted_ui.drawStars(gfx, boss.wanted_level, 10, 140);
-            wanted_ui.drawPoliceBanner(gfx, police, chase, 158);
+            hud.drawDistrictDebug(gfx, boss, &districts, clock, eco, period, false, police.alert_level, goal);
+            wanted_ui.drawStars(gfx, boss.wanted_level, 10, 250);
+            wanted_ui.drawPoliceBanner(gfx, police, chase, 268);
             for (jobs) |j| mission_ui.drawMarker(gfx, j, boss);
             mission_ui.drawMinimapHint(gfx, &jobs, boss);
+            if (scene.nearSafehouse(boss)) {
+                gfx.drawText("[E] Safehouse - heal / cool heat", 10, 396, backend.Color.rgb(100, 220, 140));
+            }
             minimap.draw(gfx, boss, &jobs);
             world_sim.drawBanner(gfx, ws);
             hints.draw(gfx, tip);

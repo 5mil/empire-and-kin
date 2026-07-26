@@ -5,9 +5,10 @@ const input = @import("input.zig");
 pub const HintId = enum {
     move,
     job,
+    choice,
+    safehouse,
     empire,
-    vehicle,
-    save,
+    goal,
     done,
 };
 
@@ -18,11 +19,12 @@ pub const Hints = struct {
 
 pub fn text(id: HintId) []const u8 {
     return switch (id) {
-        .move => "TIP: WASD walk toward cyan job poles",
-        .job => "TIP: Near a pole press E to work the job",
-        .empire => "TIP: Esc opens Empire (rackets crew cars)",
-        .vehicle => "TIP: Near car press E to enter/exit",
-        .save => "TIP: F5 save  F9 load  autosave on quit",
+        .move => "TIP: WASD toward cyan job poles",
+        .job => "TIP: Near a pole press E to work",
+        .choice => "TIP: After a job pick [1] keep or [2] tithe",
+        .safehouse => "TIP: Green door club - E to heal / cool heat",
+        .empire => "TIP: Esc empire, R on Rackets = collect street",
+        .goal => "TIP: Goal: raise control and stack $5000",
         .done => "",
     };
 }
@@ -30,10 +32,11 @@ pub fn text(id: HintId) []const u8 {
 pub fn advance(h: *Hints) void {
     h.current = switch (h.current) {
         .move => .job,
-        .job => .empire,
-        .empire => .vehicle,
-        .vehicle => .save,
-        .save => .done,
+        .job => .choice,
+        .choice => .safehouse,
+        .safehouse => .empire,
+        .empire => .goal,
+        .goal => .done,
         .done => .done,
     };
     if (h.current == .done) h.visible = false;
@@ -41,8 +44,8 @@ pub fn advance(h: *Hints) void {
 
 pub fn draw(gfx: backend.Backend, h: Hints) void {
     if (!h.visible or h.current == .done) return;
-    gfx.drawText(text(h.current), 10, 520, backend.Color.rgb(180, 220, 255));
-    gfx.drawText("[H] next  [X] dismiss", 10, 538, backend.Color.rgb(120, 140, 160));
+    gfx.drawText(text(h.current), 10, 540, backend.Color.rgb(180, 220, 255));
+    gfx.drawText("[H] next  [X] dismiss", 10, 558, backend.Color.rgb(120, 140, 160));
 }
 
 pub fn handle(h: *Hints, raw: input.RawKeys, edge_h: *input.ButtonEdge, edge_x: *input.ButtonEdge) void {

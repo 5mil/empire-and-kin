@@ -60,17 +60,17 @@ pub fn draw(
     const focus_col = backend.Color.rgb(255, 180, 80);
     const danger = backend.Color.rgb(220, 90, 70);
     var buf: [128]u8 = undefined;
-    var y: i32 = 8;
+    var y: i32 = 12;
 
-    gfx.drawText("======== EMPIRE MENU (PAUSED) ========", 260, y, title);
+    gfx.drawText("PAUSED - EMPIRE", 280, y, title);
+    y += 20;
+    const tabs = std.fmt.bufPrint(&buf, "[{s}]  Tab=next panel", .{panelName(menu.panel)}) catch "";
+    gfx.drawText(tabs, 280, y, focus_col);
     y += 18;
-    const tabs = std.fmt.bufPrint(&buf, "[ {s} ]  Rackets | Crew | Properties | Vehicles   (Tab)", .{panelName(menu.panel)}) catch "";
-    gfx.drawText(tabs, 260, y, focus_col);
-    y += 18;
-    const hdr = std.fmt.bufPrint(&buf, "Influence {d}  Rep {d} ({s})  Take ${d}/day  Prop upkeep ${d}", .{
-        emp.influence, emp.reputation, empire.reputationLabel(emp), empire.totalRacketIncome(emp), properties.totalUpkeep(pf),
+    const hdr = std.fmt.bufPrint(&buf, "Inf {d}  Rep {d}  Take ${d}/d  Upkeep ${d}", .{
+        emp.influence, emp.reputation, empire.totalRacketIncome(emp), properties.totalUpkeep(pf),
     }) catch "";
-    gfx.drawText(hdr, 260, y, accent);
+    gfx.drawText(hdr, 280, y, accent);
     y += 22;
 
     switch (menu.panel) {
@@ -79,33 +79,33 @@ pub fn draw(
         .properties => y = drawProperties(gfx, pf, menu, y, white, dim, title, danger),
         .vehicles => y = drawVehicles(gfx, fleet, menu, y, white, dim, title, danger, accent),
     }
-    y += 10;
-    gfx.drawText(helpForPanel(menu.panel), 260, y, dim);
+    y += 12;
+    gfx.drawText(helpForPanel(menu.panel), 280, y, dim);
     y += 16;
-    if (menu.last_msg.len > 0) gfx.drawText(menu.last_msg, 260, y, white);
+    if (menu.last_msg.len > 0) gfx.drawText(menu.last_msg, 280, y, white);
     _ = districts;
 }
 
 fn helpForPanel(p: Panel) []const u8 {
     return switch (p) {
-        .rackets => "Q/E select  Enter assign crew  1-5 orders",
+        .rackets => "Q/E select  Enter assign  1-5 orders",
         .crew => "Q/E select  1 Collect 2 Rest 3 Enforce 4 Scout 5 Guard",
         .properties => "Q/E select  Enter upgrade  R repair",
-        .vehicles => "Q/E select  Enter deploy+activate  R repair  F store/retrieve",
+        .vehicles => "Q/E select  Enter deploy  R repair  F store",
     };
 }
 
 fn drawRackets(gfx: backend.Backend, emp: empire.Empire, c: crew.Crew, menu: EmpireMenu, y0: i32, white: backend.Color, dim: backend.Color, title: backend.Color) i32 {
     var y = y0;
     var buf: [112]u8 = undefined;
-    gfx.drawText("--- Rackets ---", 260, y, title);
+    gfx.drawText("-- Rackets --", 280, y, title);
     y += 16;
     var i: u8 = 0;
     while (i < emp.racket_count) : (i += 1) {
         const r = emp.rackets[i];
-        const who = if (r.assigned_member) |m| c.members[m].name else "— unassigned —";
-        const line = std.fmt.bufPrint(&buf, "{s}{d} {s:<16} Lv{d} heat+{d}  {s}", .{ if (i == menu.selected_racket) ">" else " ", i, empire.racketName(r.rtype), r.level, r.heat_gen, who }) catch "";
-        gfx.drawText(line, 260, y, if (i == menu.selected_racket) white else dim);
+        const who = if (r.assigned_member) |m| c.members[m].name else "unassigned";
+        const line = std.fmt.bufPrint(&buf, "{s}{d} {s} Lv{d} +h{d} {s}", .{ if (i == menu.selected_racket) ">" else " ", i, empire.racketName(r.rtype), r.level, r.heat_gen, who }) catch "";
+        gfx.drawText(line, 280, y, if (i == menu.selected_racket) white else dim);
         y += 15;
     }
     return y;
@@ -114,13 +114,13 @@ fn drawRackets(gfx: backend.Backend, emp: empire.Empire, c: crew.Crew, menu: Emp
 fn drawCrew(gfx: backend.Backend, c: crew.Crew, menu: EmpireMenu, y0: i32, white: backend.Color, dim: backend.Color, title: backend.Color) i32 {
     var y = y0;
     var buf: [112]u8 = undefined;
-    gfx.drawText("--- Crew ---", 260, y, title);
+    gfx.drawText("-- Crew --", 280, y, title);
     y += 16;
     var i: u8 = 0;
     while (i < c.count) : (i += 1) {
         const m = c.members[i];
-        const line = std.fmt.bufPrint(&buf, "{s}{d} {s:<18} loy {d} fat {d}", .{ if (i == menu.selected_member) ">" else " ", i, m.name, m.loyalty, m.fatigue }) catch "";
-        gfx.drawText(line, 260, y, if (i == menu.selected_member) white else dim);
+        const line = std.fmt.bufPrint(&buf, "{s}{d} {s} loy{d} fat{d}", .{ if (i == menu.selected_member) ">" else " ", i, m.name, m.loyalty, m.fatigue }) catch "";
+        gfx.drawText(line, 280, y, if (i == menu.selected_member) white else dim);
         y += 15;
     }
     return y;
@@ -129,17 +129,17 @@ fn drawCrew(gfx: backend.Backend, c: crew.Crew, menu: EmpireMenu, y0: i32, white
 fn drawProperties(gfx: backend.Backend, pf: properties.Portfolio, menu: EmpireMenu, y0: i32, white: backend.Color, dim: backend.Color, title: backend.Color, danger: backend.Color) i32 {
     var y = y0;
     var buf: [128]u8 = undefined;
-    gfx.drawText("--- Properties ---", 260, y, title);
+    gfx.drawText("-- Properties --", 280, y, title);
     y += 16;
     var i: u8 = 0;
     while (i < pf.count) : (i += 1) {
         const p = pf.items[i];
-        const line = std.fmt.bufPrint(&buf, "{s}{d} {s:<18} {s:<12} Lv{d} cond {d} up ${d}", .{ if (i == menu.selected_property) ">" else " ", i, p.name, properties.propertyName(p.ptype), p.level, p.condition, p.monthly_upkeep }) catch "";
-        gfx.drawText(line, 260, y, if (i == menu.selected_property) white else if (p.condition < 40) danger else dim);
+        const line = std.fmt.bufPrint(&buf, "{s}{d} {s} Lv{d} cond{d} ${d}", .{ if (i == menu.selected_property) ">" else " ", i, p.name, p.level, p.condition, p.monthly_upkeep }) catch "";
+        gfx.drawText(line, 280, y, if (i == menu.selected_property) white else if (p.condition < 40) danger else dim);
         y += 15;
         if (i == menu.selected_property) {
-            const det = std.fmt.bufPrint(&buf, "     capacity {d}  [{s}]", .{ p.capacity, world.districtName(p.district) }) catch "";
-            gfx.drawText(det, 260, y, dim);
+            const det = std.fmt.bufPrint(&buf, "  {s} cap {d}", .{ world.districtName(p.district), p.capacity }) catch "";
+            gfx.drawText(det, 280, y, dim);
             y += 14;
         }
     }
@@ -149,20 +149,15 @@ fn drawProperties(gfx: backend.Backend, pf: properties.Portfolio, menu: EmpireMe
 fn drawVehicles(gfx: backend.Backend, fleet: garage.Fleet, menu: EmpireMenu, y0: i32, white: backend.Color, dim: backend.Color, title: backend.Color, danger: backend.Color, accent: backend.Color) i32 {
     var y = y0;
     var buf: [128]u8 = undefined;
-    gfx.drawText("--- Vehicles (Garage) ---", 260, y, title);
+    gfx.drawText("-- Vehicles --", 280, y, title);
     y += 16;
     var i: u8 = 0;
     while (i < fleet.count) : (i += 1) {
         const ov = fleet.slots[i];
         const active = if (fleet.active_idx) |a| a == i else false;
-        const line = std.fmt.bufPrint(&buf, "{s}{d} {s:<14} {s:<10} HP {d} {s}{s}", .{ if (i == menu.selected_vehicle) ">" else " ", i, ov.label, action.vehicleName(ov.vehicle.vtype), ov.vehicle.health, if (ov.stored) "[STORED] " else "", if (active) "[ACTIVE]" else if (ov.vehicle.occupied) "[IN USE]" else "" }) catch "";
-        gfx.drawText(line, 260, y, if (i == menu.selected_vehicle) white else if (ov.vehicle.health < 40) danger else if (active) accent else dim);
+        const line = std.fmt.bufPrint(&buf, "{s}{d} {s} HP{d}{s}{s}", .{ if (i == menu.selected_vehicle) ">" else " ", i, ov.label, ov.vehicle.health, if (ov.stored) " STORED" else "", if (active) " ACTIVE" else "" }) catch "";
+        gfx.drawText(line, 280, y, if (i == menu.selected_vehicle) white else if (ov.vehicle.health < 40) danger else if (active) accent else dim);
         y += 15;
-        if (i == menu.selected_vehicle) {
-            const det = std.fmt.bufPrint(&buf, "     pos ({d:.0},{d:.0}) maxspd {d:.0}", .{ ov.vehicle.x, ov.vehicle.y, ov.vehicle.max_speed }) catch "";
-            gfx.drawText(det, 260, y, dim);
-            y += 14;
-        }
     }
     return y;
 }
@@ -204,7 +199,7 @@ pub fn handleMenu(keys: MenuKeys, emp: *empire.Empire, c: *crew.Crew, pf: *prope
         },
         .properties => {
             if (keys.primary) menu.last_msg = if (properties.upgradeProperty(pf, menu.selected_property)) "Property upgraded" else "Cannot upgrade";
-            if (keys.secondary) menu.last_msg = if (properties.repairProperty(pf, menu.selected_property)) "Property repaired" else "Already full condition";
+            if (keys.secondary) menu.last_msg = if (properties.repairProperty(pf, menu.selected_property)) "Property repaired" else "Already full";
         },
         .vehicles => {
             if (keys.primary) {
@@ -219,8 +214,8 @@ pub fn handleMenu(keys: MenuKeys, emp: *empire.Empire, c: *crew.Crew, pf: *prope
                 if (idx < fleet.count) {
                     if (fleet.slots[idx].stored) {
                         _ = garage.deployVehicle(fleet, idx, player_x + 2, player_y);
-                        menu.last_msg = "Retrieved from garage";
-                    } else if (garage.storeVehicle(fleet, idx)) menu.last_msg = "Stored in garage" else menu.last_msg = "Cannot store";
+                        menu.last_msg = "Retrieved";
+                    } else if (garage.storeVehicle(fleet, idx)) menu.last_msg = "Stored" else menu.last_msg = "Cannot store";
                 }
             }
         },

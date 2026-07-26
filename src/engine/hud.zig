@@ -38,61 +38,43 @@ pub fn drawDistrictDebug(
 ) void {
     const white = backend.Color.rgb(230, 230, 220);
     const dim = backend.Color.rgb(160, 160, 150);
+    var y: i32 = 8;
 
-    gfx.drawText("=== DISTRICT ===", 10, 10, white);
-    gfx.drawText(world.districtName(p.current_district), 10, 28, backend.Color.rgb(255, 220, 120));
+    gfx.drawText(world.districtName(p.current_district), 10, y, backend.Color.rgb(255, 220, 120));
+    y += 18;
 
     if (findDistrict(districts, p.current_district)) |d| {
-        var buf: [64]u8 = undefined;
-
-        const heat_line = std.fmt.bufPrint(&buf, "Heat     {d}/100", .{d.heat}) catch "Heat ?";
-        gfx.drawText(heat_line, 10, 48, heatColor(d.heat));
-
-        var heat_bar: [22]u8 = undefined;
-        heat_bar[0] = '[';
-        const heat_fill = @min(20, d.heat / 5);
-        var i: usize = 0;
-        while (i < 20) : (i += 1) {
-            heat_bar[i + 1] = if (i < heat_fill) '#' else '-';
-        }
-        heat_bar[21] = ']';
-        gfx.drawText(heat_bar[0..], 10, 64, heatColor(d.heat));
-
-        const ctrl_line = std.fmt.bufPrint(&buf, "Control  {d}/100", .{d.control}) catch "Control ?";
-        gfx.drawText(ctrl_line, 10, 84, controlColor(d.control));
-
-        var ctrl_bar: [22]u8 = undefined;
-        ctrl_bar[0] = '[';
-        const ctrl_fill = @min(20, d.control / 5);
-        i = 0;
-        while (i < 20) : (i += 1) {
-            ctrl_bar[i + 1] = if (i < ctrl_fill) '=' else '-';
-        }
-        ctrl_bar[21] = ']';
-        gfx.drawText(ctrl_bar[0..], 10, 100, controlColor(d.control));
-
+        var buf: [48]u8 = undefined;
+        const heat_line = std.fmt.bufPrint(&buf, "Heat {d}/100", .{d.heat}) catch "Heat?";
+        gfx.drawText(heat_line, 10, y, heatColor(d.heat));
+        y += 16;
+        const ctrl_line = std.fmt.bufPrint(&buf, "Control {d}/100", .{d.control}) catch "Ctrl?";
+        gfx.drawText(ctrl_line, 10, y, controlColor(d.control));
+        y += 16;
         const income = city.dailyIncome(d);
-        const inc_line = std.fmt.bufPrint(&buf, "Racket $/day  {d}", .{income}) catch "";
-        gfx.drawText(inc_line, 10, 120, dim);
-    } else {
-        gfx.drawText("(no district data)", 10, 48, dim);
+        const inc_line = std.fmt.bufPrint(&buf, "Racket ${d}/day", .{income}) catch "";
+        gfx.drawText(inc_line, 10, y, dim);
+        y += 18;
     }
 
-    var buf2: [80]u8 = undefined;
+    var buf2: [64]u8 = undefined;
     const time_line = std.fmt.bufPrint(&buf2, "Day {d}  {d:0>2}:{d:0>2}  {s}", .{
         clock.day,
         clock.hour(),
         clock.minute(),
         if (paused) "PAUSED" else living.periodName(period),
     }) catch "";
-    gfx.drawText(time_line, 10, 150, white);
+    gfx.drawText(time_line, 10, y, white);
+    y += 16;
 
     const cash_line = std.fmt.bufPrint(&buf2, "Treasury ${d}", .{eco.treasury}) catch "";
-    gfx.drawText(cash_line, 10, 168, backend.Color.rgb(120, 200, 120));
+    gfx.drawText(cash_line, 10, y, backend.Color.rgb(120, 200, 120));
+    y += 16;
 
-    const want_line = std.fmt.bufPrint(&buf2, "Wanted {d}/5   Police alert {d}", .{ p.wanted_level, police_alert }) catch "";
-    gfx.drawText(want_line, 10, 186, if (p.wanted_level >= 3) backend.Color.rgb(220, 80, 60) else dim);
+    const want_line = std.fmt.bufPrint(&buf2, "Wanted {d}/5  Alert {d}", .{ p.wanted_level, police_alert }) catch "";
+    gfx.drawText(want_line, 10, y, if (p.wanted_level >= 3) backend.Color.rgb(220, 80, 60) else dim);
+    y += 16;
 
-    const pos_line = std.fmt.bufPrint(&buf2, "Pos ({d:.0}, {d:.0})  HP {d}", .{ p.x, p.y, p.health }) catch "";
-    gfx.drawText(pos_line, 10, 204, dim);
+    const pos_line = std.fmt.bufPrint(&buf2, "({d:.0},{d:.0})  HP {d}", .{ p.x, p.y, p.health }) catch "";
+    gfx.drawText(pos_line, 10, y, dim);
 }

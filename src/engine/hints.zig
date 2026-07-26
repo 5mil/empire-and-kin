@@ -2,8 +2,6 @@ const std = @import("std");
 const backend = @import("backend.zig");
 const input = @import("input.zig");
 
-/// A7 — dismissible onboarding hints
-
 pub const HintId = enum {
     move,
     job,
@@ -20,11 +18,11 @@ pub const Hints = struct {
 
 pub fn text(id: HintId) []const u8 {
     return switch (id) {
-        .move => "TIP: WASD to walk. Head toward a job marker.",
-        .job => "TIP: Enter the marker radius and press E to start a job.",
-        .empire => "TIP: Esc opens Empire (rackets, crew, properties, cars).",
-        .vehicle => "TIP: Vehicles panel → Enter deploys. World E enters/exits.",
-        .save => "TIP: F5 quick-save · F9 quick-load · auto-save on quit.",
+        .move => "TIP: WASD walk toward cyan job poles",
+        .job => "TIP: Near a pole press E to work the job",
+        .empire => "TIP: Esc opens Empire (rackets crew cars)",
+        .vehicle => "TIP: Near car press E to enter/exit",
+        .save => "TIP: F5 save  F9 load  autosave on quit",
         .done => "",
     };
 }
@@ -43,8 +41,8 @@ pub fn advance(h: *Hints) void {
 
 pub fn draw(gfx: backend.Backend, h: Hints) void {
     if (!h.visible or h.current == .done) return;
-    gfx.drawText(text(h.current), 10, 370, backend.Color.rgb(180, 220, 255));
-    gfx.drawText("[H] next tip  [X] dismiss tips", 10, 388, backend.Color.rgb(120, 140, 160));
+    gfx.drawText(text(h.current), 10, 520, backend.Color.rgb(180, 220, 255));
+    gfx.drawText("[H] next  [X] dismiss", 10, 538, backend.Color.rgb(120, 140, 160));
 }
 
 pub fn handle(h: *Hints, raw: input.RawKeys, edge_h: *input.ButtonEdge, edge_x: *input.ButtonEdge) void {

@@ -4,21 +4,36 @@
 
 Real-time free-roam + living crew + empire management.
 
-**Version:** `0.1.0-alpha`  
-**Stack:** Zig · SDL2 + OpenGL 3.3 · `engine.Backend` (Magister/Arcis/RealCity target)
+**Version:** `0.1.1-alpha`  
+**Stack:** Zig 0.16 · GLFW + OpenGL 3.3 · `engine.Backend`
 
 ## Art
 Public-domain historical sources preferred — `docs/ART_SOURCES.md`.
 
 ## Status
-**Alpha track complete (A1–A10)** + GPU infrastructure.  
+**Alpha track complete (A1–A10)** + GPU path verified on Windows.  
+**B1 bitmap font** · collision · smoothed camera · job respawn · toasts  
 **Full handover:** [`docs/HANDOVER.md`](docs/HANDOVER.md)
 
-## Play
+## Play (Linux / WSL display)
 
 ```bash
-zig build run              # GPU (SDL2 + OpenGL)
-zig build run-headless     # NullBackend
+# Headless (no GPU libs)
+zig build run-headless
+
+# GPU on Linux (needs libglfw + OpenGL)
+sudo apt install libglfw3-dev libgl1-mesa-dev
+zig build run -Dgpu=true
+```
+
+## Windows cross-compile from WSL
+
+```bash
+# Unpack official GLFW WIN64 prebuilt, then:
+export GLFW_WIN=$HOME/glfw-3.4.bin.WIN64
+zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
+  -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
+# Copy zig-out/bin/empire.exe AND glfw3.dll next to each other on Windows
 ```
 
 Boot → **[1] New Game** → pick era **[Enter]** → free-roam.
@@ -38,4 +53,3 @@ Boot → **[1] New Game** → pick era **[Enter]** → free-roam.
 - **`docs/HANDOVER.md`** — architecture, instructions, full future plan
 - `docs/ALPHA_ROADMAP.md` · `docs/ALPHA_CHECKLIST.md`
 - `docs/GFX_ARCHITECTURE.md` · `docs/ART_SOURCES.md`
-- `docs/RELEASE_NOTES_ALPHA.md`

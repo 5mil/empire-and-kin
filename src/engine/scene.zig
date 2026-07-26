@@ -87,6 +87,11 @@ fn waterTower(gfx: backend.Backend, x: f32, z: f32) void {
     box(gfx, x - 0.8, 7.0, z - 0.8, 0.35, 4.0, 0.35, backend.Color.rgb(70, 70, 75));
 }
 
+fn tree(gfx: backend.Backend, x: f32, z: f32) void {
+    box(gfx, x, 1.2, z, 0.35, 2.4, 0.35, backend.Color.rgb(70, 50, 30));
+    box(gfx, x, 3.2, z, 1.8, 1.6, 1.8, backend.Color.rgb(40, 90, 45));
+}
+
 fn safehouse(gfx: backend.Backend, lit: bool) void {
     box(gfx, SAFEHOUSE_X, 2.5, SAFEHOUSE_Z, 4.5, 5.0, 4.0, backend.Color.rgb(68, 72, 78));
     box(gfx, SAFEHOUSE_X, 5.2, SAFEHOUSE_Z, 4.8, 0.35, 4.3, backend.Color.rgb(40, 40, 42));
@@ -168,18 +173,25 @@ pub fn drawMinimalScene(
     hydrant(gfx, 8.2, 16.2);
     hydrant(gfx, 15.5, 24.2);
 
+    tree(gfx, 4.0, 16.0);
+    tree(gfx, 20.0, 25.0);
+    tree(gfx, 9.0, 27.0);
+
     parkedCar(gfx, 5.5, 22.5, backend.Color.rgb(50, 55, 70));
     parkedCar(gfx, 18.5, 17.5, backend.Color.rgb(90, 40, 35));
     parkedCar(gfx, 8.0, 15.0, backend.Color.rgb(35, 45, 40));
+    parkedCar(gfx, 22.0, 23.0, backend.Color.rgb(40, 50, 55));
 
     const n1 = near_job and dist2(p.x, p.y, 16, 22) < 36;
     const n2 = near_job and dist2(p.x, p.y, 8, 28) < 36;
     const n3 = near_job and dist2(p.x, p.y, 22, 12) < 36;
     const n4 = near_job and dist2(p.x, p.y, 12, 16) < 36;
+    const n5 = near_job and dist2(p.x, p.y, 26, 18) < 36;
     jobBeacon(gfx, 16.0, 22.0, n1, true);
     jobBeacon(gfx, 8.0, 28.0, n2, true);
     jobBeacon(gfx, 22.0, 12.0, n3, true);
     jobBeacon(gfx, 12.0, 16.0, n4, true);
+    jobBeacon(gfx, 26.0, 18.0, n5, true);
 
     if (car) |v| {
         const col = if (v.occupied) backend.Color.rgb(45, 130, 210) else backend.Color.rgb(70, 70, 80);

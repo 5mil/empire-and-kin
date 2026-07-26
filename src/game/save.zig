@@ -4,6 +4,9 @@ const crew = @import("crew.zig");
 const time = @import("time.zig");
 const player = @import("player.zig");
 const city = @import("city.zig");
+const goals = @import("goals.zig");
+const stash_mod = @import("stash.zig");
+const empire = @import("empire.zig");
 
 pub const SAVE_PATH = "empire_save.txt";
 
@@ -22,6 +25,12 @@ pub const SaveData = struct {
     district_heat0: u8 = 0,
     district_control0: u8 = 0,
     era_id: u8 = 0,
+    goal_tier: u8 = 1,
+    goal_ctrl: u8 = 60,
+    goal_cash: u32 = 5000,
+    stash_amt: u32 = 0,
+    reputation: i16 = 0,
+    respect_street: u8 = 20,
     valid: bool = false,
 };
 
@@ -55,40 +64,24 @@ pub fn capture(
     return s;
 }
 
-pub fn saveGame(eco: economy.Economy, c: crew.Crew, clock: time.Clock) void {
-    slot = .{
-        .day = clock.day,
-        .time_of_day = clock.time_of_day,
-        .treasury = eco.treasury,
-        .influence = eco.total_influence,
-        .crew_cash = c.cash,
-        .crew_morale = c.morale,
-        .crew_count = c.count,
-        .valid = true,
-    };
-}
-
-pub fn saveFull(
+pub fn captureFull(
     eco: economy.Economy,
     c: crew.Crew,
     clock: time.Clock,
     p: player.Player,
     districts: []const city.District,
-) void {
-    slot = capture(eco, c, clock, p, districts);
-}
-
-pub fn loadGame() ?SaveData {
-    if (!slot.valid) return null;
-    return slot;
-}
-
-pub fn hasSave() bool {
-    return slot.valid;
-}
-
-pub fn clearSave() void {
-    slot.valid = false;
+    goal: goals.Goal,
+    stash: stash_mod.Stash,
+    emp: empire.Empire,
+) SaveData {
+    var s = capture(eco, c, clock, p, districts);
+    s.goal_tier = goal.tier;
+    s.goal_ctrl = goal.control_target;
+    s.goal_cash = goal.treasury_target;
+    s.stash_amt = stash.amount;
+    s.reputation = emp.reputation;
+    s.respect_street = emp.respect_street;
+    return s;
 }
 
 pub fn writeToDisk(io: std.Io, data: SaveData) !void {
@@ -96,9 +89,9 @@ pub fn writeToDisk(io: std.Io, data: SaveData) !void {
     const file = try cwd.createFile(io, SAVE_PATH, .{});
     defer file.close(io);
 
-    var buf: [512]u8 = undefined;
+    var buf: [768]u8 = undefined;
     const body = try std.fmt.bufPrint(&buf,
-        \\# Empire & Kin save
+        \\\# Empire & Kin save
         \\day={d}
         \\time_of_day={d}
         \\treasury={d}
@@ -113,6 +106,12 @@ pub fn writeToDisk(io: std.Io, data: SaveData) !void {
         \\district_heat0={d}
         \\district_control0={d}
         \\era_id={d}
+        \\goal_tier={d}
+        \\goal_ctrl={d}
+        \\goal_cash={d}
+        \\stash_amt={d}
+        \\reputation={d}
+        \\respect_street={d}
         \\
     , .{
         data.day,
@@ -129,10 +128,15 @@ pub fn writeToDisk(io: std.Io, data: SaveData) !void {
         data.district_heat0,
         data.district_control0,
         data.era_id,
+        data.goal_tier,
+        data.goal_ctrl,
+        data.goal_cash,
+        data.stash_amt,
+        data.reputation,
+        data.respect_street,
     });
 
-    // Simple whole-buffer write via File writer
-    var wbuf: [512]u8 = undefined;
+    var wbuf: [768]u8 = undefined;
     var writer = file.writer(io, &wbuf);
     try writer.interface.writeAll(body);
     try writer.interface.flush();
@@ -143,7 +147,7 @@ pub fn writeToDisk(io: std.Io, data: SaveData) !void {
 
 pub fn readFromDisk(io: std.Io) !?SaveData {
     const cwd = std.Io.Dir.cwd();
-    var buf: [1024]u8 = undefined;
+    var buf: [2048]u8 = undefined;
     const text = cwd.readFile(io, SAVE_PATH, &buf) catch return null;
 
     var data: SaveData = .{ .valid = true };
@@ -167,6 +171,12 @@ pub fn readFromDisk(io: std.Io) !?SaveData {
             if (std.mem.eql(u8, key, "district_heat0")) data.district_heat0 = std.fmt.parseInt(u8, val, 10) catch data.district_heat0;
             if (std.mem.eql(u8, key, "district_control0")) data.district_control0 = std.fmt.parseInt(u8, val, 10) catch data.district_control0;
             if (std.mem.eql(u8, key, "era_id")) data.era_id = std.fmt.parseInt(u8, val, 10) catch data.era_id;
+            if (std.mem.eql(u8, key, "goal_tier")) data.goal_tier = std.fmt.parseInt(u8, val, 10) catch data.goal_tier;
+            if (std.mem.eql(u8, key, "goal_ctrl")) data.goal_ctrl = std.fmt.parseInt(u8, val, 10) catch data.goal_ctrl;
+            if (std.mem.eql(u8, key, "goal_cash")) data.goal_cash = std.fmt.parseInt(u32, val, 10) catch data.goal_cash;
+            if (std.mem.eql(u8, key, "stash_amt")) data.stash_amt = std.fmt.parseInt(u32, val, 10) catch data.stash_amt;
+            if (std.mem.eql(u8, key, "reputation")) data.reputation = std.fmt.parseInt(i16, val, 10) catch data.reputation;
+            if (std.mem.eql(u8, key, "respect_street")) data.respect_street = std.fmt.parseInt(u8, val, 10) catch data.respect_street;
         }
     }
     slot = data;
@@ -195,4 +205,25 @@ pub fn applyTo(
         districts[0].heat = data.district_heat0;
         districts[0].control = data.district_control0;
     }
+}
+
+pub fn applyFull(
+    data: SaveData,
+    eco: *economy.Economy,
+    c: *crew.Crew,
+    clock: *time.Clock,
+    p: *player.Player,
+    districts: []city.District,
+    goal: *goals.Goal,
+    stash: *stash_mod.Stash,
+    emp: *empire.Empire,
+) void {
+    applyTo(data, eco, c, clock, p, districts);
+    goal.tier = data.goal_tier;
+    goal.control_target = data.goal_ctrl;
+    goal.treasury_target = data.goal_cash;
+    goal.complete = false;
+    stash.amount = data.stash_amt;
+    emp.reputation = data.reputation;
+    emp.respect_street = data.respect_street;
 }

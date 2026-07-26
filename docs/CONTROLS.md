@@ -4,28 +4,23 @@
 
 | Key | Action |
 |-----|--------|
-| WASD / Arrows | Move |
-| E | Interact (job, car, fence, stash, doc, numbers, safehouse) |
-| R | Bribe at safehouse |
-| F | Attack (combat) |
-| Esc / Space | Empire menu |
+| WASD | Move |
+| E | Interact (jobs + all street contacts) |
+| R | Bribe / bartender tip / use medkit |
+| F | Attack in combat |
+| Esc | Empire menu |
 | F5 / F9 | Save / Load |
-| H / X | Tips next / dismiss |
+| H / X | Tips |
 
-## Job complete modal
+## Contacts (E near prop)
 
-| Key | Action |
-|-----|--------|
-| 1 | Keep the take |
-| 2 | Tithe to crew |
+Fence, stash, Doc, numbers, bar, vendor, phone, paper, church, dock, gamble den, informant, warehouse, arcade, taxi, safehouse.
 
-## Empire menu (paused)
+## Empire (paused)
 
 | Key | Action |
 |-----|--------|
-| Tab | Next panel |
-| Q / E | Select item |
-| Enter | Primary (assign / deploy / upgrade prop) |
-| R | Secondary (collect / repair) |
-| F | Tertiary (upgrade racket $800 / store vehicle) |
-| 1–5 | Crew orders (Collect / Rest+Tip / Enforce / Scout / Guard+Lookout) |
+| Tab | Panels |
+| Q/E | Select |
+| Enter / R / F | Primary / secondary / tertiary |
+| 1–5 | Crew orders (+ tip/loan/turf/lookout) |

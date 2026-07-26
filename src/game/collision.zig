@@ -1,10 +1,10 @@
 //! Simple AABB collision against known building footprints + world bounds.
 const std = @import("std");
 
-pub const WORLD_MIN_X: f32 = -8.0;
-pub const WORLD_MAX_X: f32 = 40.0;
-pub const WORLD_MIN_Y: f32 = 4.0;
-pub const WORLD_MAX_Y: f32 = 36.0;
+pub const WORLD_MIN_X: f32 = -2.0;
+pub const WORLD_MAX_X: f32 = 32.0;
+pub const WORLD_MIN_Y: f32 = 6.0;
+pub const WORLD_MAX_Y: f32 = 34.0;
 
 pub const Box = struct {
     min_x: f32,
@@ -13,14 +13,20 @@ pub const Box = struct {
     max_z: f32,
 };
 
-/// Matches the simplified street block in engine/scene.zig (x,z = player x,y).
+/// Matches engine/scene.zig footprints (x,z = player x,y).
 const buildings = [_]Box{
-    .{ .min_x = 1.5, .max_x = 6.5, .min_z = 26.0, .max_z = 30.0 },
-    .{ .min_x = 9.5, .max_x = 14.5, .min_z = 27.0, .max_z = 31.0 },
-    .{ .min_x = 17.5, .max_x = 22.5, .min_z = 26.0, .max_z = 30.0 },
-    .{ .min_x = 1.5, .max_x = 6.5, .min_z = 10.0, .max_z = 14.0 },
-    .{ .min_x = 9.5, .max_x = 14.5, .min_z = 9.0, .max_z = 13.0 },
-    .{ .min_x = 17.5, .max_x = 22.5, .min_z = 10.0, .max_z = 14.0 },
+    // North row
+    .{ .min_x = 0.9, .max_x = 6.1, .min_z = 26.4, .max_z = 30.6 },
+    .{ .min_x = 9.0, .max_x = 14.0, .min_z = 27.2, .max_z = 31.2 },
+    .{ .min_x = 16.9, .max_x = 22.1, .min_z = 26.2, .max_z = 30.4 },
+    .{ .min_x = 24.75, .max_x = 29.25, .min_z = 26.9, .max_z = 30.7 },
+    // South row
+    .{ .min_x = 1.0, .max_x = 6.0, .min_z = 9.5, .max_z = 13.5 },
+    .{ .min_x = 9.0, .max_x = 14.0, .min_z = 8.8, .max_z = 12.8 },
+    .{ .min_x = 16.9, .max_x = 22.1, .min_z = 9.5, .max_z = 13.5 },
+    .{ .min_x = 24.75, .max_x = 29.25, .min_z = 9.3, .max_z = 13.1 },
+    // Safehouse body (leave front clear for approach)
+    .{ .min_x = 7.75, .max_x = 12.25, .min_z = 16.0, .max_z = 20.0 },
 };
 
 pub fn pointInBox(x: f32, z: f32, b: Box, margin: f32) bool {
@@ -34,7 +40,6 @@ pub fn hitsBuilding(x: f32, z: f32, radius: f32) bool {
     return false;
 }
 
-/// Try move from (ox,oz) by (dx,dz). Slides on single-axis if blocked.
 pub fn resolveMove(ox: f32, oz: f32, dx: f32, dz: f32, radius: f32) struct { x: f32, z: f32 } {
     var nx = ox + dx;
     var nz = oz + dz;

@@ -1,19 +1,22 @@
 # Empire & Kin — Handover
 
-**Version:** `0.1.7-alpha`  
-**Steps complete:** ~200 design/implementation pushes on this track  
+**Version:** `0.1.8-alpha`  
 **Repo:** https://github.com/5mil/empire-and-kin
 
-## What exists
+## Current playable surface
 
-- Playable GPU Windows path (ReleaseFast recommended)
-- Dense agency: interact hub + 15+ street contacts + jobs + empire
-- Ambush, patrol car, radio, turf, weather, news, banter
-- HUD stack: district, HP, threat, morale, loan, score, compass, minimap
-- Expanded save: goal tier, stash, reputation
-- Modules ready but not all hooked: bakery, barber, laundry, perfume, cigar, post, skirmish, milestones, difficulty
+- 5 jobs (incl. hit) + payout choice  
+- 20+ street contacts via `interact.zig` (see `docs/MAP.md`)  
+- Ambush, patrol car, radio, turf, weather, news, banter  
+- HUD: district, HP, threat, morale, loan, rep, stash, clock, zone, score  
+- Milestones, day reputation drift, expanded save  
+- Scene: trees, 5 beacons, denser props  
 
-## First action when you return
+## Modules ready / partial
+
+Death/hospital, recruit, intimidate, protection_run, heat_spike, gameover UI, zone UI  
+
+## Build
 
 ```bash
 cd ~/empire-and-kin && git pull && rm -rf .zig-cache zig-out
@@ -22,13 +25,6 @@ zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
   -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
 ```
 
-Paste compile errors → fix pass. Then playtest the contact map (`docs/MAP.md`).
+**Next:** paste compile errors → fix pass; then wire death/recruit into main loop.
 
-## Next product priorities
-
-1. Compile-fix  
-2. Hook remaining shops into `interact.zig`  
-3. Second district scenery  
-4. Visual pass (textures / font)
-
-**End of handover (step 200).**
+**End of handover.**

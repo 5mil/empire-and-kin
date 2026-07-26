@@ -4,12 +4,15 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // Default false so headless / CI works without display libs.
-    // Use: zig build run -Dgpu=true
+    // Default false so headless / CI / cross-compile work without display libs.
+    // GPU: zig build -Dgpu=true
+    // Windows headless: zig build -Dtarget=x86_64-windows-gnu
     const gpu = b.option(bool, "gpu", "Enable GLFW+OpenGL GPU backend") orelse false;
 
     const options = b.addOptions();
     options.addOption(bool, "enable_gpu", gpu);
+
+    const need_libc = gpu or target.result.os.tag == .windows;
 
     const exe = b.addExecutable(.{
         .name = "empire",
@@ -17,30 +20,33 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
-            .link_libc = gpu,
+            .link_libc = need_libc,
         }),
     });
     exe.root_module.addOptions("build_options", options);
 
     if (gpu) {
-        exe.root_module.linkSystemLibrary("glfw", .{});
-        exe.root_module.linkSystemLibrary("GL", .{});
-        if (target.result.os.tag == .linux) {
-            exe.root_module.linkSystemLibrary("pthread", .{});
-            exe.root_module.linkSystemLibrary("dl", .{});
-            exe.root_module.linkSystemLibrary("m", .{});
-        }
-        if (target.result.os.tag == .macos) {
-            exe.root_module.linkFramework("OpenGL", .{});
-            exe.root_module.linkFramework("Cocoa", .{});
-            exe.root_module.linkFramework("IOKit", .{});
-            exe.root_module.linkFramework("CoreVideo", .{});
-        }
+        // Prefer glfw3 on Windows (vcpkg/MSYS), glfw on Linux/macOS package names.
         if (target.result.os.tag == .windows) {
+            exe.root_module.linkSystemLibrary("glfw3", .{});
             exe.root_module.linkSystemLibrary("opengl32", .{});
             exe.root_module.linkSystemLibrary("gdi32", .{});
             exe.root_module.linkSystemLibrary("shell32", .{});
             exe.root_module.linkSystemLibrary("user32", .{});
+        } else {
+            exe.root_module.linkSystemLibrary("glfw", .{});
+            exe.root_module.linkSystemLibrary("GL", .{});
+            if (target.result.os.tag == .linux) {
+                exe.root_module.linkSystemLibrary("pthread", .{});
+                exe.root_module.linkSystemLibrary("dl", .{});
+                exe.root_module.linkSystemLibrary("m", .{});
+            }
+            if (target.result.os.tag == .macos) {
+                exe.root_module.linkFramework("OpenGL", .{});
+                exe.root_module.linkFramework("Cocoa", .{});
+                exe.root_module.linkFramework("IOKit", .{});
+                exe.root_module.linkFramework("CoreVideo", .{});
+            }
         }
     }
 
@@ -64,6 +70,7 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
+            .link_libc = target.result.os.tag == .windows,
         }),
     });
     headless.root_module.addOptions("build_options", headless_opts);

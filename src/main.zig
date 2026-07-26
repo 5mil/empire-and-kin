@@ -38,6 +38,10 @@ const bartender = @import("game/bartender.zig");
 const medkit = @import("game/medkit.zig");
 const reputation_tick = @import("game/reputation_tick.zig");
 const milestone = @import("game/milestone.zig");
+const death = @import("game/death.zig");
+const heat_spike = @import("game/heat_spike.zig");
+const payday = @import("game/payday.zig");
+const intimidate = @import("game/intimidate.zig");
 const scene = @import("engine/scene.zig");
 const input = @import("engine/input.zig");
 const controller = @import("engine/controller.zig");
@@ -71,6 +75,8 @@ const rep_ui = @import("engine/rep_ui.zig");
 const stash_ui = @import("engine/stash_ui.zig");
 const clock_ui = @import("engine/clock_ui.zig");
 const district_label = @import("engine/district_label.zig");
+const zone_ui = @import("engine/zone_ui.zig");
+const gameover = @import("engine/gameover.zig");
 const backend = @import("engine/backend.zig");
 
 const gfx_mod = if (build_options.enable_gpu)
@@ -162,6 +168,7 @@ pub fn main(init: std.process.Init) !void {
     var ambush_cd: f64 = balance.AMBUSH_CHECK_INTERVAL;
     var radio_cd: f64 = 55.0;
     var turf_cd: f64 = 90.0;
+    var day_count: u32 = 0;
 
     var edge_ord: [5]input.ButtonEdge = .{ .{}, .{}, .{}, .{}, .{} };
     var edge_tab: input.ButtonEdge = .{};
@@ -263,7 +270,8 @@ pub fn main(init: std.process.Init) !void {
         const car_ptr = garage.activeVehicle(&fleet);
         const in_car = if (car_ptr) |v| v.occupied else false;
         const speed: f32 = if (car_ptr) |v| v.speed else boss.speed;
-        _ = ctrl.tick(raw, &boss, if (in_car) 0 else dt);
+        const downed = death.isDown(boss);
+        if (!downed) _ = ctrl.tick(raw, &boss, if (in_car) 0 else dt);
 
         const near_any = mission_ui.anyNear(&jobs, boss);
         const cam = follow.update(boss, in_car, dt);
@@ -306,14 +314,29 @@ pub fn main(init: std.process.Init) !void {
                 }
             }
             if (keys.order_enforce and menu.panel == .crew) {
-                const msg = turf.resolve(&districts[0], &emp, &the_kin, frame_seed);
-                toast.show(msg, 2.5);
-                feed.push(msg);
+                if (intimidate.press(&the_kin, &districts[0], &emp)) {
+                    toast.show("Enforcers on the street", 2.5);
+                    feed.push("Intimidation");
+                } else {
+                    const msg = turf.resolve(&districts[0], &emp, &the_kin, frame_seed);
+                    toast.show(msg, 2.5);
+                    feed.push(msg);
+                }
             }
             empire_ui.handleMenu(keys, &emp, &the_kin, &portfolio, &fleet, districts[0..], &menu, boss.x, boss.y, &eco);
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
             scene.drawMinimalScene(gfx, boss, living.currentPeriod(clock), car_opt, cam, selected_era, near_any);
             empire_ui.draw(gfx, emp, the_kin, portfolio, fleet, &districts, menu);
+        } else if (downed) {
+            if (edge_interact.pressed(raw.e)) {
+                death.hospital(&boss, &eco);
+                toast.show("Hospital $400", 2.5);
+                feed.push("Woke in hospital");
+            }
+            const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
+            scene.drawMinimalScene(gfx, boss, living.currentPeriod(clock), car_opt, cam, selected_era, false);
+            gameover.draw(gfx, true);
+            toast.draw(gfx);
         } else {
             if (edge_interact.pressed(raw.e)) {
                 var used = false;
@@ -328,7 +351,7 @@ pub fn main(init: std.process.Init) !void {
                     }
                 }
                 if (!used) {
-                    const res = interact.tryE(&boss, &eco, &districts[0], &inv, &stash, &rival, &emp, frame_seed, &safehouse_cd);
+                    const res = interact.tryE(&boss, &eco, &districts[0], &inv, &stash, &rival, &emp, &the_kin, frame_seed, &safehouse_cd);
                     if (res.handled) {
                         toast.show(res.msg, 2.0);
                         feed.push(res.msg);
@@ -366,6 +389,13 @@ pub fn main(init: std.process.Init) !void {
                     feed.push("Medkit used");
                 }
             }
+            if (edge_f.pressed(raw.f) and !cui.encounter.active) {
+                const res = interact.tryEmptyStash(boss, &stash, &eco);
+                if (res.handled) {
+                    toast.show(res.msg, 2.0);
+                    feed.push(res.msg);
+                }
+            }
 
             const action_prompt = interact.promptNear(boss);
 
@@ -393,6 +423,11 @@ pub fn main(init: std.process.Init) !void {
             if (day_cycle.crossed(&dayw, clock)) {
                 loan_mod.tickDay(&loan, &eco);
                 reputation_tick.daily(&emp, districts[0]);
+                day_count += 1;
+                if (day_count % 7 == 0) {
+                    payday.weekly(&the_kin, &eco);
+                    feed.push("Crew payday");
+                }
                 feed.push("A new day");
                 if (loan.due > 0) feed.push("Loan still due");
             }
@@ -421,7 +456,7 @@ pub fn main(init: std.process.Init) !void {
                 ambush_cd = balance.AMBUSH_CHECK_INTERVAL;
                 if (ambush.roll(frame_seed, districts[0].heat, boss.wanted_level)) {
                     ambush.apply(&boss, &districts[0]);
-                    toast.show("AMBUSH!", 2.5);
+                    toast.showUrgent("AMBUSH!", 2.5);
                     feed.push("Ambushed");
                 }
             }
@@ -435,6 +470,10 @@ pub fn main(init: std.process.Init) !void {
                     const msg = turf.resolve(&districts[0], &emp, &the_kin, frame_seed);
                     feed.push(msg);
                 }
+            }
+            if (heat_spike.maybe(&districts[0], boss, frame_seed)) {
+                toast.showUrgent("Heat spike!", 2.0);
+                feed.push("Police heat spike");
             }
 
             for (&jobs) |*j| {
@@ -488,6 +527,7 @@ pub fn main(init: std.process.Init) !void {
             stash_ui.draw(gfx, stash);
             clock_ui.draw(gfx, clock);
             district_label.draw(gfx, boss.current_district);
+            zone_ui.draw(gfx, boss);
             reticle.draw(gfx, job_working);
             debug_overlay.draw(gfx, frame_seed, dt);
             prompt.draw(gfx, action_prompt);

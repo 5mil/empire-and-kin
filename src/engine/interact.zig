@@ -6,6 +6,7 @@ const city = @import("../game/city.zig");
 const inventory = @import("../game/inventory.zig");
 const rival = @import("../game/rival.zig");
 const empire = @import("../game/empire.zig");
+const crew = @import("../game/crew.zig");
 const fence = @import("../game/fence.zig");
 const stash_mod = @import("../game/stash.zig");
 const doc = @import("../game/doc.zig");
@@ -28,6 +29,9 @@ const perfume = @import("../game/perfume.zig");
 const cigar = @import("../game/cigar.zig");
 const postoffice = @import("../game/postoffice.zig");
 const alley_deal = @import("../game/alley_deal.zig");
+const recruit = @import("../game/recruit.zig");
+const crew_names = @import("../game/crew_names.zig");
+const safehouse_stash = @import("../game/safehouse_stash.zig");
 const scene = @import("scene.zig");
 const balance = @import("../game/balance.zig");
 
@@ -58,8 +62,9 @@ pub fn promptNear(p: player.Player) []const u8 {
     if (perfume.near(p)) return "[E] Perfume $75";
     if (cigar.near(p)) return "[E] Cigar $40";
     if (postoffice.near(p)) return "[E] Mail";
+    if (recruit.nearCorner(p)) return "[E] Recruit $600";
     if (alley_deal.nearAlley(p)) return "[E] Alley deal";
-    if (scene.nearSafehouse(p)) return "[E] heal  [R] bribe";
+    if (scene.nearSafehouse(p)) return "[E] heal  [R] bribe  [F] empty stash";
     return "";
 }
 
@@ -71,6 +76,7 @@ pub fn tryE(
     stash: *stash_mod.Stash,
     riv: *rival.Rival,
     emp: *empire.Empire,
+    kin: *crew.Crew,
     seed: u32,
     safehouse_cd: *f64,
 ) Result {
@@ -164,6 +170,10 @@ pub fn tryE(
     if (postoffice.near(p.*)) {
         return .{ .handled = true, .msg = postoffice.checkMail(eco, seed) };
     }
+    if (recruit.nearCorner(p.*)) {
+        if (recruit.hire(kin, eco, crew_names.nameFor(seed))) return .{ .handled = true, .msg = "Recruited muscle" };
+        return .{ .handled = true, .msg = "Can't recruit" };
+    }
     if (alley_deal.nearAlley(p.*)) {
         return .{ .handled = true, .msg = alley_deal.deal(eco, d, seed) };
     }
@@ -175,6 +185,13 @@ pub fn tryE(
         return .{ .handled = true, .msg = "Safehouse healed" };
     }
     return .{};
+}
+
+pub fn tryEmptyStash(p: player.Player, stash: *stash_mod.Stash, eco: *economy.Economy) Result {
+    if (!safehouse_stash.nearSafeStash(p)) return .{};
+    const amt = safehouse_stash.withdrawAll(stash, eco);
+    if (amt == 0) return .{ .handled = true, .msg = "Stash empty" };
+    return .{ .handled = true, .msg = "Emptied stash" };
 }
 
 pub fn drawMarkers(gfx: backend.Backend) void {
@@ -199,4 +216,5 @@ pub fn drawMarkers(gfx: backend.Backend) void {
     gfx.drawBox(.{ .x = perfume.SHOP_X, .y = 0.7, .z = perfume.SHOP_Z }, 1.2, 1.4, 1.2, backend.Color.rgb(200, 120, 160));
     gfx.drawBox(.{ .x = cigar.CIG_X, .y = 0.6, .z = cigar.CIG_Z }, 1.0, 1.2, 1.0, backend.Color.rgb(90, 60, 40));
     gfx.drawBox(.{ .x = postoffice.PO_X, .y = 1.2, .z = postoffice.PO_Z }, 2.2, 2.4, 2.0, backend.Color.rgb(180, 50, 40));
+    gfx.drawBox(.{ .x = 15.0, .y = 0.9, .z = 20.0 }, 0.9, 1.8, 0.9, backend.Color.rgb(100, 80, 60));
 }

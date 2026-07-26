@@ -3,8 +3,6 @@ const backend = @import("backend.zig");
 const era = @import("../game/era.zig");
 const input = @import("input.zig");
 
-/// A1 — Title / New Game / Continue / Era select
-
 pub const BootPhase = enum {
     title,
     era_select,
@@ -29,35 +27,36 @@ pub fn draw(gfx: backend.Backend, boot: BootState) void {
 
     switch (boot.phase) {
         .title => {
-            gfx.drawText("EMPIRE & KIN", 40, 40, title_c);
-            gfx.drawText("New York City mob life — real-time", 40, 70, dim);
-            gfx.drawText("[1] New Game", 40, 120, white);
+            gfx.drawText("EMPIRE & KIN", 40, 48, title_c);
+            gfx.drawText("NYC mob life  -  real-time alpha", 40, 78, dim);
+            gfx.drawText("[1]  New Game", 40, 130, white);
             if (boot.has_save) {
-                gfx.drawText("[2] Continue", 40, 145, accent);
+                gfx.drawText("[2]  Continue", 40, 158, accent);
             } else {
-                gfx.drawText("[2] Continue (no save)", 40, 145, dim);
+                gfx.drawText("[2]  Continue (no save)", 40, 158, dim);
             }
+            gfx.drawText("WASD move  E job/car  Esc empire", 40, 220, dim);
         },
         .era_select => {
-            gfx.drawText("CHOOSE YOUR ERA", 40, 40, title_c);
+            gfx.drawText("CHOOSE YOUR ERA", 40, 48, title_c);
             if (boot.selected_era == .nyc_1930s) {
-                gfx.drawText("> 1930s New York  [1]", 40, 100, accent);
+                gfx.drawText("> 1930s New York   [1]", 40, 110, accent);
             } else {
-                gfx.drawText("  1930s New York  [1]", 40, 100, white);
+                gfx.drawText("  1930s New York   [1]", 40, 110, white);
             }
-            gfx.drawText(era.description(.nyc_1930s), 60, 120, dim);
+            gfx.drawText("Prohibition rackets, old families", 60, 132, dim);
             if (boot.selected_era == .nyc_1980s) {
-                gfx.drawText("> 1980s New York  [2]", 40, 170, accent);
+                gfx.drawText("> 1980s New York   [2]", 40, 180, accent);
             } else {
-                gfx.drawText("  1980s New York  [2]", 40, 170, white);
+                gfx.drawText("  1980s New York   [2]", 40, 180, white);
             }
-            gfx.drawText(era.description(.nyc_1980s), 60, 190, dim);
-            gfx.drawText("[Enter] Start", 40, 250, white);
+            gfx.drawText("Neon heat, new crews, cocaine era", 60, 202, dim);
+            gfx.drawText("[Enter] Start", 40, 260, white);
         },
         .playing => {},
     }
     if (boot.message.len > 0) {
-        gfx.drawText(boot.message, 40, 300, accent);
+        gfx.drawText(boot.message, 40, 320, accent);
     }
 }
 
@@ -78,9 +77,9 @@ pub fn handle(
                 if (boot.has_save) {
                     boot.load_on_start = true;
                     boot.phase = .playing;
-                    boot.message = "Continuing save…";
+                    boot.message = "Loading save...";
                 } else {
-                    boot.message = "No save on disk — start New Game";
+                    boot.message = "No save - start New Game";
                 }
             }
         },

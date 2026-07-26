@@ -13,7 +13,7 @@ pub const lit_vert =
     \\void main() {
     \\    vec4 world = uModel * vec4(aPos, 1.0);
     \\    vWorldPos = world.xyz;
-    \\    vNormal = mat3(transpose(inverse(uModel))) * aNormal;
+    \\    vNormal = mat3(uModel) * aNormal;
     \\    vColor = aColor;
     \\    gl_Position = uMVP * vec4(aPos, 1.0);
     \\}
@@ -45,8 +45,8 @@ pub const ui_vert =
     \\uniform vec2 uScreen;
     \\out vec4 vColor;
     \\void main() {
-    \\    float x = (aPos.x / uScreen.x) * 2.0 - 1.0;
-    \\    float y = 1.0 - (aPos.y / uScreen.y) * 2.0;
+    \\    float x = (aPos.x / max(uScreen.x, 1.0)) * 2.0 - 1.0;
+    \\    float y = 1.0 - (aPos.y / max(uScreen.y, 1.0)) * 2.0;
     \\    gl_Position = vec4(x, y, 0.0, 1.0);
     \\    vColor = aColor;
     \\}

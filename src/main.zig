@@ -18,6 +18,13 @@ const goals = @import("game/goals.zig");
 const heat = @import("game/heat.zig");
 const peds = @import("game/peds.zig");
 const traffic = @import("game/traffic.zig");
+const fence = @import("game/fence.zig");
+const stash_mod = @import("game/stash.zig");
+const lookout_mod = @import("game/lookout.zig");
+const rival_mod = @import("game/rival.zig");
+const news = @import("game/news.zig");
+const events = @import("game/events.zig");
+const respect = @import("game/respect.zig");
 const scene = @import("engine/scene.zig");
 const input = @import("engine/input.zig");
 const controller = @import("engine/controller.zig");
@@ -34,6 +41,10 @@ const camera = @import("engine/camera.zig");
 const minimap = @import("engine/minimap.zig");
 const choice_mod = @import("engine/choice.zig");
 const feed_mod = @import("engine/feed.zig");
+const compass = @import("engine/compass.zig");
+const legend = @import("engine/legend.zig");
+const vignette = @import("engine/vignette.zig");
+const prompt = @import("engine/prompt.zig");
 const backend = @import("engine/backend.zig");
 
 const gfx_mod = if (build_options.enable_gpu)
@@ -99,11 +110,16 @@ pub fn main(init: std.process.Init) !void {
     var street_peds: peds.StreetPeds = .{};
     street_peds.init();
     var cars: traffic.Traffic = .{};
+    var stash: stash_mod.Stash = .{};
+    var lookout: lookout_mod.Lookout = .{};
+    var rival: rival_mod.Rival = .{};
     var selected_era: era_mod.Era = .nyc_1930s;
     var world_ready = false;
     var heal_accum: f32 = 0;
     var heat_accum: f32 = 0;
     var safehouse_cd: f64 = 0;
+    var street_event_cd: f64 = balance.STREET_EVENT_INTERVAL;
+    var news_cd: f64 = 60.0;
 
     var edge_ord: [5]input.ButtonEdge = .{ .{}, .{}, .{}, .{}, .{} };
     var edge_tab: input.ButtonEdge = .{};
@@ -129,8 +145,11 @@ pub fn main(init: std.process.Init) !void {
         const raw = gfx_mod.pollRawKeys();
         frame_seed +%= 1;
         toast.tick(dt);
+        lookout_mod.tick(&lookout, dt);
         if (menu.collect_cooldown > 0) menu.collect_cooldown -= dt;
         if (safehouse_cd > 0) safehouse_cd -= dt;
+        if (street_event_cd > 0) street_event_cd -= dt;
+        if (news_cd > 0) news_cd -= dt;
 
         if (boot.phase != .playing) {
             boot_mod.handle(&boot, raw, &edge_1, &edge_2, &edge_enter);
@@ -157,6 +176,7 @@ pub fn main(init: std.process.Init) !void {
             if (choice_mod.handle(&choice, raw, &edge_1, &edge_2, &eco, &the_kin, &districts[0])) |msg| {
                 toast.show(msg, 2.5);
                 feed.push(msg);
+                respect.earnStreet(&emp, 1);
                 if (goals.check(&goal, districts[0], eco)) {
                     toast.show("GOAL TIER UP", 3.5);
                     feed.push("Goal tier advanced");
@@ -212,12 +232,17 @@ pub fn main(init: std.process.Init) !void {
                 .secondary = edge_r.pressed(raw.r),
                 .tertiary = edge_f.pressed(raw.f),
             };
+            // Lookout post with order_guard when lookout selected - also F on crew for lookout
+            if (keys.order_guard and lookout_mod.post(&lookout, &the_kin)) {
+                toast.show("Lookout posted 20s", 2.0);
+                feed.push("Lookout on the corner");
+            }
             empire_ui.handleMenu(keys, &emp, &the_kin, &portfolio, &fleet, districts[0..], &menu, boss.x, boss.y, &eco);
-            if (menu.last_msg.len > 0) feed.push(menu.last_msg);
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
             scene.drawMinimalScene(gfx, boss, living.currentPeriod(clock), car_opt, cam, selected_era, near_any);
             empire_ui.draw(gfx, emp, the_kin, portfolio, fleet, &districts, menu);
         } else {
+            var action_prompt: []const u8 = "";
             if (edge_interact.pressed(raw.e)) {
                 var used = false;
                 for (&jobs) |*j| {
@@ -239,6 +264,32 @@ pub fn main(init: std.process.Init) !void {
                     feed.push("Used safehouse");
                     used = true;
                 }
+                if (!used and fence.near(boss)) {
+                    if (fence.coolHeat(&eco, &districts[0])) {
+                        toast.show("Fence cooled heat", 2.0);
+                        feed.push("Fence: heat down");
+                        used = true;
+                    } else if (fence.clearStar(&eco, &boss)) {
+                        toast.show("Fence cleared a star", 2.0);
+                        feed.push("Fence: star gone");
+                        used = true;
+                    } else {
+                        toast.show("Fence wants cash", 1.5);
+                        used = true;
+                    }
+                }
+                if (!used and stash_mod.near(boss)) {
+                    if (stash_mod.deposit(&stash, &eco, balance.STASH_CHUNK)) {
+                        toast.show("Stashed $250", 1.5);
+                        feed.push("Cash in the stash");
+                    } else if (stash_mod.withdraw(&stash, &eco, balance.STASH_CHUNK)) {
+                        toast.show("Withdrew $250", 1.5);
+                        feed.push("Took from stash");
+                    } else {
+                        toast.show("Stash empty / no cash", 1.5);
+                    }
+                    used = true;
+                }
                 if (!used) {
                     if (car_ptr) |car| {
                         if (car.occupied) {
@@ -251,19 +302,18 @@ pub fn main(init: std.process.Init) !void {
                     }
                 }
             }
-            // Bribe at safehouse with R
             if (edge_r.pressed(raw.r) and scene.nearSafehouse(boss)) {
-                if (eco.treasury >= 500 and boss.wanted_level > 0) {
-                    eco.treasury -= 500;
+                if (eco.treasury >= balance.BRIBE_COST and boss.wanted_level > 0) {
+                    eco.treasury -= balance.BRIBE_COST;
                     boss.wanted_level = 0;
-                    toast.show("Bribed cops -$500", 2.5);
+                    toast.show("Bribed cops", 2.5);
                     feed.push("Bribe paid");
-                } else if (boss.wanted_level == 0) {
-                    toast.show("No warrant to clear", 1.5);
-                } else {
-                    toast.show("Need $500 to bribe", 1.5);
                 }
             }
+
+            if (fence.near(boss)) action_prompt = "[E] Fence - heat/star for cash";
+            else if (stash_mod.near(boss)) action_prompt = "[E] Stash deposit/withdraw $250";
+            else if (scene.nearSafehouse(boss)) action_prompt = "[E] heal  [R] bribe";
 
             if (car_ptr) |car| {
                 if (car.occupied) {
@@ -282,12 +332,27 @@ pub fn main(init: std.process.Init) !void {
             heat.applyDecayAccum(&districts[0], &heat_accum, dt);
             street_peds.tick(dt);
             cars.tick(dt);
+            rival_mod.tick(&rival, &districts[0], clock.elapsed);
+            lookout_mod.suppressAlert(lookout, &police);
+
+            if (street_event_cd <= 0) {
+                street_event_cd = balance.STREET_EVENT_INTERVAL;
+                const ev = events.rollEvent(frame_seed);
+                events.applyEvent(ev, districts[0..], &the_kin, &eco.treasury);
+                toast.show(ev.title, 3.0);
+                feed.push(ev.title);
+            }
+            if (news_cd <= 0) {
+                news_cd = 75.0;
+                feed.push(news.lineForSeed(frame_seed));
+            }
 
             for (&jobs) |*j| {
                 const pay = mission_ui.tickJob(j, &boss, &eco, &districts[0], emp, dt);
                 if (pay > 0) {
                     choice_mod.open(&choice, pay);
                     feed.push("Job finished - choose");
+                    rival_mod.pushBack(&rival);
                 }
             }
 
@@ -310,6 +375,9 @@ pub fn main(init: std.process.Init) !void {
 
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
             scene.drawMinimalScene(gfx, boss, period, car_opt, cam, selected_era, near_any);
+            // Fence / stash markers
+            gfx.drawBox(.{ .x = fence.FENCE_X, .y = 0.8, .z = fence.FENCE_Z }, 1.2, 1.6, 1.2, backend.Color.rgb(120, 90, 40));
+            gfx.drawBox(.{ .x = stash_mod.STASH_X, .y = 0.4, .z = stash_mod.STASH_Z }, 1.0, 0.8, 1.0, backend.Color.rgb(60, 50, 40));
             street_peds.draw(gfx);
             cars.draw(gfx);
             hud.drawDistrictDebug(gfx, boss, &districts, clock, eco, period, false, police.alert_level, goal);
@@ -317,9 +385,10 @@ pub fn main(init: std.process.Init) !void {
             wanted_ui.drawPoliceBanner(gfx, police, chase, 268);
             for (jobs) |j| mission_ui.drawMarker(gfx, j, boss);
             mission_ui.drawMinimapHint(gfx, &jobs, boss);
-            if (scene.nearSafehouse(boss)) {
-                gfx.drawText("[E] heal  [R] bribe $500", 10, 396, backend.Color.rgb(100, 220, 140));
-            }
+            compass.draw(gfx, boss, &jobs);
+            legend.draw(gfx);
+            vignette.draw(gfx, period);
+            prompt.draw(gfx, action_prompt);
             minimap.draw(gfx, boss, &jobs);
             world_sim.drawBanner(gfx, ws);
             feed.draw(gfx);

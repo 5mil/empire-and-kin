@@ -1,16 +1,14 @@
 # Empire & Kin — Handover
 
-**Version:** `0.1.9-alpha`  
+**Version:** `0.2.0-alpha`  
 **Repo:** https://github.com/5mil/empire-and-kin
 
-## Wired this stretch
+## New this stretch
 
-- Recruit corner (15,20) via interact + crew names  
-- Hospital when HP = 0 (`[E]` $400)  
-- Zone name + heat spike + weekly payday  
-- Safehouse `[F]` empty stash  
-- Crew menu 3 → intimidate (else turf)  
-- Full contact map (see `docs/MAP.md`)
+- **Hell's Kitchen** scenery (east of Little Italy, x≈40–52)  
+- **District gates** at x≈30 / -1 / 42 — `[E]` warps between LI ↔ HK / LES  
+- Expanded collision + world bounds  
+- Gate arches in scene; travel via `interact.tryTravel`  
 
 ## Build
 
@@ -21,6 +19,6 @@ zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
   -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
 ```
 
-Paste compile errors for a fix pass.
+Walk east to the arch (~30, 20) and press **E** to enter Hell's Kitchen.
 
 **End of handover.**

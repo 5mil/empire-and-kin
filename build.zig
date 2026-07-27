@@ -66,7 +66,7 @@ pub fn build(b: *std.Build) void {
     }
 
     if (gles) {
-        exe.root_module.linkSystemLibrary("EGL", .{});G
+        exe.root_module.linkSystemLibrary("EGL", .{});
         exe.root_module.linkSystemLibrary("GLESv3", .{});
         if (target.result.os.tag == .linux) {
             exe.root_module.linkSystemLibrary("dl", .{});
@@ -84,10 +84,8 @@ pub fn build(b: *std.Build) void {
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| run_cmd.addArgs(args);
-    const run_step = b.step("run", "Run (use -Dgpu=true for GLFW+OpenGL)");
-    run_step.dependOn(&run_cmd.step);
+    b.step("run", "Run (use -Dgpu=true for GLFW+OpenGL)").dependOn(&run_cmd.step);
 
-    // Headless
     const headless_opts = b.addOptions();
     headless_opts.addOption(bool, "enable_gpu", false);
     headless_opts.addOption(bool, "enable_android", false);
@@ -108,7 +106,6 @@ pub fn build(b: *std.Build) void {
     run_h.step.dependOn(&b.addInstallArtifact(headless, .{}).step);
     b.step("run-headless", "Run NullBackend").dependOn(&run_h.step);
 
-    // Android headless/touch demo
     const android_opts = b.addOptions();
     android_opts.addOption(bool, "enable_gpu", false);
     android_opts.addOption(bool, "enable_android", true);
@@ -129,7 +126,6 @@ pub fn build(b: *std.Build) void {
     run_android.step.dependOn(&b.addInstallArtifact(android_exe, .{}).step);
     b.step("run-android", "Android touch backend (no window)").dependOn(&run_android.step);
 
-    // libempire.so — GLES-capable for APK
     const lib_opts = b.addOptions();
     lib_opts.addOption(bool, "enable_gpu", false);
     lib_opts.addOption(bool, "enable_android", true);

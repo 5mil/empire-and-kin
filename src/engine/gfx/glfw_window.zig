@@ -33,6 +33,8 @@ pub const c = struct {
     pub const GLFW_KEY_F5: c_int = 294;
     pub const GLFW_KEY_F9: c_int = 298;
     pub const GLFW_PRESS: c_int = 1;
+    pub const GLFW_MOUSE_BUTTON_LEFT: c_int = 0;
+    pub const GLFW_MOUSE_BUTTON_RIGHT: c_int = 1;
 
     pub const GLFWwindow = opaque {};
     pub const GLFWmonitor = opaque {};
@@ -48,6 +50,8 @@ pub const c = struct {
     pub extern fn glfwWindowShouldClose(window: *GLFWwindow) c_int;
     pub extern fn glfwGetFramebufferSize(window: *GLFWwindow, width: *c_int, height: *c_int) void;
     pub extern fn glfwGetKey(window: *GLFWwindow, key: c_int) c_int;
+    pub extern fn glfwGetMouseButton(window: *GLFWwindow, button: c_int) c_int;
+    pub extern fn glfwGetCursorPos(window: *GLFWwindow, xpos: *f64, ypos: *f64) void;
     pub extern fn glfwGetTime() f64;
     pub extern fn glfwSwapInterval(interval: c_int) void;
     pub extern fn glfwGetProcAddress(procname: [*:0]const u8) ?*anyopaque;
@@ -112,6 +116,27 @@ pub const Window = struct {
 
     pub fn keyDown(self: *Window, key: c_int) bool {
         return c.glfwGetKey(self.handle, key) == c.GLFW_PRESS;
+    }
+
+    pub fn mouseLeftDown(self: *Window) bool {
+        return c.glfwGetMouseButton(self.handle, c.GLFW_MOUSE_BUTTON_LEFT) == c.GLFW_PRESS;
+    }
+
+    pub fn mouseRightDown(self: *Window) bool {
+        return c.glfwGetMouseButton(self.handle, c.GLFW_MOUSE_BUTTON_RIGHT) == c.GLFW_PRESS;
+    }
+
+    /// Cursor in normalized 0..1 (origin top-left).
+    pub fn cursorNorm(self: *Window) struct { x: f32, y: f32 } {
+        var x: f64 = 0;
+        var y: f64 = 0;
+        c.glfwGetCursorPos(self.handle, &x, &y);
+        const w: f64 = @floatFromInt(@max(self.width, 1));
+        const h: f64 = @floatFromInt(@max(self.height, 1));
+        return .{
+            .x = @floatCast(@max(0, @min(1, x / w))),
+            .y = @floatCast(@max(0, @min(1, y / h))),
+        };
     }
 
     pub fn time() f64 {

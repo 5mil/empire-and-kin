@@ -1,10 +1,13 @@
 //! GPU Backend — GLFW window + OpenGL 3.3 core.
+//! Optional -Dtouch=true: mouse injects virtual pad (Android control practice).
 
 const std = @import("std");
+const build_options = @import("build_options");
 const backend = @import("backend.zig");
 const input = @import("input.zig");
 const glfw_window = @import("gfx/glfw_window.zig");
 const renderer = @import("gfx/renderer.zig");
+const touch = @import("touch.zig");
 
 var window: ?glfw_window.Window = null;
 var rend: renderer.Renderer = .{};
@@ -24,7 +27,12 @@ fn initImpl(title: []const u8, width: u32, height: u32) !void {
     last_time = glfw_window.Window.time();
     mapper = .{};
     text_count = 0;
-    std.debug.print("[GLBackend] OpenGL 3.3 + GLFW ready {d}x{d}\n", .{ width, height });
+    touch.clear();
+    std.debug.print("[GLBackend] OpenGL 3.3 + GLFW ready {d}x{d} touch={}\n", .{
+        width,
+        height,
+        build_options.enable_touch,
+    });
 }
 
 fn shutdownImpl() void {
@@ -44,6 +52,22 @@ fn beginFrameImpl() void {
     if (window) |*w| {
         w.poll();
         rend.resize(w.width, w.height);
+        // Mouse → touch zones (practice Android pad on desktop)
+        if (build_options.enable_touch) {
+            const cur = w.cursorNorm();
+            const left = w.mouseLeftDown();
+            const right = w.mouseRightDown();
+            if (left) {
+                touch.setPointer(cur.x, cur.y, true);
+            } else {
+                touch.setPointer(-1, -1, false);
+            }
+            if (right) {
+                touch.setPointer2(cur.x, cur.y, true);
+            } else {
+                touch.setPointer2(-1, -1, false);
+            }
+        }
     }
 }
 
@@ -52,6 +76,14 @@ fn endFrameImpl() void {
     while (i < text_count) : (i += 1) {
         const q = text_queue[i];
         rend.drawText(q.t[0..q.len], q.x, q.y, q.c);
+    }
+    if (build_options.enable_touch) {
+        if (window) |w| {
+            const ww: i32 = @intCast(w.width);
+            const hh: i32 = @intCast(w.height);
+            rend.drawText("STICK", @divTrunc(ww * 12, 100), @divTrunc(hh * 92, 100), backend.Color.rgb(180, 200, 220));
+            rend.drawText("[E] LMB zones", @divTrunc(ww * 70, 100), @divTrunc(hh * 92, 100), backend.Color.rgb(120, 255, 180));
+        }
     }
     if (window) |*w| w.swap();
 }
@@ -85,6 +117,24 @@ pub fn pollRawKeys() input.RawKeys {
         raw.key_5 = w.keyDown(k.GLFW_KEY_5);
         raw.f5 = w.keyDown(k.GLFW_KEY_F5);
         raw.f9 = w.keyDown(k.GLFW_KEY_F9);
+    }
+    // Merge virtual pad when touch mode on
+    if (build_options.enable_touch) {
+        const t = touch.toRawKeys();
+        if (t.w) raw.w = true;
+        if (t.a) raw.a = true;
+        if (t.s) raw.s = true;
+        if (t.d) raw.d = true;
+        if (t.e) raw.e = true;
+        if (t.f) raw.f = true;
+        if (t.r) raw.r = true;
+        if (t.space) raw.space = true;
+        if (t.f5) raw.f5 = true;
+        if (t.enter) raw.enter = true;
+        if (t.key_1) raw.key_1 = true;
+        if (t.key_2) raw.key_2 = true;
+        if (@abs(t.stick_x) > 0.15) raw.stick_x = t.stick_x;
+        if (@abs(t.stick_y) > 0.15) raw.stick_y = t.stick_y;
     }
     return raw;
 }

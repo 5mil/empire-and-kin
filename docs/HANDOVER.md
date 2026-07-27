@@ -1,16 +1,20 @@
 # Empire & Kin — Handover
 
-**Version:** `0.2.0-alpha`  
+**Version:** `0.2.1-alpha`  
 **Repo:** https://github.com/5mil/empire-and-kin
 
-## New this stretch
+## Platforms
 
-- **Hell's Kitchen** scenery (east of Little Italy, x≈40–52)  
-- **District gates** at x≈30 / -1 / 42 — `[E]` warps between LI ↔ HK / LES  
-- Expanded collision + world bounds  
-- Gate arches in scene; travel via `interact.tryTravel`  
+| Track | Command | Status |
+|-------|---------|--------|
+| **Windows GPU** | `zig build -Dtarget=x86_64-windows-gnu -Dgpu=true -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast` | Primary playtest |
+| **Headless** | `zig build run-headless` | CI / logic |
+| **Android Phase A** | `zig build run-android` | Touch backend, no GLES window yet |
+| **Android lib** | `zig build android-lib` | `libempire.so` exports |
 
-## Build
+See **docs/ANDROID.md** for the full mobile plan.
+
+## Windows GPU (unchanged)
 
 ```bash
 cd ~/empire-and-kin && git pull && rm -rf .zig-cache zig-out
@@ -19,6 +23,10 @@ zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
   -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
 ```
 
-Walk east to the arch (~30, 20) and press **E** to enter Hell's Kitchen.
+## Android Phase A (same machine)
+
+```bash
+zig build run-android
+```
 
 **End of handover.**

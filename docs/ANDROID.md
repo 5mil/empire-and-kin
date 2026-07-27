@@ -1,6 +1,7 @@
 # Android track — Empire & Kin
 
-**Status:** Phase A scaffold (touch backend + shared lib + GLES shaders).  
+**Status:** Phase A at **PC NullBackend parity** (scripted demo + touch path).  
+**Version:** `0.2.2-alpha`  
 **Not yet:** GLES window inside an APK on a real phone (Phase B).
 
 ## Why not “just -Dgpu” on Android?
@@ -12,96 +13,89 @@
 | Keyboard | **Touch** (virtual stick) |
 | `.exe` / ELF | **APK** + `libempire.so` + Activity |
 
-Zig 0.16 Android/bionic support is still incomplete upstream, so we stage carefully.
+Zig Android/bionic support is still incomplete upstream, so we stage carefully.
 
 ---
 
-## Phase A — what you can run **today**
+## Phase A — PC development test level (now)
 
-### 1) Android backend on your WSL/PC (no phone needed)
+Android backend matches **NullBackend** acceptance:
 
-Same game logic, touch→key mapping, no GPU window:
+| Milestone | Frames (approx) |
+|-----------|-----------------|
+| New Game (`1`) | 5–6 |
+| Confirm era (Enter) | 12–13 |
+| Move (W+D / stick) | 20–55 |
+| Start job (E) | 60–61 |
+| Hints (H) | 70–71 |
+| Pause peek | 90–101 |
+| Quick-save (F5) | 120–121 |
+| Secondary (F) | 140–141 |
+| Move again | 150–180 |
+| Auto-exit | 200 |
+
+Also exercises **touch zones** (stick, E, pause, F5, F) every scripted step.
+
+### Run (same machine as Windows GPU tests)
 
 ```bash
 cd ~/empire-and-kin && git pull && rm -rf .zig-cache zig-out
+
+# Windows GPU (unchanged)
+export GLFW_WIN=$HOME/glfw-3.4.bin.WIN64
+zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
+  -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
+
+# Android Phase A — PC-parity demo (~200 frames @ 30 Hz)
 zig build run-android
 ```
 
-Exits after ~300 frames. Logs `[AndroidBackend]` + `[draw]` lines.
+Expect:
 
-### 2) Explicit `-Dandroid=true`
-
-```bash
-zig build -Dandroid=true -Doptimize=ReleaseFast
-# → zig-out/bin/empire  (android backend selected)
+```
+[AndroidBackend] Empire & Kin 1280x720 touch_path=true close_after=200
+[AndroidBackend] PC-parity demo: boot→era→move→job→save
+--- android frame 40 pos=(...) boxes=... ---
+[draw] ...
+[AndroidBackend] === DEMO SUMMARY ===
 ```
 
-### 3) Shared library for future APK
+### Shared library
 
 ```bash
 zig build android-lib -Doptimize=ReleaseFast
-# → zig-out/lib/libempire.so   (or .dll on Windows host — prefer Linux)
-```
-
-On Linux / WSL:
-
-```bash
+# Prefer Linux host for .so:
 zig build android-lib -Dtarget=aarch64-linux -Doptimize=ReleaseFast
 ```
 
 Exports: `empire_touch`, `empire_touch2`, `empire_abi_version`, …
 
-### 4) Termux on a phone (game logic smoke-test)
-
-If you install [Termux](https://termux.dev) + Zig on the device:
+### Termux (ARM smoke, still no GLES UI)
 
 ```bash
-# inside Termux
-git clone https://github.com/5mil/empire-and-kin.git
-cd empire-and-kin
 zig build run-android
 ```
 
-This validates simulation + touch mapping on ARM. **Still no GLES window.**
+---
 
-### 5) Desktop GPU + touch overlay (practice virtual pad)
+## Phase B — real on-device graphics
 
-```bash
-zig build run -Dgpu=true -Dtouch=true
-```
-
-(Overlay labels only until mouse→touch injection is wired in gl_backend.)
+1. Android NDK + `aarch64-linux-android` + sysroot (`-Dndk_sysroot=…`)
+2. NativeActivity / GameActivity → EGL + GLES3
+3. `shaders_es.zig` when `enable_android`
+4. Load `libempire.so`, feed `empire_touch`
+5. Gradle APK (`android/` scaffold)
 
 ---
 
-## Phase B — real on-device graphics (next work)
-
-1. Android NDK + `aarch64-linux-android` target + sysroot (`-Dndk_sysroot=…`)
-2. NativeActivity (or GameActivity) hosts EGL + GLES3 context
-3. Swap `shaders.zig` → `shaders_es.zig` when `enable_android`
-4. Load `libempire.so`, feed touch via `empire_touch(x,y,down)`
-5. Package APK with Gradle (see `android/` scaffold)
-
-Reference templates: [ZigAndroidTemplate](https://github.com/MasterQ32/ZigAndroidTemplate), zero-graphics.
-
----
-
-## Simultaneous iteration workflow
+## Simultaneous iteration
 
 | Each push | Windows GPU | Android backend |
 |-----------|-------------|-----------------|
-| Feature / scenery / agency | `zig build … -Dgpu=true` → `empire.exe` | `zig build run-android` |
-| Touch mapping changes | optional `-Dtouch=true` | primary |
-| GLES shaders | desktop 330 | `shaders_es.zig` ready |
-
-**Recommended per iteration:**
+| Feature | `-Dgpu=true` → playtest | `zig build run-android` |
+| Touch mapping | optional `-Dtouch=true` | primary |
 
 ```bash
-# Windows (existing)
-zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
-  -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
-
-# Android track (logic)
 zig build run-android -Doptimize=ReleaseFast
 ```
 
@@ -118,17 +112,14 @@ zig build run-android -Doptimize=ReleaseFast
  (left)         [E] [F]
 ```
 
-- Stick: bottom-left → WASD / stick axes  
-- E / F / R / pause: bottom-right  
-
 ---
 
-## Files added
+## Files
 
 | Path | Role |
 |------|------|
 | `src/engine/touch.zig` | Virtual pad → `RawKeys` |
-| `src/engine/android_backend.zig` | Mobile backend |
+| `src/engine/android_backend.zig` | Mobile backend (PC-parity demo) |
 | `src/engine/gfx/shaders_es.zig` | GLES 3.0 shaders |
 | `src/android_lib.zig` | `libempire.so` exports |
 | `android/` | Manifest + README scaffold |

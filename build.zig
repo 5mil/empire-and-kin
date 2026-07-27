@@ -5,24 +5,21 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const gpu = b.option(bool, "gpu", "Enable GLFW+OpenGL GPU backend") orelse false;
-    const android = b.option(bool, "android", "Android / mobile backend (touch, no GLFW)") orelse false;
+    const android = b.option(bool, "android", "Android / mobile backend (touch)") orelse false;
+    const gles = b.option(bool, "gles", "EGL + OpenGL ES 3.0 (device graphics)") orelse false;
     const touch = b.option(bool, "touch", "Enable virtual touch overlay on GPU") orelse false;
 
-    // Windows GLFW prebuilt prefix, e.g. $HOME/glfw-3.4.bin.WIN64
     const glfw_prefix = b.option([]const u8, "glfw_prefix", "Path to Windows GLFW SDK (for cross-compile)");
-
-    // Which import lib name: "glfw3dll" (DLL) or "glfw3" (static). Default glfw3dll.
     const glfw_lib = b.option([]const u8, "glfw_lib", "GLFW link name (glfw3dll or glfw3)") orelse "glfw3dll";
-
-    // Optional Android NDK sysroot for aarch64-linux-android linking
     const ndk_sysroot = b.option([]const u8, "ndk_sysroot", "Android NDK sysroot path");
 
     const options = b.addOptions();
-    options.addOption(bool, "enable_gpu", gpu and !android);
-    options.addOption(bool, "enable_android", android);
-    options.addOption(bool, "enable_touch", touch or android);
+    options.addOption(bool, "enable_gpu", gpu and !android and !gles);
+    options.addOption(bool, "enable_android", android and !gles);
+    options.addOption(bool, "enable_gles", gles);
+    options.addOption(bool, "enable_touch", touch or android or gles);
 
-    const need_libc = (gpu and !android) or target.result.os.tag == .windows;
+    const need_libc = (gpu and !android and !gles) or gles or target.result.os.tag == .windows;
 
     const exe = b.addExecutable(.{
         .name = "empire",
@@ -35,7 +32,7 @@ pub fn build(b: *std.Build) void {
     });
     exe.root_module.addOptions("build_options", options);
 
-    if (gpu and !android) {
+    if (gpu and !android and !gles) {
         if (target.result.os.tag == .windows) {
             if (glfw_prefix) |prefix| {
                 exe.root_module.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include", .{prefix}) });
@@ -68,6 +65,15 @@ pub fn build(b: *std.Build) void {
         }
     }
 
+    if (gles) {
+        exe.root_module.linkSystemLibrary("EGL", .{});G
+        exe.root_module.linkSystemLibrary("GLESv3", .{});
+        if (target.result.os.tag == .linux) {
+            exe.root_module.linkSystemLibrary("dl", .{});
+            exe.root_module.linkSystemLibrary("m", .{});
+        }
+    }
+
     if (ndk_sysroot) |sys| {
         exe.root_module.addIncludePath(.{ .cwd_relative = b.fmt("{s}/usr/include", .{sys}) });
         exe.root_module.addLibraryPath(.{ .cwd_relative = b.fmt("{s}/usr/lib/aarch64-linux-android/24", .{sys}) });
@@ -77,19 +83,16 @@ pub fn build(b: *std.Build) void {
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
-
+    if (b.args) |args| run_cmd.addArgs(args);
     const run_step = b.step("run", "Run (use -Dgpu=true for GLFW+OpenGL)");
     run_step.dependOn(&run_cmd.step);
 
-    // Headless always available
+    // Headless
     const headless_opts = b.addOptions();
     headless_opts.addOption(bool, "enable_gpu", false);
     headless_opts.addOption(bool, "enable_android", false);
+    headless_opts.addOption(bool, "enable_gles", false);
     headless_opts.addOption(bool, "enable_touch", false);
-
     const headless = b.addExecutable(.{
         .name = "empire-headless",
         .root_module = b.createModule(.{
@@ -101,19 +104,16 @@ pub fn build(b: *std.Build) void {
     });
     headless.root_module.addOptions("build_options", headless_opts);
     b.installArtifact(headless);
-
     const run_h = b.addRunArtifact(headless);
-    const headless_install = b.addInstallArtifact(headless, .{});
-    run_h.step.dependOn(&headless_install.step);
-    const run_headless = b.step("run-headless", "Run NullBackend (no GPU)");
-    run_headless.dependOn(&run_h.step);
+    run_h.step.dependOn(&b.addInstallArtifact(headless, .{}).step);
+    b.step("run-headless", "Run NullBackend").dependOn(&run_h.step);
 
-    // Android-oriented executable (touch backend, no GLFW)
+    // Android headless/touch demo
     const android_opts = b.addOptions();
     android_opts.addOption(bool, "enable_gpu", false);
     android_opts.addOption(bool, "enable_android", true);
+    android_opts.addOption(bool, "enable_gles", false);
     android_opts.addOption(bool, "enable_touch", true);
-
     const android_exe = b.addExecutable(.{
         .name = "empire-android",
         .root_module = b.createModule(.{
@@ -125,33 +125,33 @@ pub fn build(b: *std.Build) void {
     });
     android_exe.root_module.addOptions("build_options", android_opts);
     b.installArtifact(android_exe);
-
     const run_android = b.addRunArtifact(android_exe);
-    const android_install = b.addInstallArtifact(android_exe, .{});
-    run_android.step.dependOn(&android_install.step);
-    // Auto-close after N frames so CI / phone scripts can exit
-    const run_android_step = b.step("run-android", "Run Android/touch backend (no window)");
-    run_android_step.dependOn(&run_android.step);
+    run_android.step.dependOn(&b.addInstallArtifact(android_exe, .{}).step);
+    b.step("run-android", "Android touch backend (no window)").dependOn(&run_android.step);
 
-    // Shared library for packaging into an APK (NativeActivity loads libempire.so)
+    // libempire.so — GLES-capable for APK
     const lib_opts = b.addOptions();
     lib_opts.addOption(bool, "enable_gpu", false);
     lib_opts.addOption(bool, "enable_android", true);
+    lib_opts.addOption(bool, "enable_gles", true);
     lib_opts.addOption(bool, "enable_touch", true);
-
     const lib = b.addLibrary(.{
         .name = "empire",
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/android_lib.zig"),
             .target = target,
             .optimize = optimize,
-            .link_libc = false,
+            .link_libc = true,
         }),
         .linkage = .dynamic,
     });
     lib.root_module.addOptions("build_options", lib_opts);
+    if (ndk_sysroot) |sys| {
+        lib.root_module.addIncludePath(.{ .cwd_relative = b.fmt("{s}/usr/include", .{sys}) });
+        lib.root_module.addLibraryPath(.{ .cwd_relative = b.fmt("{s}/usr/lib/aarch64-linux-android/24", .{sys}) });
+    }
+    lib.root_module.linkSystemLibrary("EGL", .{});
+    lib.root_module.linkSystemLibrary("GLESv3", .{});
     b.installArtifact(lib);
-
-    const lib_step = b.step("android-lib", "Build libempire.so for APK packaging");
-    lib_step.dependOn(&b.addInstallArtifact(lib, .{}).step);
+    b.step("android-lib", "Build libempire.so (GLES) for APK").dependOn(&b.addInstallArtifact(lib, .{}).step);
 }

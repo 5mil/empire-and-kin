@@ -1,10 +1,6 @@
 //! GLES 3.0 backend — visual parity with desktop GLBackend.
 //!
-//! Requires an EGL surface from the Android host (NativeActivity).
-//! Host calls empire_gles_attach(window, w, h) before the game loop,
-//! or the backend stays in a safe no-op until attached.
-//!
-//! Same draw path as PC: lit meshes, camera, bitmap font HUD, touch input.
+//! Host calls empire_gles_attach(window, w, h) before the game loop.
 
 const std = @import("std");
 const backend = @import("backend.zig");
@@ -23,19 +19,16 @@ var text_count: usize = 0;
 var close_requested: bool = false;
 var attached: bool = false;
 
-/// Called from JNI / NativeActivity when the native window is ready.
 pub fn attachNativeWindow(window: egl_android.c.EGLNativeWindowType, width: u32, height: u32) !void {
     if (egl != null) {
         egl.?.destroy();
         egl = null;
     }
     egl = try egl_android.Context.createFromWindow(window, width, height);
-    const w = egl.?.width;
-    const h = egl.?.height;
-    try rend.init(w, h);
+    try rend.init(egl.?.width, egl.?.height);
     attached = true;
     last_ns = std.time.nanoTimestamp();
-    std.debug.print("[GLESBackend] attached {d}x{d}\n", .{ w, h });
+    std.debug.print("[GLESBackend] attached {d}x{d}\n", .{ egl.?.width, egl.?.height });
 }
 
 pub fn detach() void {
@@ -58,7 +51,6 @@ fn initImpl(title: []const u8, width: u32, height: u32) !void {
     text_count = 0;
     close_requested = false;
     last_ns = std.time.nanoTimestamp();
-    // If host already attached a window, renderer is live; else wait for attach.
     std.debug.print("[GLESBackend] init '{s}' attached={}\n", .{ title, attached });
 }
 
@@ -86,9 +78,13 @@ fn endFrameImpl() void {
         const q = text_queue[i];
         rend.drawText(q.t[0..q.len], q.x, q.y, q.c);
     }
-    // Touch overlay labels
+    // On-screen stick labels (bitmap font)
     if (egl) |e| {
-        touch.drawOverlay(.{ .vtable = undefined }, @intCast(e.width), @intCast(e.height));
+        const w: i32 = @intCast(e.width);
+        const h: i32 = @intCast(e.height);
+        rend.drawText("STICK", @divTrunc(w * 12, 100), @divTrunc(h * 92, 100), backend.Color.rgb(180, 200, 220));
+        rend.drawText("[E]", @divTrunc(w * 76, 100), @divTrunc(h * 78, 100), backend.Color.rgb(120, 255, 180));
+        rend.drawText("[F]", @divTrunc(w * 90, 100), @divTrunc(h * 78, 100), backend.Color.rgb(255, 140, 120));
     }
     if (egl) |*e| e.swap();
 }

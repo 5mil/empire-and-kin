@@ -92,6 +92,12 @@ fn tree(gfx: backend.Backend, x: f32, z: f32) void {
     box(gfx, x, 3.2, z, 1.8, 1.6, 1.8, backend.Color.rgb(40, 90, 45));
 }
 
+fn gateArch(gfx: backend.Backend, x: f32, z: f32) void {
+    box(gfx, x - 1.5, 1.5, z, 0.4, 3.0, 0.4, backend.Color.rgb(80, 75, 70));
+    box(gfx, x + 1.5, 1.5, z, 0.4, 3.0, 0.4, backend.Color.rgb(80, 75, 70));
+    box(gfx, x, 3.2, z, 3.4, 0.35, 0.5, backend.Color.rgb(100, 90, 70));
+}
+
 fn safehouse(gfx: backend.Backend, lit: bool) void {
     box(gfx, SAFEHOUSE_X, 2.5, SAFEHOUSE_Z, 4.5, 5.0, 4.0, backend.Color.rgb(68, 72, 78));
     box(gfx, SAFEHOUSE_X, 5.2, SAFEHOUSE_Z, 4.8, 0.35, 4.3, backend.Color.rgb(40, 40, 42));
@@ -131,13 +137,18 @@ pub fn drawMinimalScene(
     if (cam_opt) |c| gfx.setCamera(c) else gfx.setCamera(followCamera(p, 11.0, 15.0));
 
     gfx.drawGround(200.0, backend.Color.rgb(42, 40, 38));
+    // Little Italy roads
     box(gfx, 12, 0.03, 20, 11.0, 0.08, 72.0, backend.Color.rgb(24, 24, 26));
     box(gfx, 12, 0.03, 20, 58.0, 0.07, 11.0, backend.Color.rgb(24, 24, 26));
+    // Hell's Kitchen connector road
+    box(gfx, 40, 0.03, 20, 30.0, 0.07, 11.0, backend.Color.rgb(22, 22, 24));
+    box(gfx, 45, 0.03, 20, 11.0, 0.08, 40.0, backend.Color.rgb(22, 22, 24));
 
     crosswalk(gfx, 12, 15.2, true);
     crosswalk(gfx, 12, 24.8, true);
     crosswalk(gfx, 6.8, 20, false);
     crosswalk(gfx, 17.2, 20, false);
+    crosswalk(gfx, 30, 20, false);
 
     box(gfx, 12, 0.05, 12, 0.25, 0.04, 2.0, backend.Color.rgb(180, 160, 60));
     box(gfx, 12, 0.05, 20, 0.25, 0.04, 2.0, backend.Color.rgb(180, 160, 60));
@@ -147,11 +158,14 @@ pub fn drawMinimalScene(
     sidewalk(gfx, 12, 14.5, 55, 2.2);
     sidewalk(gfx, 6.5, 20, 2.2, 55);
     sidewalk(gfx, 17.5, 20, 2.2, 55);
+    sidewalk(gfx, 45, 25.5, 25, 2.0);
+    sidewalk(gfx, 45, 14.5, 25, 2.0);
 
     box(gfx, 0.5, 0.04, 20, 3.0, 0.08, 40.0, backend.Color.rgb(30, 28, 28));
     dumpster(gfx, 0.8, 17.0);
     dumpster(gfx, 0.8, 24.0);
 
+    // Little Italy
     building(gfx, 3.5, 28.5, 5.2, 6.5, 4.2, backend.Color.rgb(98, 78, 68), nightish);
     building(gfx, 11.5, 29.2, 5.0, 7.5, 4.0, backend.Color.rgb(70, 74, 82), nightish);
     building(gfx, 19.5, 28.3, 5.2, 5.8, 4.2, backend.Color.rgb(90, 72, 64), nightish);
@@ -161,7 +175,14 @@ pub fn drawMinimalScene(
     building(gfx, 19.5, 11.5, 5.2, 5.5, 4.0, backend.Color.rgb(92, 80, 72), nightish);
     building(gfx, 27.0, 11.2, 4.5, 5.8, 3.8, backend.Color.rgb(78, 68, 60), nightish);
 
+    // Hell's Kitchen — greyer industrial
+    building(gfx, 41.0, 28.2, 5.5, 7.0, 4.0, backend.Color.rgb(60, 65, 72), nightish);
+    building(gfx, 49.0, 28.0, 5.5, 6.5, 4.0, backend.Color.rgb(55, 58, 65), nightish);
+    building(gfx, 41.0, 11.5, 5.5, 6.0, 4.0, backend.Color.rgb(65, 62, 58), nightish);
+    building(gfx, 49.0, 11.3, 5.5, 5.8, 4.0, backend.Color.rgb(58, 60, 68), nightish);
+
     waterTower(gfx, 11.5, 29.2);
+    waterTower(gfx, 49.0, 28.0);
     safehouse(gfx, nightish);
 
     lamp(gfx, 7, 20, nightish);
@@ -170,8 +191,11 @@ pub fn drawMinimalScene(
     lamp(gfx, 12, 25.5, nightish);
     lamp(gfx, 2, 20, nightish);
     lamp(gfx, 24, 20, nightish);
+    lamp(gfx, 35, 20, nightish);
+    lamp(gfx, 45, 20, nightish);
     hydrant(gfx, 8.2, 16.2);
     hydrant(gfx, 15.5, 24.2);
+    hydrant(gfx, 43.0, 16.5);
 
     tree(gfx, 4.0, 16.0);
     tree(gfx, 20.0, 25.0);
@@ -181,17 +205,24 @@ pub fn drawMinimalScene(
     parkedCar(gfx, 18.5, 17.5, backend.Color.rgb(90, 40, 35));
     parkedCar(gfx, 8.0, 15.0, backend.Color.rgb(35, 45, 40));
     parkedCar(gfx, 22.0, 23.0, backend.Color.rgb(40, 50, 55));
+    parkedCar(gfx, 43.0, 22.0, backend.Color.rgb(45, 50, 55));
+
+    gateArch(gfx, 30.0, 20.0);
+    gateArch(gfx, -1.0, 20.0);
+    gateArch(gfx, 42.0, 20.0);
 
     const n1 = near_job and dist2(p.x, p.y, 16, 22) < 36;
     const n2 = near_job and dist2(p.x, p.y, 8, 28) < 36;
     const n3 = near_job and dist2(p.x, p.y, 22, 12) < 36;
     const n4 = near_job and dist2(p.x, p.y, 12, 16) < 36;
     const n5 = near_job and dist2(p.x, p.y, 26, 18) < 36;
+    const n6 = near_job and dist2(p.x, p.y, 45, 22) < 36;
     jobBeacon(gfx, 16.0, 22.0, n1, true);
     jobBeacon(gfx, 8.0, 28.0, n2, true);
     jobBeacon(gfx, 22.0, 12.0, n3, true);
     jobBeacon(gfx, 12.0, 16.0, n4, true);
     jobBeacon(gfx, 26.0, 18.0, n5, true);
+    jobBeacon(gfx, 45.0, 22.0, n6, true);
 
     if (car) |v| {
         const col = if (v.occupied) backend.Color.rgb(45, 130, 210) else backend.Color.rgb(70, 70, 80);

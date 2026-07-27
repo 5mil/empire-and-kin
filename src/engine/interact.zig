@@ -32,6 +32,7 @@ const alley_deal = @import("../game/alley_deal.zig");
 const recruit = @import("../game/recruit.zig");
 const crew_names = @import("../game/crew_names.zig");
 const safehouse_stash = @import("../game/safehouse_stash.zig");
+const district_travel = @import("../game/district_travel.zig");
 const scene = @import("scene.zig");
 const balance = @import("../game/balance.zig");
 
@@ -41,6 +42,7 @@ pub const Result = struct {
 };
 
 pub fn promptNear(p: player.Player) []const u8 {
+    if (district_travel.nearGate(p)) |_| return "[E] Travel";
     if (fence.near(p)) return "[E] Fence";
     if (stash_mod.near(p)) return "[E] Stash";
     if (doc.near(p)) return "[E] Doc $300";
@@ -68,6 +70,14 @@ pub fn promptNear(p: player.Player) []const u8 {
     return "";
 }
 
+pub fn tryTravel(p: *player.Player) Result {
+    if (district_travel.nearGate(p.*)) |g| {
+        district_travel.travel(p, g);
+        return .{ .handled = true, .msg = g.label };
+    }
+    return .{};
+}
+
 pub fn tryE(
     p: *player.Player,
     eco: *economy.Economy,
@@ -80,6 +90,9 @@ pub fn tryE(
     seed: u32,
     safehouse_cd: *f64,
 ) Result {
+    const trav = tryTravel(p);
+    if (trav.handled) return trav;
+
     if (fence.near(p.*)) {
         if (fence.coolHeat(eco, d)) return .{ .handled = true, .msg = "Fence: heat down" };
         if (fence.clearStar(eco, p)) return .{ .handled = true, .msg = "Fence: star gone" };

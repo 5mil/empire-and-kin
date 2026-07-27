@@ -21,7 +21,13 @@ fn box(gfx: backend.Backend, x: f32, y: f32, z: f32, w: f32, h: f32, d: f32, col
     gfx.drawBox(.{ .x = x, .y = y, .z = z }, w, h, d, col);
 }
 
+/// Soft contact shadow (dark plate) — works on PC GL and Android GLES.
+fn shadow(gfx: backend.Backend, x: f32, z: f32, w: f32, d: f32) void {
+    box(gfx, x, 0.04, z, w, 0.06, d, backend.Color.rgb(12, 12, 14));
+}
+
 fn building(gfx: backend.Backend, x: f32, z: f32, w: f32, h: f32, d: f32, col: backend.Color, lit: bool) void {
+    shadow(gfx, x, z, w * 1.05, d * 1.05);
     box(gfx, x, h * 0.5, z, w, h, d, col);
     box(gfx, x, h + 0.15, z, w + 0.3, 0.3, d + 0.3, backend.Color.rgb(45, 42, 40));
     box(gfx, x + w * 0.3, h + 0.7, z - d * 0.2, 0.5, 1.0, 0.5, backend.Color.rgb(60, 55, 50));
@@ -54,6 +60,7 @@ fn crosswalk(gfx: backend.Backend, x: f32, z: f32, along_x: bool) void {
 
 fn jobBeacon(gfx: backend.Backend, x: f32, z: f32, near: bool, active: bool) void {
     if (!active) return;
+    shadow(gfx, x, z, 2.8, 2.8);
     const base = if (near) backend.Color.rgb(40, 140, 180) else backend.Color.rgb(25, 70, 95);
     const pole = if (near) backend.Color.rgb(120, 255, 255) else backend.Color.rgb(70, 190, 255);
     box(gfx, x, 0.12, z, 2.5, 0.24, 2.5, base);
@@ -68,6 +75,7 @@ fn lamp(gfx: backend.Backend, x: f32, z: f32, on: bool) void {
 }
 
 fn parkedCar(gfx: backend.Backend, x: f32, z: f32, col: backend.Color) void {
+    shadow(gfx, x, z, 2.2, 3.6);
     box(gfx, x, 0.45, z, 1.8, 0.9, 3.2, col);
     box(gfx, x, 0.95, z - 0.3, 1.6, 0.5, 1.4, backend.Color.rgb(30, 40, 55));
 }
@@ -77,6 +85,7 @@ fn hydrant(gfx: backend.Backend, x: f32, z: f32) void {
 }
 
 fn dumpster(gfx: backend.Backend, x: f32, z: f32) void {
+    shadow(gfx, x, z, 1.6, 2.2);
     box(gfx, x, 0.6, z, 1.4, 1.2, 2.0, backend.Color.rgb(55, 70, 50));
 }
 
@@ -88,6 +97,7 @@ fn waterTower(gfx: backend.Backend, x: f32, z: f32) void {
 }
 
 fn tree(gfx: backend.Backend, x: f32, z: f32) void {
+    shadow(gfx, x, z, 1.6, 1.6);
     box(gfx, x, 1.2, z, 0.35, 2.4, 0.35, backend.Color.rgb(70, 50, 30));
     box(gfx, x, 3.2, z, 1.8, 1.6, 1.8, backend.Color.rgb(40, 90, 45));
 }
@@ -99,6 +109,7 @@ fn gateArch(gfx: backend.Backend, x: f32, z: f32) void {
 }
 
 fn safehouse(gfx: backend.Backend, lit: bool) void {
+    shadow(gfx, SAFEHOUSE_X, SAFEHOUSE_Z, 5.0, 4.5);
     box(gfx, SAFEHOUSE_X, 2.5, SAFEHOUSE_Z, 4.5, 5.0, 4.0, backend.Color.rgb(68, 72, 78));
     box(gfx, SAFEHOUSE_X, 5.2, SAFEHOUSE_Z, 4.8, 0.35, 4.3, backend.Color.rgb(40, 40, 42));
     box(gfx, SAFEHOUSE_X, 1.1, SAFEHOUSE_Z + 2.05, 1.4, 2.2, 0.2, backend.Color.rgb(30, 120, 70));
@@ -137,10 +148,8 @@ pub fn drawMinimalScene(
     if (cam_opt) |c| gfx.setCamera(c) else gfx.setCamera(followCamera(p, 11.0, 15.0));
 
     gfx.drawGround(200.0, backend.Color.rgb(42, 40, 38));
-    // Little Italy roads
     box(gfx, 12, 0.03, 20, 11.0, 0.08, 72.0, backend.Color.rgb(24, 24, 26));
     box(gfx, 12, 0.03, 20, 58.0, 0.07, 11.0, backend.Color.rgb(24, 24, 26));
-    // Hell's Kitchen connector road
     box(gfx, 40, 0.03, 20, 30.0, 0.07, 11.0, backend.Color.rgb(22, 22, 24));
     box(gfx, 45, 0.03, 20, 11.0, 0.08, 40.0, backend.Color.rgb(22, 22, 24));
 
@@ -165,7 +174,6 @@ pub fn drawMinimalScene(
     dumpster(gfx, 0.8, 17.0);
     dumpster(gfx, 0.8, 24.0);
 
-    // Little Italy
     building(gfx, 3.5, 28.5, 5.2, 6.5, 4.2, backend.Color.rgb(98, 78, 68), nightish);
     building(gfx, 11.5, 29.2, 5.0, 7.5, 4.0, backend.Color.rgb(70, 74, 82), nightish);
     building(gfx, 19.5, 28.3, 5.2, 5.8, 4.2, backend.Color.rgb(90, 72, 64), nightish);
@@ -175,7 +183,6 @@ pub fn drawMinimalScene(
     building(gfx, 19.5, 11.5, 5.2, 5.5, 4.0, backend.Color.rgb(92, 80, 72), nightish);
     building(gfx, 27.0, 11.2, 4.5, 5.8, 3.8, backend.Color.rgb(78, 68, 60), nightish);
 
-    // Hell's Kitchen — greyer industrial
     building(gfx, 41.0, 28.2, 5.5, 7.0, 4.0, backend.Color.rgb(60, 65, 72), nightish);
     building(gfx, 49.0, 28.0, 5.5, 6.5, 4.0, backend.Color.rgb(55, 58, 65), nightish);
     building(gfx, 41.0, 11.5, 5.5, 6.0, 4.0, backend.Color.rgb(65, 62, 58), nightish);
@@ -225,6 +232,7 @@ pub fn drawMinimalScene(
     jobBeacon(gfx, 45.0, 22.0, n6, true);
 
     if (car) |v| {
+        shadow(gfx, v.x, v.y, 2.4, 3.8);
         const col = if (v.occupied) backend.Color.rgb(45, 130, 210) else backend.Color.rgb(70, 70, 80);
         box(gfx, v.x, 0.5, v.y, 2.0, 1.0, 3.5, col);
         box(gfx, v.x, 1.05, v.y - 0.4, 1.7, 0.45, 1.5, backend.Color.rgb(25, 35, 50));
@@ -232,6 +240,7 @@ pub fn drawMinimalScene(
 
     const px = p.x;
     const pz = p.y;
+    shadow(gfx, px, pz, 0.9, 0.8);
     box(gfx, px, 0.7, pz, 0.65, 1.2, 0.55, backend.Color.rgb(40, 45, 70));
     box(gfx, px, 1.55, pz, 0.5, 0.5, 0.45, backend.Color.rgb(220, 180, 140));
     box(gfx, px, 1.9, pz, 0.55, 0.25, 0.5, backend.Color.rgb(30, 30, 35));

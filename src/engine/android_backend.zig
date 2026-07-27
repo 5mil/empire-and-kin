@@ -1,12 +1,10 @@
 //! Android / mobile backend.
 //!
-//! Phase A (now): runs the full game loop with touch→key mapping.
-//!   - On Termux (aarch64-linux): same as headless + optional stdin later.
-//!   - When linked as libempire.so into a NativeActivity, host injects
-//!     touch via empire_touch() and frames via empire_frame().
+//! Phase A (now): full game loop with touch→key mapping, no window.
+//!   Test via: zig build run-android
+//!   Or on phone Termux: zig build -Dandroid=true -Dtarget=aarch64-linux
 //!
-//! Phase B (next): GLES context owned by Java/NativeActivity; this module
-//!   only pumps game + draws via GLES renderer.
+//! Phase B: GLES context from NativeActivity; this module pumps game only.
 
 const std = @import("std");
 const backend = @import("backend.zig");
@@ -14,7 +12,7 @@ const input = @import("input.zig");
 const touch = @import("touch.zig");
 
 var frame_count: u64 = 0;
-var close_after: u64 = 0; // 0 = never auto-close (device)
+var close_after: u64 = 300; // demo length for run-android; 0 = run forever on device
 var last_ns: i128 = 0;
 var dt: f64 = 1.0 / 60.0;
 var mapper: input.Mapper = .{};
@@ -22,7 +20,6 @@ var screen_w: u32 = 1280;
 var screen_h: u32 = 720;
 var use_touch: bool = true;
 
-// Host can force keys (debug / Bluetooth keyboard on Android)
 var host_raw: input.RawKeys = .{};
 var host_raw_valid: bool = false;
 
@@ -66,6 +63,15 @@ pub fn pollRawKeys() input.RawKeys {
     }
     if (use_touch) return touch.toRawKeys();
     return .{};
+}
+
+pub fn injectRaw(raw: input.RawKeys) void {
+    host_raw = raw;
+    host_raw_valid = true;
+}
+
+pub fn setAutoClose(frames: u64) void {
+    close_after = frames;
 }
 
 fn deltaTimeImpl() f64 {
@@ -121,18 +127,4 @@ pub fn getBackend() backend.Backend {
         .drawBox = drawBoxImpl,
         .drawPlayerProxy = drawPlayerProxyImpl,
     } };
-}
-
-// ─── C ABI for NativeActivity / JNI host ───────────────────────────
-
-export fn empire_touch(x_norm: f32, y_norm: f32, down: u8) void {
-    touch.setPointer(x_norm, y_norm, down != 0);
-}
-
-export fn empire_touch2(x_norm: f32, y_norm: f32, down: u8) void {
-    touch.setPointer2(x_norm, y_norm, down != 0);
-}
-
-export fn empire_set_auto_close(frames: u64) void {
-    close_after = frames;
 }

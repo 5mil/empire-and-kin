@@ -1,4 +1,4 @@
-//! Frame renderer: lit meshes + bitmap HUD text.
+//! Frame renderer: lit meshes + bitmap HUD + distance fog.
 //! Shader sources: desktop 330 core or GLES 300 es via shader_select.
 
 const std = @import("std");
@@ -21,13 +21,18 @@ pub const Renderer = struct {
     ui_vbo: gl.GLuint = 0,
     cam: backend.Camera = .{},
     view_proj: math.Mat4 = .{},
+    // Atmosphere (shared PC + GLES)
+    light_dir: [3]f32 = .{ 0.35, -1.0, 0.25 },
+    ambient: [3]f32 = .{ 0.55, 0.55, 0.58 },
+    fog_color: [3]f32 = .{ 0.45, 0.55, 0.65 },
+    fog_density: f32 = 0.012,
 
     pub fn init(self: *Renderer, width: u32, height: u32) !void {
         self.width = if (width == 0) 1280 else width;
         self.height = if (height == 0) 720 else height;
         self.lit_prog = try compileProgram(shaders.lit_vert, shaders.lit_frag);
         self.ui_prog = try compileProgram(shaders.ui_vert, shaders.ui_frag);
-        std.debug.print("[Renderer] shaders OK lit={d} ui={d}\n", .{ self.lit_prog, self.ui_prog });
+        std.debug.print("[Renderer] shaders OK lit={d} ui={d} (fog+rim)\n", .{ self.lit_prog, self.ui_prog });
 
         var box_v: [24]mesh.Vertex = undefined;
         var box_i: [36]u32 = undefined;
@@ -56,9 +61,6 @@ pub const Renderer = struct {
         gl.glEnable(gl.BLEND);
         gl.glBlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         self.resize(self.width, self.height);
-
-        gl.glClearColor(0.15, 0.18, 0.28, 1);
-        gl.glClear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     }
 
     pub fn shutdown(self: *Renderer) void {
@@ -78,11 +80,27 @@ pub const Renderer = struct {
         gl.glViewport(0, 0, @intCast(w), @intCast(h));
     }
 
+    /// Sync fog to clear color so distant buildings melt into sky (both backends).
     pub fn beginFrame(self: *Renderer, color: backend.Color) void {
-        _ = self;
         const r = @as(f32, @floatFromInt(color.r)) / 255.0;
         const g = @as(f32, @floatFromInt(color.g)) / 255.0;
         const b = @as(f32, @floatFromInt(color.b)) / 255.0;
+        self.fog_color = .{ r, g, b };
+        // Night: cooler ambient, heavier fog; day: brighter ambient, lighter fog
+        const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        if (lum < 0.2) {
+            self.ambient = .{ 0.28, 0.30, 0.38 };
+            self.light_dir = .{ 0.2, -0.7, 0.4 };
+            self.fog_density = 0.018;
+        } else if (lum < 0.35) {
+            self.ambient = .{ 0.42, 0.38, 0.40 };
+            self.light_dir = .{ 0.5, -0.85, 0.15 };
+            self.fog_density = 0.014;
+        } else {
+            self.ambient = .{ 0.58, 0.58, 0.60 };
+            self.light_dir = .{ 0.35, -1.0, 0.25 };
+            self.fog_density = 0.010;
+        }
         gl.glClearColor(r, g, b, 1);
         gl.glClear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     }
@@ -107,10 +125,13 @@ pub const Renderer = struct {
         const loc_light = gl.glGetUniformLocation(self.lit_prog, "uLightDir");
         const loc_amb = gl.glGetUniformLocation(self.lit_prog, "uAmbient");
         const loc_tint = gl.glGetUniformLocation(self.lit_prog, "uTint");
+        const loc_fog = gl.glGetUniformLocation(self.lit_prog, "uFogColor");
+        const loc_dens = gl.glGetUniformLocation(self.lit_prog, "uFogDensity");
+        const loc_cam = gl.glGetUniformLocation(self.lit_prog, "uCamPos");
         gl.glUniformMatrix4fv(loc_mvp, 1, gl.FALSE, mvp.ptr());
         gl.glUniformMatrix4fv(loc_model, 1, gl.FALSE, model.ptr());
-        gl.glUniform3f(loc_light, 0.35, -1.0, 0.25);
-        gl.glUniform3f(loc_amb, 0.55, 0.55, 0.58);
+        gl.glUniform3f(loc_light, self.light_dir[0], self.light_dir[1], self.light_dir[2]);
+        gl.glUniform3f(loc_amb, self.ambient[0], self.ambient[1], self.ambient[2]);
         gl.glUniform4f(
             loc_tint,
             @as(f32, @floatFromInt(tint.r)) / 255.0,
@@ -118,6 +139,9 @@ pub const Renderer = struct {
             @as(f32, @floatFromInt(tint.b)) / 255.0,
             @as(f32, @floatFromInt(tint.a)) / 255.0,
         );
+        gl.glUniform3f(loc_fog, self.fog_color[0], self.fog_color[1], self.fog_color[2]);
+        gl.glUniform1f(loc_dens, self.fog_density);
+        gl.glUniform3f(loc_cam, self.cam.position.x, self.cam.position.y, self.cam.position.z);
         m.draw();
     }
 

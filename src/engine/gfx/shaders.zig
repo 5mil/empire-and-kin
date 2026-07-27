@@ -1,4 +1,4 @@
-//! GLSL 330 core sources (embedded).
+//! GLSL 330 core — tier-up: half-Lambert + distance fog + horizon tint.
 
 pub const lit_vert =
     \\#version 330 core
@@ -27,14 +27,22 @@ pub const lit_frag =
     \\uniform vec3 uLightDir;
     \\uniform vec3 uAmbient;
     \\uniform vec4 uTint;
+    \\uniform vec3 uFogColor;
+    \\uniform float uFogDensity;
+    \\uniform vec3 uCamPos;
     \\out vec4 FragColor;
     \\void main() {
     \\    vec3 n = normalize(vNormal);
     \\    float ndl = max(dot(n, normalize(-uLightDir)), 0.0);
     \\    float half_lambert = ndl * 0.5 + 0.5;
+    \\    float rim = pow(1.0 - max(dot(n, normalize(uCamPos - vWorldPos)), 0.0), 3.0) * 0.12;
     \\    vec3 base = vColor.rgb * uTint.rgb;
-    \\    vec3 lit = base * (uAmbient + vec3(half_lambert * 0.85));
-    \\    FragColor = vec4(lit, vColor.a * uTint.a);
+    \\    vec3 lit = base * (uAmbient + vec3(half_lambert * 0.9)) + vec3(rim);
+    \\    float dist = length(vWorldPos - uCamPos);
+    \\    float fog = 1.0 - exp(-uFogDensity * dist);
+    \\    fog = clamp(fog, 0.0, 0.85);
+    \\    vec3 color = mix(lit, uFogColor, fog);
+    \\    FragColor = vec4(color, vColor.a * uTint.a);
     \\}
 ;
 

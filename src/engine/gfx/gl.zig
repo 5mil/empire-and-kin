@@ -1,4 +1,4 @@
-//! Minimal OpenGL 3.3 core loader via getProcAddress.
+//! Minimal OpenGL 3.3 / GLES loader via getProcAddress.
 
 const std = @import("std");
 
@@ -67,6 +67,7 @@ pub var glGetProgramInfoLog: *const fn (GLuint, GLsizei, ?*GLsizei, [*]GLchar) c
 pub var glUseProgram: *const fn (GLuint) callconv(.c) void = undefined;
 pub var glGetUniformLocation: *const fn (GLuint, [*:0]const GLchar) callconv(.c) GLint = undefined;
 pub var glUniformMatrix4fv: *const fn (GLint, GLsizei, GLboolean, [*]const GLfloat) callconv(.c) void = undefined;
+pub var glUniform1f: *const fn (GLint, GLfloat) callconv(.c) void = undefined;
 pub var glUniform3f: *const fn (GLint, GLfloat, GLfloat, GLfloat) callconv(.c) void = undefined;
 pub var glUniform4f: *const fn (GLint, GLfloat, GLfloat, GLfloat, GLfloat) callconv(.c) void = undefined;
 pub var glUniform2f: *const fn (GLint, GLfloat, GLfloat) callconv(.c) void = undefined;
@@ -111,6 +112,7 @@ pub fn load(get: GetProc) !void {
     glUseProgram = try loadFn(@TypeOf(glUseProgram), get, "glUseProgram");
     glGetUniformLocation = try loadFn(@TypeOf(glGetUniformLocation), get, "glGetUniformLocation");
     glUniformMatrix4fv = try loadFn(@TypeOf(glUniformMatrix4fv), get, "glUniformMatrix4fv");
+    glUniform1f = try loadFn(@TypeOf(glUniform1f), get, "glUniform1f");
     glUniform3f = try loadFn(@TypeOf(glUniform3f), get, "glUniform3f");
     glUniform4f = try loadFn(@TypeOf(glUniform4f), get, "glUniform4f");
     glUniform2f = try loadFn(@TypeOf(glUniform2f), get, "glUniform2f");

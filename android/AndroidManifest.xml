@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phase B stub — not yet packaged. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.fivemil.empireandkin">
+    <uses-feature android:glEsVersion="0x00030000" android:required="true" />
+    <application
+        android:label="Empire & Kin"
+        android:hasCode="true"
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+        <!-- Replace with NativeActivity / GameActivity when Phase B lands -->
+        <activity
+            android:name="android.app.NativeActivity"
+            android:exported="true"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:screenOrientation="landscape">
+            <meta-data android:name="android.app.lib_name" android:value="empire" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

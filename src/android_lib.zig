@@ -1,16 +1,15 @@
 //! Shared library entry for packaging into an Android APK.
 //! NativeActivity / JNI host loads libempire.so and calls these symbols.
 //!
-//! Full GLES window is owned by the Java/NativeActivity side in Phase B.
-//! Phase A exports touch injection + a thin "tick once" API for hosts that
-//! run the game loop themselves.
+//! Phase B: host creates ANativeWindow, calls empire_gles_attach, then
+//! either runs its own loop calling empire_frame, or embeds main later.
 
 const android_backend = @import("engine/android_backend.zig");
+const gles_backend = @import("engine/gles_backend.zig");
 const touch = @import("engine/touch.zig");
 
-/// Required so the .so is not empty / stripped of exports.
 export fn empire_abi_version() u32 {
-    return 1;
+    return 2;
 }
 
 export fn empire_touch(x_norm: f32, y_norm: f32, down: u8) void {
@@ -25,15 +24,33 @@ export fn empire_touch_clear() void {
     touch.clear();
 }
 
-/// Placeholder frame counter for hosts that only want a heartbeat.
 var host_frames: u64 = 0;
 export fn empire_host_frame() u64 {
     host_frames +%= 1;
     return host_frames;
 }
 
-// Re-export backend factory for hosts that embed the full loop later.
+/// Attach GLES to an ANativeWindow* from NativeActivity.
+/// width/height may be 0 — EGL will query the surface.
+export fn empire_gles_attach(window: ?*anyopaque, width: u32, height: u32) u8 {
+    gles_backend.attachNativeWindow(window, width, height) catch return 0;
+    return 1;
+}
+
+export fn empire_gles_detach() void {
+    gles_backend.detach();
+}
+
+export fn empire_gles_request_close() void {
+    gles_backend.requestClose();
+}
+
 export fn empire_backend_ready() u8 {
     _ = android_backend.getBackend();
+    return 1;
+}
+
+export fn empire_gles_backend_ready() u8 {
+    _ = gles_backend.getBackend();
     return 1;
 }

@@ -35,6 +35,8 @@ pub const c = struct {
     pub const EGL_OPENGL_ES3_BIT: EGLint = 0x0040;
     pub const EGL_NONE: EGLint = 0x3038;
     pub const EGL_CONTEXT_CLIENT_VERSION: EGLint = 0x3098;
+    pub const EGL_WIDTH: EGLint = 0x3057;
+    pub const EGL_HEIGHT: EGLint = 0x3056;
 
     pub extern fn eglGetDisplay(display_id: ?*anyopaque) EGLDisplay;
     pub extern fn eglInitialize(display: EGLDisplay, major: ?*EGLint, minor: ?*EGLint) EGLBoolean;
@@ -49,9 +51,6 @@ pub const c = struct {
     pub extern fn eglGetError() EGLint;
     pub extern fn eglQuerySurface(display: EGLDisplay, surface: EGLSurface, attribute: EGLint, value: *EGLint) EGLBoolean;
     pub extern fn eglGetProcAddress(procname: [*:0]const u8) ?*anyopaque;
-
-    pub const EGL_WIDTH: EGLint = 0x3057;
-    pub const EGL_HEIGHT: EGLint = 0x3056;
 };
 
 pub const Context = struct {
@@ -64,7 +63,7 @@ pub const Context = struct {
 
     pub fn createFromWindow(window: c.EGLNativeWindowType, width: u32, height: u32) !Context {
         var self: Context = .{};
-        self.width = if (width == 0 1280 else width;
+        self.width = if (width == 0) 1280 else width;
         self.height = if (height == 0) 720 else height;
 
         self.display = c.eglGetDisplay(c.EGL_DEFAULT_DISPLAY);
@@ -76,13 +75,13 @@ pub const Context = struct {
         std.debug.print("[EGL] {d}.{d}\n", .{ major, minor });
 
         const cfg_attribs = [_]c.EGLint{
-            c.EGL_SURFACE_TYPE,     c.EGL_WINDOW_BIT,
-            c.EGL_RED_SIZE,         8,
-            c.EGL_GREEN_SIZE,       8,
-            c.EGL_BLUE_SIZE,        8,
-            c.EGL_ALPHA_SIZE,       8,
-            c.EGL_DEPTH_SIZE,       24,
-            c.EGL_RENDERABLE_TYPE,  c.EGL_OPENGL_ES3_BIT,
+            c.EGL_SURFACE_TYPE,    c.EGL_WINDOW_BIT,
+            c.EGL_RED_SIZE,        8,
+            c.EGL_GREEN_SIZE,      8,
+            c.EGL_BLUE_SIZE,       8,
+            c.EGL_ALPHA_SIZE,      8,
+            c.EGL_DEPTH_SIZE,      24,
+            c.EGL_RENDERABLE_TYPE, c.EGL_OPENGL_ES3_BIT,
             c.EGL_NONE,
         };
         var config: c.EGLConfig = null;

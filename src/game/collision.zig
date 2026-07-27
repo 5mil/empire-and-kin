@@ -1,8 +1,8 @@
 //! Simple AABB collision against known building footprints + world bounds.
 const std = @import("std");
 
-pub const WORLD_MIN_X: f32 = -2.0;
-pub const WORLD_MAX_X: f32 = 32.0;
+pub const WORLD_MIN_X: f32 = -14.0;
+pub const WORLD_MAX_X: f32 = 55.0;
 pub const WORLD_MIN_Y: f32 = 6.0;
 pub const WORLD_MAX_Y: f32 = 34.0;
 
@@ -15,7 +15,7 @@ pub const Box = struct {
 
 /// Matches engine/scene.zig footprints (x,z = player x,y).
 const buildings = [_]Box{
-    // North row
+    // North row Little Italy
     .{ .min_x = 0.9, .max_x = 6.1, .min_z = 26.4, .max_z = 30.6 },
     .{ .min_x = 9.0, .max_x = 14.0, .min_z = 27.2, .max_z = 31.2 },
     .{ .min_x = 16.9, .max_x = 22.1, .min_z = 26.2, .max_z = 30.4 },
@@ -25,8 +25,13 @@ const buildings = [_]Box{
     .{ .min_x = 9.0, .max_x = 14.0, .min_z = 8.8, .max_z = 12.8 },
     .{ .min_x = 16.9, .max_x = 22.1, .min_z = 9.5, .max_z = 13.5 },
     .{ .min_x = 24.75, .max_x = 29.25, .min_z = 9.3, .max_z = 13.1 },
-    // Safehouse body (leave front clear for approach)
+    // Safehouse body
     .{ .min_x = 7.75, .max_x = 12.25, .min_z = 16.0, .max_z = 20.0 },
+    // Hell's Kitchen row
+    .{ .min_x = 38.0, .max_x = 44.0, .min_z = 26.0, .max_z = 30.5 },
+    .{ .min_x = 46.0, .max_x = 52.0, .min_z = 26.0, .max_z = 30.5 },
+    .{ .min_x = 38.0, .max_x = 44.0, .min_z = 9.5, .max_z = 13.5 },
+    .{ .min_x = 46.0, .max_x = 52.0, .min_z = 9.5, .max_z = 13.5 },
 };
 
 pub fn pointInBox(x: f32, z: f32, b: Box, margin: f32) bool {

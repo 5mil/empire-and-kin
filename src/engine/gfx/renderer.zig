@@ -1,11 +1,12 @@
 //! Frame renderer: lit meshes + bitmap HUD text.
+//! Shader sources: desktop 330 core or GLES 300 es via shader_select.
 
 const std = @import("std");
 const gl = @import("gl.zig");
 const math = @import("math.zig");
 const mesh = @import("mesh.zig");
 const gpu_mesh = @import("gpu_mesh.zig");
-const shaders = @import("shaders.zig");
+const shaders = @import("shader_select.zig").shaders;
 const font = @import("font.zig");
 const backend = @import("../backend.zig");
 
@@ -42,7 +43,6 @@ pub const Renderer = struct {
         gl.glGenBuffers(1, &self.ui_vbo);
         gl.glBindVertexArray(self.ui_vao);
         gl.glBindBuffer(gl.ARRAY_BUFFER, self.ui_vbo);
-        // Room for ~200 quads per upload
         gl.glBufferData(gl.ARRAY_BUFFER, 200 * 6 * 6 * @sizeOf(f32), null, gl.DYNAMIC_DRAW);
         const stride: gl.GLsizei = 6 * @sizeOf(f32);
         gl.glEnableVertexAttribArray(0);
@@ -176,7 +176,6 @@ pub const Renderer = struct {
         return true;
     }
 
-    /// B1 bitmap font — readable HUD text (batched uploads).
     pub fn drawText(self: *Renderer, text: []const u8, x: i32, y: i32, color: backend.Color) void {
         const scale: f32 = 1.5;
         const r = @as(f32, @floatFromInt(color.r)) / 255.0;
@@ -184,7 +183,7 @@ pub const Renderer = struct {
         const b = @as(f32, @floatFromInt(color.b)) / 255.0;
         const a: f32 = 1.0;
 
-        var vert_buf: [7200]f32 = undefined; // ~200 quads
+        var vert_buf: [7200]f32 = undefined;
         var vcount: usize = 0;
 
         const max_chars = @min(text.len, 64);

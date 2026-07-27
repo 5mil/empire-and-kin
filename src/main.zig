@@ -79,10 +79,7 @@ const zone_ui = @import("engine/zone_ui.zig");
 const gameover = @import("engine/gameover.zig");
 const backend = @import("engine/backend.zig");
 
-const gfx_mod = if (build_options.enable_gpu)
-    @import("engine/gl_backend.zig")
-else
-    @import("engine/null_backend.zig");
+const gfx_mod = @import("engine/gfx_select.zig").BackendMod;
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;

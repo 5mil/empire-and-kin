@@ -4,16 +4,17 @@ const player = @import("../game/player.zig");
 const living = @import("../game/living.zig");
 const action = @import("../game/action.zig");
 const era_mod = @import("../game/era.zig");
+const sim_actor = @import("sim_actor.zig");
 
 pub const SAFEHOUSE_X: f32 = 10.0;
 pub const SAFEHOUSE_Z: f32 = 18.0;
 
 pub fn followCamera(p: player.Player, height: f32, back: f32) backend.Camera {
     return .{
-        .position = .{ .x = p.x, .y = height, .z = p.y - back },
-        .target = .{ .x = p.x, .y = 1.0, .z = p.y },
+        .position = .{ .x = p.x + 4.5, .y = height, .z = p.y - back },
+        .target = .{ .x = p.x, .y = 0.8, .z = p.y },
         .up = .{ .x = 0, .y = 1, .z = 0 },
-        .fov_deg = 52,
+        .fov_deg = 46,
     };
 }
 
@@ -21,7 +22,6 @@ fn box(gfx: backend.Backend, x: f32, y: f32, z: f32, w: f32, h: f32, d: f32, col
     gfx.drawBox(.{ .x = x, .y = y, .z = z }, w, h, d, col);
 }
 
-/// Soft contact shadow (dark plate) — works on PC GL and Android GLES.
 fn shadow(gfx: backend.Backend, x: f32, z: f32, w: f32, d: f32) void {
     box(gfx, x, 0.04, z, w, 0.06, d, backend.Color.rgb(12, 12, 14));
 }
@@ -44,28 +44,28 @@ fn building(gfx: backend.Backend, x: f32, z: f32, w: f32, h: f32, d: f32, col: b
 }
 
 fn sidewalk(gfx: backend.Backend, x: f32, z: f32, w: f32, d: f32) void {
-    box(gfx, x, 0.06, z, w, 0.12, d, backend.Color.rgb(95, 92, 88));
+    box(gfx, x, 0.06, z, w, 0.12, d, backend.Color.rgb(110, 108, 102));
 }
 
 fn crosswalk(gfx: backend.Backend, x: f32, z: f32, along_x: bool) void {
     var i: i32 = 0;
     while (i < 5) : (i += 1) {
         if (along_x) {
-            box(gfx, x + @as(f32, @floatFromInt(i)) * 1.1 - 2.0, 0.06, z, 0.7, 0.05, 2.8, backend.Color.rgb(200, 200, 190));
+            box(gfx, x + @as(f32, @floatFromInt(i)) * 1.1 - 2.0, 0.06, z, 0.7, 0.05, 2.8, backend.Color.rgb(210, 210, 200));
         } else {
-            box(gfx, x, 0.06, z + @as(f32, @floatFromInt(i)) * 1.1 - 2.0, 2.8, 0.05, 0.7, backend.Color.rgb(200, 200, 190));
+            box(gfx, x, 0.06, z + @as(f32, @floatFromInt(i)) * 1.1 - 2.0, 2.8, 0.05, 0.7, backend.Color.rgb(210, 210, 200));
         }
     }
 }
 
 fn jobBeacon(gfx: backend.Backend, x: f32, z: f32, near: bool, active: bool) void {
     if (!active) return;
-    shadow(gfx, x, z, 2.8, 2.8);
-    const base = if (near) backend.Color.rgb(40, 140, 180) else backend.Color.rgb(25, 70, 95);
-    const pole = if (near) backend.Color.rgb(120, 255, 255) else backend.Color.rgb(70, 190, 255);
-    box(gfx, x, 0.12, z, 2.5, 0.24, 2.5, base);
-    box(gfx, x, 2.0, z, 0.5, 4.0, 0.5, pole);
-    if (near) box(gfx, x, 4.4, z, 1.4, 0.35, 1.4, backend.Color.rgb(255, 240, 120));
+    shadow(gfx, x, z, 2.2, 2.2);
+    // Soft diamond marker (less "tech pole")
+    const base = if (near) backend.Color.rgb(50, 180, 120) else backend.Color.rgb(30, 100, 70);
+    box(gfx, x, 0.15, z, 1.8, 0.2, 1.8, base);
+    box(gfx, x, 1.2, z, 0.35, 2.0, 0.35, if (near) backend.Color.rgb(100, 255, 160) else backend.Color.rgb(60, 160, 100));
+    if (near) box(gfx, x, 2.4, z, 0.6, 0.6, 0.6, backend.Color.rgb(255, 240, 120));
 }
 
 fn lamp(gfx: backend.Backend, x: f32, z: f32, on: bool) void {
@@ -137,21 +137,22 @@ pub fn drawMinimalScene(
 ) void {
     const nightish = period == .night or period == .evening;
     const clear_col = switch (period) {
-        .night => if (era == .nyc_1980s) backend.Color.rgb(5, 6, 22) else backend.Color.rgb(7, 9, 20),
-        .dawn => backend.Color.rgb(55, 45, 70),
-        .day => if (era == .nyc_1980s) backend.Color.rgb(55, 100, 150) else backend.Color.rgb(75, 120, 165),
-        .dusk => backend.Color.rgb(110, 55, 40),
-        .evening => if (era == .nyc_1980s) backend.Color.rgb(15, 16, 40) else backend.Color.rgb(20, 22, 38),
+        .night => if (era == .nyc_1980s) backend.Color.rgb(8, 10, 28) else backend.Color.rgb(10, 12, 26),
+        .dawn => backend.Color.rgb(70, 55, 85),
+        .day => if (era == .nyc_1980s) backend.Color.rgb(70, 120, 170) else backend.Color.rgb(95, 145, 190),
+        .dusk => backend.Color.rgb(130, 70, 50),
+        .evening => if (era == .nyc_1980s) backend.Color.rgb(20, 22, 48) else backend.Color.rgb(28, 30, 48),
     };
     gfx.clear(clear_col);
 
-    if (cam_opt) |c| gfx.setCamera(c) else gfx.setCamera(followCamera(p, 11.0, 15.0));
+    if (cam_opt) |c| gfx.setCamera(c) else gfx.setCamera(followCamera(p, 17.5, 18.0));
 
-    gfx.drawGround(200.0, backend.Color.rgb(42, 40, 38));
-    box(gfx, 12, 0.03, 20, 11.0, 0.08, 72.0, backend.Color.rgb(24, 24, 26));
-    box(gfx, 12, 0.03, 20, 58.0, 0.07, 11.0, backend.Color.rgb(24, 24, 26));
-    box(gfx, 40, 0.03, 20, 30.0, 0.07, 11.0, backend.Color.rgb(22, 22, 24));
-    box(gfx, 45, 0.03, 20, 11.0, 0.08, 40.0, backend.Color.rgb(22, 22, 24));
+    // Softer ground (neighborhood, not asphalt void)
+    gfx.drawGround(200.0, backend.Color.rgb(58, 62, 52));
+    box(gfx, 12, 0.03, 20, 11.0, 0.08, 72.0, backend.Color.rgb(32, 32, 34));
+    box(gfx, 12, 0.03, 20, 58.0, 0.07, 11.0, backend.Color.rgb(32, 32, 34));
+    box(gfx, 40, 0.03, 20, 30.0, 0.07, 11.0, backend.Color.rgb(30, 30, 32));
+    box(gfx, 45, 0.03, 20, 11.0, 0.08, 40.0, backend.Color.rgb(30, 30, 32));
 
     crosswalk(gfx, 12, 15.2, true);
     crosswalk(gfx, 12, 24.8, true);
@@ -238,12 +239,8 @@ pub fn drawMinimalScene(
         box(gfx, v.x, 1.05, v.y - 0.4, 1.7, 0.45, 1.5, backend.Color.rgb(25, 35, 50));
     }
 
-    const px = p.x;
-    const pz = p.y;
-    shadow(gfx, px, pz, 0.9, 0.8);
-    box(gfx, px, 0.7, pz, 0.65, 1.2, 0.55, backend.Color.rgb(40, 45, 70));
-    box(gfx, px, 1.55, pz, 0.5, 0.5, 0.45, backend.Color.rgb(220, 180, 140));
-    box(gfx, px, 1.9, pz, 0.55, 0.25, 0.5, backend.Color.rgb(30, 30, 35));
+    // Boss as multi-part Sim silhouette
+    sim_actor.drawBoss(gfx, p.x, p.y);
 }
 
 fn dist2(ax: f32, ay: f32, bx: f32, by: f32) f32 {

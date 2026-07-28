@@ -147,6 +147,8 @@ pub fn main(init: std.process.Init) !void {
     var radio_cd: f64 = 55.0;
     var turf_cd: f64 = 90.0;
     var day_count: u32 = 0;
+    var prev_boss_x: f32 = boss.x;
+    var prev_boss_y: f32 = boss.y;
 
     var edge_ord: [5]input.ButtonEdge = .{ .{}, .{}, .{}, .{}, .{} };
     var edge_tab: input.ButtonEdge = .{};
@@ -169,6 +171,7 @@ pub fn main(init: std.process.Init) !void {
     while (!gfx.shouldClose()) {
         gfx.beginFrame();
         const dt = gfx.deltaTime();
+        scene.anim_time_s += @as(f32, @floatCast(dt));
         const raw = gfx_mod.pollRawKeys();
         frame_seed +%= 1;
         toast.tick(dt);
@@ -245,6 +248,13 @@ pub fn main(init: std.process.Init) !void {
         const speed: f32 = if (car_ptr) |v| v.speed else boss.speed;
         const downed = death.isDown(boss);
         if (!downed) _ = ctrl.tick(raw, &boss, if (in_car) 0 else dt);
+
+        // Procedural walk: detect horizontal motion
+        const dx = boss.x - prev_boss_x;
+        const dy = boss.y - prev_boss_y;
+        scene.boss_moving = (dx * dx + dy * dy) > 0.0001;
+        prev_boss_x = boss.x;
+        prev_boss_y = boss.y;
 
         const near_any = mission_ui.anyNear(&jobs, boss);
         const cam = follow.update(boss, in_car, dt);

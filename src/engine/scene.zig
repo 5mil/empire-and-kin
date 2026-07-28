@@ -9,6 +9,11 @@ const sim_actor = @import("sim_actor.zig");
 pub const SAFEHOUSE_X: f32 = 10.0;
 pub const SAFEHOUSE_Z: f32 = 18.0;
 
+/// Wall-clock for procedural anim (set each frame from main).
+pub var anim_time_s: f32 = 0;
+/// Boss horizontal motion this frame.
+pub var boss_moving: bool = false;
+
 pub fn followCamera(p: player.Player, height: f32, back: f32) backend.Camera {
     return .{
         .position = .{ .x = p.x + 4.5, .y = height, .z = p.y - back },
@@ -26,7 +31,6 @@ fn shadow(gfx: backend.Backend, x: f32, z: f32, w: f32, d: f32) void {
     box(gfx, x, 0.04, z, w, 0.06, d, backend.Color.rgb(12, 12, 14));
 }
 
-/// Soft neighborhood lot grid (Sims-like lot boundaries without textures).
 fn lotGrid(gfx: backend.Backend) void {
     const col = backend.Color.rgb(72, 78, 68);
     var ix: i32 = -2;
@@ -253,7 +257,8 @@ pub fn drawMinimalScene(
         box(gfx, v.x, 1.05, v.y - 0.4, 1.7, 0.45, 1.5, backend.Color.rgb(25, 35, 50));
     }
 
-    sim_actor.drawBoss(gfx, p.x, p.y);
+    // Animated boss (procedural walk until Quaternius GLB lands)
+    sim_actor.drawBoss(gfx, p.x, p.y, anim_time_s, boss_moving);
 }
 
 fn dist2(ax: f32, ay: f32, bx: f32, by: f32) f32 {

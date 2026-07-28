@@ -1,37 +1,33 @@
 # Visual target vs reality
 
-## Straight talk
+## Straight talk (read before the next test)
 
-**The Sims 4** is a decade of EA art, animation, CAS, routing, lighting, and UI polish.
-Empire & Kin is a Zig alpha with **procedural boxes + bitmap font**. Playtests that only measure “does it look like Sims 4?” will always fail until we add a real art pipeline (meshes, textures, skinned characters, UI toolkit).
+**The Sims 4** is not a visual bar we can clear with procedural boxes before a playtest.
+It is a decade of character art, animation, CAS, routing, lighting, UI, and audio.
 
-What we *can* hit in the near term is **life-sim readability**:
+**Empire & Kin `0.3.1-alpha`** is the **highest Sims-*like* fidelity this stack can offer without meshes/textures**:
 
-| Signal | Sims 4 | Empire & Kin (now) |
-|--------|--------|--------------------|
-| Camera | Elevated neighborhood | Elevated 3/4 follow |
-| Sim | Full body mesh | Multi-part silhouette + plumbob cue |
-| HUD | Portrait + needs + money | Clean panel: cash / heat / control / goal |
-| World | Textured lots | Block city with fog + shadows |
-| UI noise | Focused | Debug overlays **removed from default play** |
+| Layer | Sims 4 | Empire & Kin now |
+|-------|--------|------------------|
+| Camera | Elevated neighborhood | Elevated 3/4 follow (shared PC + GLES) |
+| Selected Sim | Mesh + plumbob | Multi-part boss + stacked green plumbob |
+| Other Sims | Full bodies | Variant ped silhouettes |
+| Needs | Icon bars | Text needs bars (Health / Calm / Control) |
+| Aspiration | Career/want panel | Goal card + progress bars |
+| World | Textured lots | Block city + fog + contact shadows + lot grid |
+| UI chrome | Nine-slice panels | Bitmap font cards (no image atlas yet) |
+| Animation | Walk cycles | Static poses |
+| Materials | PBR textures | Vertex color + fog/rim |
 
-## Playability bar (this milestone)
+If the test scores only “looks like Sims 4 screenshots,” it will fail.
+If it scores **can I read my Sim, my money, my goal, and the block**, `0.3.1` is the bar.
 
-1. You always know **where you are** (district + clock).  
-2. You always know **what matters** (goal % + cash).  
-3. You always know **what to press** (bottom prompt).  
-4. Your character reads as a **person**, not a crate.  
-5. The screen is not a wall of debug text.
+## What would true fidelity require (post-test roadmap)
 
-## Next visual tiers (ordered)
+1. glTF character + building import  
+2. Texture atlas (PD sources in `docs/ART_SOURCES.md`)  
+3. Skinned walk / idle  
+4. Real UI toolkit (rects, nine-slice, icons)  
+5. Android APK host with same GLES path  
 
-1. **Larger type** (font scale 2.5+) — done this pass  
-2. **Sim HUD only** — done this pass  
-3. Articulated boss + ped silhouettes — done this pass  
-4. Soft ground grid / lot boundaries  
-5. Simple billboard icons for jobs (not cyan poles only)  
-6. True mesh import (glTF) + materials  
-7. Skinned walk cycle  
-8. Proper UI toolkit (rects, nine-slice panels)
-
-Until tier 6–8, comparisons to Sims 4 should be about **clarity and agency**, not screenshots.
+Until then: **clarity and agency**, not screenshot parity.

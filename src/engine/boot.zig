@@ -18,53 +18,46 @@ pub const BootState = struct {
 };
 
 pub fn draw(gfx: backend.Backend, boot: BootState) void {
-    const title_c = backend.Color.rgb(255, 215, 120);
-    const white = backend.Color.rgb(235, 235, 225);
-    const dim = backend.Color.rgb(150, 150, 145);
-    const accent = backend.Color.rgb(100, 210, 160);
-    const muted = backend.Color.rgb(100, 110, 130);
+    const title_c = backend.Color.rgb(255, 220, 130);
+    const white = backend.Color.rgb(245, 245, 240);
+    const dim = backend.Color.rgb(160, 165, 175);
+    const accent = backend.Color.rgb(90, 220, 160);
 
-    gfx.clear(backend.Color.rgb(10, 12, 20));
-    gfx.drawText("================================", 40, 28, muted);
+    gfx.clear(backend.Color.rgb(14, 16, 28));
 
     switch (boot.phase) {
         .title => {
-            gfx.drawText("EMPIRE & KIN", 40, 55, title_c);
-            gfx.drawText("Little Italy  |  real-time alpha", 40, 85, dim);
-            gfx.drawText("================================", 40, 105, muted);
-            gfx.drawText("[1]  New Game", 40, 145, white);
+            gfx.drawText("EMPIRE & KIN", 420, 160, title_c);
+            gfx.drawText("Build a family. Own the block.", 380, 200, dim);
+            gfx.drawText("[1]  New Game", 460, 280, white);
             if (boot.has_save) {
-                gfx.drawText("[2]  Continue last save", 40, 175, accent);
+                gfx.drawText("[2]  Continue", 460, 320, accent);
             } else {
-                gfx.drawText("[2]  Continue (no save yet)", 40, 175, dim);
+                gfx.drawText("[2]  Continue (no save)", 420, 320, dim);
             }
-            gfx.drawText("--------------------------------", 40, 215, muted);
-            gfx.drawText("WASD walk   E job/car/club/fence/doc", 40, 240, dim);
-            gfx.drawText("Esc empire  F5 save  F9 load  R bribe", 40, 260, dim);
-            gfx.drawText("Goal: control the block & stack cash", 40, 300, backend.Color.rgb(180, 200, 220));
-            gfx.drawText("Stash hides cash  Numbers bets  Doc heals", 40, 320, dim);
+            gfx.drawText("WASD move · E interact · Esc empire menu", 360, 420, dim);
+            gfx.drawText("F5 save · F9 load · R bribe at safehouse", 370, 450, dim);
         },
         .era_select => {
-            gfx.drawText("CHOOSE YOUR ERA", 40, 55, title_c);
-            gfx.drawText("================================", 40, 80, muted);
+            gfx.drawText("CHOOSE YOUR ERA", 420, 140, title_c);
             if (boot.selected_era == .nyc_1930s) {
-                gfx.drawText("> 1930s New York    [1]", 40, 120, accent);
+                gfx.drawText("> 1930s New York   [1]", 420, 220, accent);
             } else {
-                gfx.drawText("  1930s New York    [1]", 40, 120, white);
+                gfx.drawText("  1930s New York   [1]", 420, 220, white);
             }
-            gfx.drawText("  Rackets, families, Prohibition fade", 50, 145, dim);
+            gfx.drawText("Families, rackets, Prohibition fade", 420, 250, dim);
             if (boot.selected_era == .nyc_1980s) {
-                gfx.drawText("> 1980s New York    [2]", 40, 190, accent);
+                gfx.drawText("> 1980s New York   [2]", 420, 310, accent);
             } else {
-                gfx.drawText("  1980s New York    [2]", 40, 190, white);
+                gfx.drawText("  1980s New York   [2]", 420, 310, white);
             }
-            gfx.drawText("  Neon, new crews, harder heat", 50, 215, dim);
-            gfx.drawText("[Enter]  Hit the street", 40, 280, white);
+            gfx.drawText("Neon, new crews, harder heat", 420, 340, dim);
+            gfx.drawText("[Enter]  Hit the street", 420, 420, white);
         },
         .playing => {},
     }
     if (boot.message.len > 0) {
-        gfx.drawText(boot.message, 40, 360, accent);
+        gfx.drawText(boot.message, 420, 500, accent);
     }
 }
 

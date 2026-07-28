@@ -1,16 +1,21 @@
 # Empire & Kin — Handover
 
-**Version:** `0.3.0-alpha`  
-**Focus:** Life-sim **readability** (not Sims 4 fidelity — see `docs/VISUAL.md`).
+**Version:** `0.3.1-alpha`  
+**Focus:** Maximum **Sims-like readability** on PC + Android GLES path — **not** Sims 4 screenshot parity.
 
-## What changed this pass
+## Honest scope
 
-- Elevated **3/4 camera** (neighborhood dollhouse angle)
-- **Multi-part boss** silhouette + green plumbob cue
-- **Clean HUD**: district, cash, health/heat/control, goal % — no debug wall
-- **Larger font** (scale 2.75)
-- Softer sky/ground; greener job markers
-- Centered title screen
+True Sims 4 fidelity needs meshes, textures, skinned animation, CAS, and a UI toolkit.  
+This build is the ceiling for **procedural boxes + bitmap font** on both backends.
+
+## What landed (`0.3.1`)
+
+- Articulated boss (legs, torso, arms, head, eyes, plumbob stack)
+- Ped variants + contact shadows
+- Needs-style bars: Health / Calm / Control + aspiration progress
+- Soft **lot grid** on ground
+- Elevated 3/4 camera (unchanged path)
+- Shared scene/HUD/renderer → PC GL and Android GLES both benefit
 
 ## Build (Windows GPU)
 
@@ -21,11 +26,20 @@ zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
   -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
 ```
 
-## Playtest checklist
+## Android
 
-1. Can you tell who you are? (green diamond over boss)  
-2. Can you read cash + goal without hunting?  
-3. Does the camera feel like looking down at a block?  
-4. Is the screen *not* covered in overlapping text?
+```bash
+zig build run-android
+zig build android-lib -Doptimize=ReleaseFast
+```
 
-If those pass, playtests are useful again.
+## Test scoring guide
+
+Score **clarity**, not EA comparison:
+
+1. Can you spot the boss (green plumbob)?  
+2. Can you read cash + needs bars?  
+3. Does the block feel like lots, not empty void?  
+4. Is the HUD free of debug spam?
+
+See `docs/VISUAL.md` for the full gap list toward real fidelity.

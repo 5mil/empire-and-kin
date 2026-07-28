@@ -1,5 +1,4 @@
 //! Frame renderer: lit meshes + bitmap HUD + distance fog.
-//! Shader sources: desktop 330 core or GLES 300 es via shader_select.
 
 const std = @import("std");
 const gl = @import("gl.zig");
@@ -21,7 +20,6 @@ pub const Renderer = struct {
     ui_vbo: gl.GLuint = 0,
     cam: backend.Camera = .{},
     view_proj: math.Mat4 = .{},
-    // Atmosphere (shared PC + GLES)
     light_dir: [3]f32 = .{ 0.35, -1.0, 0.25 },
     ambient: [3]f32 = .{ 0.55, 0.55, 0.58 },
     fog_color: [3]f32 = .{ 0.45, 0.55, 0.65 },
@@ -32,7 +30,7 @@ pub const Renderer = struct {
         self.height = if (height == 0) 720 else height;
         self.lit_prog = try compileProgram(shaders.lit_vert, shaders.lit_frag);
         self.ui_prog = try compileProgram(shaders.ui_vert, shaders.ui_frag);
-        std.debug.print("[Renderer] shaders OK lit={d} ui={d} (fog+rim)\n", .{ self.lit_prog, self.ui_prog });
+        std.debug.print("[Renderer] shaders OK lit={d} ui={d}\n", .{ self.lit_prog, self.ui_prog });
 
         var box_v: [24]mesh.Vertex = undefined;
         var box_i: [36]u32 = undefined;
@@ -80,13 +78,11 @@ pub const Renderer = struct {
         gl.glViewport(0, 0, @intCast(w), @intCast(h));
     }
 
-    /// Sync fog to clear color so distant buildings melt into sky (both backends).
     pub fn beginFrame(self: *Renderer, color: backend.Color) void {
         const r = @as(f32, @floatFromInt(color.r)) / 255.0;
         const g = @as(f32, @floatFromInt(color.g)) / 255.0;
         const b = @as(f32, @floatFromInt(color.b)) / 255.0;
         self.fog_color = .{ r, g, b };
-        // Night: cooler ambient, heavier fog; day: brighter ambient, lighter fog
         const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
         if (lum < 0.2) {
             self.ambient = .{ 0.28, 0.30, 0.38 };
@@ -201,21 +197,21 @@ pub const Renderer = struct {
     }
 
     pub fn drawText(self: *Renderer, text: []const u8, x: i32, y: i32, color: backend.Color) void {
-        const scale: f32 = 1.5;
+        const scale: f32 = 2.75; // life-sim readable
         const r = @as(f32, @floatFromInt(color.r)) / 255.0;
         const g = @as(f32, @floatFromInt(color.g)) / 255.0;
         const b = @as(f32, @floatFromInt(color.b)) / 255.0;
         const a: f32 = 1.0;
 
-        var vert_buf: [7200]f32 = undefined;
+        var vert_buf: [9600]f32 = undefined;
         var vcount: usize = 0;
 
-        const max_chars = @min(text.len, 64);
-        const bg_w: f32 = @as(f32, @floatFromInt(max_chars)) * @as(f32, @floatFromInt(font.CELL_W)) * scale + 4.0;
-        const bg_h: f32 = @as(f32, @floatFromInt(font.GLYPH_H)) * scale + 4.0;
-        const bx: f32 = @as(f32, @floatFromInt(x)) - 2.0;
-        const by: f32 = @as(f32, @floatFromInt(y)) - 2.0;
-        _ = emitQuad(&vert_buf, &vcount, bx, by, bx + bg_w, by + bg_h, 0.02, 0.02, 0.05, 0.7);
+        const max_chars = @min(text.len, 48);
+        const bg_w: f32 = @as(f32, @floatFromInt(max_chars)) * @as(f32, @floatFromInt(font.CELL_W)) * scale + 8.0;
+        const bg_h: f32 = @as(f32, @floatFromInt(font.GLYPH_H)) * scale + 6.0;
+        const bx: f32 = @as(f32, @floatFromInt(x)) - 3.0;
+        const by: f32 = @as(f32, @floatFromInt(y)) - 3.0;
+        _ = emitQuad(&vert_buf, &vcount, bx, by, bx + bg_w, by + bg_h, 0.04, 0.05, 0.08, 0.78);
 
         var cx: f32 = @as(f32, @floatFromInt(x));
         const cy: f32 = @as(f32, @floatFromInt(y));

@@ -26,6 +26,21 @@ fn shadow(gfx: backend.Backend, x: f32, z: f32, w: f32, d: f32) void {
     box(gfx, x, 0.04, z, w, 0.06, d, backend.Color.rgb(12, 12, 14));
 }
 
+/// Soft neighborhood lot grid (Sims-like lot boundaries without textures).
+fn lotGrid(gfx: backend.Backend) void {
+    const col = backend.Color.rgb(72, 78, 68);
+    var ix: i32 = -2;
+    while (ix <= 12) : (ix += 1) {
+        const x = @as(f32, @floatFromInt(ix)) * 8.0;
+        box(gfx, x, 0.02, 20.0, 0.08, 0.03, 90.0, col);
+    }
+    var iz: i32 = 0;
+    while (iz <= 8) : (iz += 1) {
+        const z = @as(f32, @floatFromInt(iz)) * 8.0 + 4.0;
+        box(gfx, 20.0, 0.02, z, 100.0, 0.03, 0.08, col);
+    }
+}
+
 fn building(gfx: backend.Backend, x: f32, z: f32, w: f32, h: f32, d: f32, col: backend.Color, lit: bool) void {
     shadow(gfx, x, z, w * 1.05, d * 1.05);
     box(gfx, x, h * 0.5, z, w, h, d, col);
@@ -61,7 +76,6 @@ fn crosswalk(gfx: backend.Backend, x: f32, z: f32, along_x: bool) void {
 fn jobBeacon(gfx: backend.Backend, x: f32, z: f32, near: bool, active: bool) void {
     if (!active) return;
     shadow(gfx, x, z, 2.2, 2.2);
-    // Soft diamond marker (less "tech pole")
     const base = if (near) backend.Color.rgb(50, 180, 120) else backend.Color.rgb(30, 100, 70);
     box(gfx, x, 0.15, z, 1.8, 0.2, 1.8, base);
     box(gfx, x, 1.2, z, 0.35, 2.0, 0.35, if (near) backend.Color.rgb(100, 255, 160) else backend.Color.rgb(60, 160, 100));
@@ -147,8 +161,8 @@ pub fn drawMinimalScene(
 
     if (cam_opt) |c| gfx.setCamera(c) else gfx.setCamera(followCamera(p, 17.5, 18.0));
 
-    // Softer ground (neighborhood, not asphalt void)
     gfx.drawGround(200.0, backend.Color.rgb(58, 62, 52));
+    lotGrid(gfx);
     box(gfx, 12, 0.03, 20, 11.0, 0.08, 72.0, backend.Color.rgb(32, 32, 34));
     box(gfx, 12, 0.03, 20, 58.0, 0.07, 11.0, backend.Color.rgb(32, 32, 34));
     box(gfx, 40, 0.03, 20, 30.0, 0.07, 11.0, backend.Color.rgb(30, 30, 32));
@@ -239,7 +253,6 @@ pub fn drawMinimalScene(
         box(gfx, v.x, 1.05, v.y - 0.4, 1.7, 0.45, 1.5, backend.Color.rgb(25, 35, 50));
     }
 
-    // Boss as multi-part Sim silhouette
     sim_actor.drawBoss(gfx, p.x, p.y);
 }
 

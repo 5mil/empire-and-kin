@@ -45,7 +45,6 @@ const intimidate = @import("game/intimidate.zig");
 const scene = @import("engine/scene.zig");
 const input = @import("engine/input.zig");
 const controller = @import("engine/controller.zig");
-const hud = @import("engine/hud.zig");
 const empire_ui = @import("engine/empire_ui.zig");
 const wanted_ui = @import("engine/wanted_ui.zig");
 const mission_ui = @import("engine/mission_ui.zig");
@@ -55,29 +54,11 @@ const hints = @import("engine/hints.zig");
 const combat_ui = @import("engine/combat_ui.zig");
 const toast_mod = @import("engine/toast.zig");
 const camera = @import("engine/camera.zig");
-const minimap = @import("engine/minimap.zig");
 const choice_mod = @import("engine/choice.zig");
 const feed_mod = @import("engine/feed.zig");
-const compass = @import("engine/compass.zig");
-const legend = @import("engine/legend.zig");
-const vignette = @import("engine/vignette.zig");
-const prompt = @import("engine/prompt.zig");
-const scoreboard = @import("engine/scoreboard.zig");
-const weather_ui = @import("engine/weather_ui.zig");
-const hp_bar = @import("engine/hp_bar.zig");
 const interact = @import("engine/interact.zig");
-const threat = @import("engine/threat.zig");
-const morale_ui = @import("engine/morale_ui.zig");
-const loan_ui = @import("engine/loan_ui.zig");
-const reticle = @import("engine/reticle.zig");
-const debug_overlay = @import("engine/debug_overlay.zig");
-const rep_ui = @import("engine/rep_ui.zig");
-const stash_ui = @import("engine/stash_ui.zig");
-const clock_ui = @import("engine/clock_ui.zig");
-const district_label = @import("engine/district_label.zig");
-const zone_ui = @import("engine/zone_ui.zig");
 const gameover = @import("engine/gameover.zig");
-const backend = @import("engine/backend.zig");
+const play_draw = @import("engine/play_draw.zig");
 
 const gfx_mod = @import("engine/gfx_select.zig").BackendMod;
 
@@ -238,12 +219,7 @@ pub fn main(init: std.process.Init) !void {
             const car_ptr0 = garage.activeVehicle(&fleet);
             const car_opt0: ?action.Vehicle = if (car_ptr0) |v| v.* else null;
             const cam0 = follow.update(boss, false, dt);
-            scene.drawMinimalScene(gfx, boss, living.currentPeriod(clock), car_opt0, cam0, selected_era, false);
-            interact.drawMarkers(gfx);
-            street_peds.draw(gfx);
-            cars.draw(gfx);
-            choice_mod.draw(gfx, choice);
-            toast.draw(gfx);
+            play_draw.drawChoice(gfx, boss, living.currentPeriod(clock), car_opt0, cam0, selected_era, &street_peds, &cars, choice, &toast);
             gfx.endFrame();
             continue;
         }
@@ -272,10 +248,6 @@ pub fn main(init: std.process.Init) !void {
 
         const near_any = mission_ui.anyNear(&jobs, boss);
         const cam = follow.update(boss, in_car, dt);
-        var job_working = false;
-        for (jobs) |j| {
-            if (j.state == .in_progress) job_working = true;
-        }
 
         if (ctrl.paused) {
             const keys = empire_ui.MenuKeys{
@@ -501,39 +473,27 @@ pub fn main(init: std.process.Init) !void {
             }
 
             const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
-            scene.drawMinimalScene(gfx, boss, period, car_opt, cam, selected_era, near_any);
-            interact.drawMarkers(gfx);
-            street_peds.draw(gfx);
-            cars.draw(gfx);
-            patrol_car.draw(gfx);
-            hud.drawDistrictDebug(gfx, boss, &districts, clock, eco, period, false, police.alert_level, goal);
-            hp_bar.draw(gfx, boss.health, 10, 300);
-            wanted_ui.drawStars(gfx, boss.wanted_level, 10, 250);
-            wanted_ui.drawPoliceBanner(gfx, police, chase, 268);
-            for (jobs) |j| mission_ui.drawMarker(gfx, j, boss);
-            mission_ui.drawMinimapHint(gfx, &jobs, boss);
-            compass.draw(gfx, boss, &jobs);
-            legend.draw(gfx);
-            vignette.draw(gfx, period);
-            weather_ui.draw(gfx, weather);
-            scoreboard.draw(gfx, eco, districts[0], emp);
-            threat.draw(gfx, districts[0].heat, boss.wanted_level);
-            morale_ui.draw(gfx, the_kin);
-            loan_ui.draw(gfx, loan);
-            rep_ui.draw(gfx, emp);
-            stash_ui.draw(gfx, stash);
-            clock_ui.draw(gfx, clock);
-            district_label.draw(gfx, boss.current_district);
-            zone_ui.draw(gfx, boss);
-            reticle.draw(gfx, job_working);
-            debug_overlay.draw(gfx, frame_seed, dt);
-            prompt.draw(gfx, action_prompt);
-            minimap.draw(gfx, boss, &jobs);
-            world_sim.drawBanner(gfx, ws);
-            feed.draw(gfx);
-            hints.draw(gfx, tip);
-            combat_ui.draw(gfx, cui);
-            toast.draw(gfx);
+            play_draw.drawPlay(
+                gfx,
+                boss,
+                period,
+                car_opt,
+                cam,
+                selected_era,
+                near_any,
+                districts[0],
+                eco,
+                goal,
+                clock,
+                action_prompt,
+                &jobs,
+                &street_peds,
+                &cars,
+                &patrol_car,
+                &toast,
+                &feed,
+                cui,
+            );
         }
         gfx.endFrame();
     }

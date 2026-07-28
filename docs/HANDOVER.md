@@ -1,20 +1,18 @@
 # Empire & Kin — Handover
 
-**Version:** `0.2.1-alpha`  
-**Repo:** https://github.com/5mil/empire-and-kin
+**Version:** `0.3.0-alpha`  
+**Focus:** Life-sim **readability** (not Sims 4 fidelity — see `docs/VISUAL.md`).
 
-## Platforms
+## What changed this pass
 
-| Track | Command | Status |
-|-------|---------|--------|
-| **Windows GPU** | `zig build -Dtarget=x86_64-windows-gnu -Dgpu=true -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast` | Primary playtest |
-| **Headless** | `zig build run-headless` | CI / logic |
-| **Android Phase A** | `zig build run-android` | Touch backend, no GLES window yet |
-| **Android lib** | `zig build android-lib` | `libempire.so` exports |
+- Elevated **3/4 camera** (neighborhood dollhouse angle)
+- **Multi-part boss** silhouette + green plumbob cue
+- **Clean HUD**: district, cash, health/heat/control, goal % — no debug wall
+- **Larger font** (scale 2.75)
+- Softer sky/ground; greener job markers
+- Centered title screen
 
-See **docs/ANDROID.md** for the full mobile plan.
-
-## Windows GPU (unchanged)
+## Build (Windows GPU)
 
 ```bash
 cd ~/empire-and-kin && git pull && rm -rf .zig-cache zig-out
@@ -23,10 +21,11 @@ zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
   -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
 ```
 
-## Android Phase A (same machine)
+## Playtest checklist
 
-```bash
-zig build run-android
-```
+1. Can you tell who you are? (green diamond over boss)  
+2. Can you read cash + goal without hunting?  
+3. Does the camera feel like looking down at a block?  
+4. Is the screen *not* covered in overlapping text?
 
-**End of handover.**
+If those pass, playtests are useful again.

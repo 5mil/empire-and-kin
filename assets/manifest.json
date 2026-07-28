@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "policy": "CC0 or verified public domain only",
+  "format": "glTF 2.0 / GLB preferred",
+  "sources": [
+    {
+      "id": "kenney-city-commercial",
+      "name": "Kenney City Kit (Commercial)",
+      "license": "CC0",
+      "url": "https://kenney.nl/assets",
+      "use": "street buildings",
+      "target_dir": "assets/cc0/buildings"
+    },
+    {
+      "id": "kenney-city-roads",
+      "name": "Kenney City Kit (Roads)",
+      "license": "CC0",
+      "url": "https://kenney.nl/assets",
+      "use": "roads sidewalks",
+      "target_dir": "assets/cc0/props"
+    },
+    {
+      "id": "kenney-modular-buildings",
+      "name": "Kenney Modular Buildings",
+      "license": "CC0",
+      "url": "https://kenney.nl/assets",
+      "use": "facade modules",
+      "target_dir": "assets/cc0/buildings"
+    },
+    {
+      "id": "kenney-nature",
+      "name": "Kenney Nature Kit",
+      "license": "CC0",
+      "url": "https://kenney.nl/assets/nature-kit",
+      "use": "trees props",
+      "target_dir": "assets/cc0/props"
+    },
+    {
+      "id": "quaternius-base-characters",
+      "name": "Quaternius Universal Base Characters",
+      "license": "CC0",
+      "url": "https://quaternius.com/packs/universalbasecharacters.html",
+      "use": "player and peds",
+      "target_dir": "assets/cc0/characters"
+    },
+    {
+      "id": "quaternius-ual",
+      "name": "Quaternius Universal Animation Library",
+      "license": "CC0",
+      "url": "https://quaternius.com/",
+      "use": "walk idle interact",
+      "target_dir": "assets/cc0/animations"
+    },
+    {
+      "id": "kaykit-anims",
+      "name": "KayKit Character Animations",
+      "license": "CC0",
+      "url": "https://kaylousberg.itch.io/kaykit-character-animations",
+      "use": "humanoid clips",
+      "target_dir": "assets/cc0/animations"
+    },
+    {
+      "id": "polyhaven-textures",
+      "name": "Poly Haven textures",
+      "license": "CC0",
+      "url": "https://polyhaven.com/textures",
+      "use": "brick asphalt concrete",
+      "target_dir": "assets/cc0/textures"
+    },
+    {
+      "id": "mesh2motion",
+      "name": "Mesh2Motion",
+      "license": "FOSS tool",
+      "url": "https://mesh2motion.org/",
+      "use": "auto-rig export GLB",
+      "target_dir": null
+    },
+    {
+      "id": "loc-fsa",
+      "name": "Library of Congress FSA/OWI photos",
+      "license": "often public domain — verify item",
+      "url": "https://www.loc.gov/",
+      "use": "1930s NYC reference",
+      "target_dir": "assets/cc0/reference"
+    }
+  ]
+}

@@ -1,33 +1,30 @@
 # Visual target vs reality
 
-## Straight talk (read before the next test)
+## Straight talk
 
-**The Sims 4** is not a visual bar we can clear with procedural boxes before a playtest.
-It is a decade of character art, animation, CAS, routing, lighting, UI, and audio.
+**The Sims 4** is a decade of EA art, animation, CAS, routing, lighting, and UI.
+Empire & Kin is a Zig alpha. **True Sims 4 fidelity is not a free-asset drop-in.**
 
-**Empire & Kin `0.3.1-alpha`** is the **highest Sims-*like* fidelity this stack can offer without meshes/textures**:
+What we *are* building is a **legal free pipeline** (`docs/FIDELITY_PIPELINE.md`) toward life-sim quality:
 
-| Layer | Sims 4 | Empire & Kin now |
-|-------|--------|------------------|
-| Camera | Elevated neighborhood | Elevated 3/4 follow (shared PC + GLES) |
-| Selected Sim | Mesh + plumbob | Multi-part boss + stacked green plumbob |
-| Other Sims | Full bodies | Variant ped silhouettes |
-| Needs | Icon bars | Text needs bars (Health / Calm / Control) |
-| Aspiration | Career/want panel | Goal card + progress bars |
-| World | Textured lots | Block city + fog + contact shadows + lot grid |
-| UI chrome | Nine-slice panels | Bitmap font cards (no image atlas yet) |
-| Animation | Walk cycles | Static poses |
-| Materials | PBR textures | Vertex color + fog/rim |
+| Layer | Sims 4 | Empire & Kin |
+|-------|--------|----------------|
+| Camera | Elevated neighborhood | Elevated 3/4 follow |
+| Character | Mesh + CAS | Procedural multi-part + **walk bob** → Quaternius CC0 GLB |
+| Animation | Full clips | Procedural limbs → KayKit / Quaternius UAL (CC0) |
+| Buildings | Textured lots | Boxes → **Kenney City Kit** (CC0) |
+| Textures | PBR sets | Vertex color → **Poly Haven** (CC0) |
+| Rig tooling | Proprietary | **Mesh2Motion** + Blender (FOSS) |
+| Historical mood | Art direction | LOC / NYPL PD photos (reference) |
 
-If the test scores only “looks like Sims 4 screenshots,” it will fail.
-If it scores **can I read my Sim, my money, my goal, and the block**, `0.3.1` is the bar.
+## Now (`0.3.2`)
 
-## What would true fidelity require (post-test roadmap)
+- Free source **manifest** + fetch script  
+- Procedural walk animation  
+- GLB loader **stub** ready for Phase 1  
 
-1. glTF character + building import  
-2. Texture atlas (PD sources in `docs/ART_SOURCES.md`)  
-3. Skinned walk / idle  
-4. Real UI toolkit (rects, nine-slice, icons)  
-5. Android APK host with same GLES path  
+## Next measurable steps
 
-Until then: **clarity and agency**, not screenshot parity.
+1. Download Kenney + Quaternius into `assets/cc0/`  
+2. Implement `gltf_loader.loadGlbBytes`  
+3. Draw one building + one character from GLB on PC and GLES  

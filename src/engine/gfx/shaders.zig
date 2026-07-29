@@ -1,4 +1,5 @@
-//! GLSL 330 core — half-Lambert + distance fog + procedural surface grain.
+//! GLSL 330 core — half-Lambert + distance fog + multi-octave procedural surface grain.
+//! Grain is the locked-in stand-in for asphalt/brick micro-detail until real CC0 maps are uploaded.
 
 pub const lit_vert =
     \\#version 330 core
@@ -44,15 +45,30 @@ pub const lit_frag =
     \\    vec2 u = f * f * (3.0 - 2.0 * f);
     \\    return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
     \\}
+    \\float fbm(vec2 p) {
+    \\    float v = 0.0;
+    \\    float a = 0.5;
+    \\    for (int i = 0; i < 4; i++) {
+    \\        v += a * noise(p);
+    \\        p *= 2.05;
+    \\        a *= 0.5;
+    \\    }
+    \\    return v;
+    \\}
     \\void main() {
     \\    vec3 n = normalize(vNormal);
     \\    float ndl = max(dot(n, normalize(-uLightDir)), 0.0);
     \\    float half_lambert = ndl * 0.5 + 0.5;
-    \\    float rim = pow(1.0 - max(dot(n, normalize(uCamPos - vWorldPos)), 0.0), 3.0) * 0.14;
-    \\    // Locked-in surface grain (asphalt/brick readability without external maps)
-    \\    float g = noise(vWorldPos.xz * 2.5) * 0.08 + noise(vWorldPos.xz * 9.0) * 0.04;
-    \\    vec3 base = vColor.rgb * uTint.rgb * (1.0 + g);
-    \\    vec3 lit = base * (uAmbient + vec3(half_lambert * 0.92)) + vec3(rim);
+    \\    float rim = pow(1.0 - max(dot(n, normalize(uCamPos - vWorldPos)), 0.0), 3.0) * 0.16;
+    \\    // Multi-octave locked surface grain — asphalt/brick readability without external maps
+    \\    float g = fbm(vWorldPos.xz * 1.8) * 0.10 + noise(vWorldPos.xz * 11.0) * 0.045;
+    \\    // Slight directional streak (road wear)
+    \\    float streak = noise(vec2(vWorldPos.x * 0.35, vWorldPos.z * 4.5)) * 0.03;
+    \\    vec3 base = vColor.rgb * uTint.rgb * (1.0 + g + streak);
+    \\    // Soft specular lobe for wetter / metal-leaning surfaces (driven by brightness)
+    \\    float gloss_hint = smoothstep(0.35, 0.75, length(vColor.rgb));
+    \\    float spec = pow(max(dot(reflect(normalize(uLightDir), n), normalize(uCamPos - vWorldPos)), 0.0), 24.0) * 0.12 * gloss_hint;
+    \\    vec3 lit = base * (uAmbient + vec3(half_lambert * 0.90)) + vec3(rim + spec);
     \\    float dist = length(vWorldPos - uCamPos);
     \\    float fog = clamp(1.0 - exp(-uFogDensity * dist), 0.0, 0.88);
     \\    vec3 color = mix(lit, uFogColor, fog);

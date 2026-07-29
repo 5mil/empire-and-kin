@@ -2,24 +2,34 @@
 
 **NYC mob life** — 1930s / 1980s · real-time free-roam + empire.
 
-**Version:** `0.4.1-alpha`  
+**Version:** `0.4.2-alpha`  
 **Stack:** Zig · GLFW + OpenGL 3.3 · GLES path
 
-**Resources:** `ResourceManager` caches up to 256 GLB meshes from `assets/cc0/**` (characters, buildings, vehicles, props). CC0 catalog in [`assets/catalog.json`](assets/catalog.json).
+## Auto-fetch free meshes (WSL / Linux / macOS)
 
 ```bash
+chmod +x tools/fetch_cc0_assets.sh
 ./tools/fetch_cc0_assets.sh
-# Download Kenney All-in-1 / Quaternius / Poly Haven → assets/cc0/
 ```
 
-- [`docs/RESOURCE_SYSTEM.md`](docs/RESOURCE_SYSTEM.md)  
-- [`docs/MESH_SKINS.md`](docs/MESH_SKINS.md)  
-- [`docs/FIDELITY_PIPELINE.md`](docs/FIDELITY_PIPELINE.md)  
+Pulls Kenney city/car/nature packs, Poly Haven sample models, and Khronos loader tests into `assets/cc0/`. See [`tools/fetch_cc0_assets.md`](tools/fetch_cc0_assets.md).
 
-## Windows GPU build
+## Headless playtest
 
 ```bash
-export GLFW_WIN=$HOME/glfw-3.4.bin.WIN64
-zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
-  -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
+zig build run-headless
 ```
+
+## GPU (Linux / WSL)
+
+```bash
+sudo apt install -y libglfw3-dev libgl1-mesa-dev
+zig build -Dgpu=true -Doptimize=ReleaseFast
+./zig-out/bin/empire
+```
+
+## Docs
+
+- [`docs/RESOURCE_SYSTEM.md`](docs/RESOURCE_SYSTEM.md)
+- [`docs/MESH_SKINS.md`](docs/MESH_SKINS.md)
+- [`assets/catalog.json`](assets/catalog.json)

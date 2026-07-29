@@ -6,12 +6,16 @@ const action = @import("../game/action.zig");
 const era_mod = @import("../game/era.zig");
 const sim_actor = @import("sim_actor.zig");
 const cityscape = @import("cityscape.zig");
+const character_map = @import("../game/character_map.zig");
+const texture_bank = @import("gfx/texture_bank.zig");
 
 pub const SAFEHOUSE_X: f32 = 10.0;
 pub const SAFEHOUSE_Z: f32 = 18.0;
 
 pub var anim_time_s: f32 = 0;
 pub var boss_moving: bool = false;
+pub var boss_yaw: f32 = 0;
+pub var boss_cm: character_map.CharacterMap = .{};
 
 pub fn followCamera(p: player.Player, height: f32, back: f32) backend.Camera {
     return .{
@@ -47,11 +51,8 @@ fn lotGrid(gfx: backend.Backend) void {
 fn building(gfx: backend.Backend, x: f32, z: f32, w: f32, h: f32, d: f32, col: backend.Color, lit: bool) void {
     shadow(gfx, x, z, w * 1.05, d * 1.05);
     box(gfx, x, h * 0.5, z, w, h, d, col);
-    // cornice
-    box(gfx, x, h + 0.12, z, w + 0.25, 0.28, d + 0.25, backend.Color.rgb(42, 40, 38));
-    // chimney
+    box(gfx, x, h + 0.12, z, w + 0.25, 0.28, d + 0.25, texture_bank.colorOf(.roof_tar));
     box(gfx, x + w * 0.28, h + 0.65, z - d * 0.18, 0.45, 0.9, 0.45, backend.Color.rgb(58, 52, 48));
-    // door
     box(gfx, x, 1.0, z + d * 0.5 - 0.04, 1.1, 2.0, 0.14, backend.Color.rgb(52, 38, 28));
     const win = if (lit) backend.Color.rgb(255, 228, 135) else backend.Color.rgb(88, 108, 138);
     box(gfx, x - w * 0.22, 3.1, z + d * 0.5 - 0.02, 0.85, 1.05, 0.1, win);
@@ -64,14 +65,12 @@ fn building(gfx: backend.Backend, x: f32, z: f32, w: f32, h: f32, d: f32, col: b
         box(gfx, x - w * 0.22, 7.0, z + d * 0.5 - 0.02, 0.85, 1.0, 0.1, win);
         box(gfx, x + w * 0.22, 7.0, z + d * 0.5 - 0.02, 0.85, 1.0, 0.1, win);
     }
-    // awning
     box(gfx, x, 2.25, z + d * 0.5 + 0.35, w * 0.65, 0.1, 1.0, backend.Color.rgb(130, 38, 38));
-    // fire escape strip
-    box(gfx, x - w * 0.48, h * 0.42, z, 0.18, h * 0.65, 1.1, backend.Color.rgb(68, 72, 78));
+    box(gfx, x - w * 0.48, h * 0.42, z, 0.18, h * 0.65, 1.1, texture_bank.colorOf(.metal));
 }
 
 fn sidewalk(gfx: backend.Backend, x: f32, z: f32, w: f32, d: f32) void {
-    box(gfx, x, 0.06, z, w, 0.12, d, backend.Color.rgb(108, 106, 100));
+    box(gfx, x, 0.06, z, w, 0.12, d, texture_bank.colorOf(.sidewalk));
 }
 
 fn crosswalk(gfx: backend.Backend, x: f32, z: f32, along_x: bool) void {
@@ -86,10 +85,9 @@ fn crosswalk(gfx: backend.Backend, x: f32, z: f32, along_x: bool) void {
 }
 
 fn avenue(gfx: backend.Backend, x: f32, z: f32, len: f32, along_z: bool) void {
-    const asphalt = backend.Color.rgb(30, 30, 32);
+    const asphalt = texture_bank.colorOf(.asphalt);
     if (along_z) {
         box(gfx, x, 0.03, z, 11.0, 0.08, len, asphalt);
-        // center line dashes
         var i: i32 = 0;
         const n: i32 = @intFromFloat(len / 6.0);
         while (i < n) : (i += 1) {
@@ -116,7 +114,7 @@ fn jobBeacon(gfx: backend.Backend, x: f32, z: f32, near: bool) void {
 }
 
 fn lamp(gfx: backend.Backend, x: f32, z: f32, on: bool) void {
-    box(gfx, x, 1.5, z, 0.22, 3.0, 0.22, backend.Color.rgb(35, 35, 40));
+    box(gfx, x, 1.5, z, 0.22, 3.0, 0.22, texture_bank.colorOf(.metal));
     const glow = if (on) backend.Color.rgb(255, 230, 150) else backend.Color.rgb(70, 70, 75);
     box(gfx, x, 3.2, z, 0.55, 0.4, 0.55, glow);
 }
@@ -137,7 +135,7 @@ fn dumpster(gfx: backend.Backend, x: f32, z: f32) void {
 }
 
 fn waterTower(gfx: backend.Backend, x: f32, z: f32) void {
-    box(gfx, x, 9.0, z, 2.2, 2.5, 2.2, backend.Color.rgb(90, 95, 100));
+    box(gfx, x, 9.0, z, 2.2, 2.5, 2.2, texture_bank.colorOf(.metal));
     box(gfx, x, 7.0, z, 0.4, 4.0, 0.4, backend.Color.rgb(70, 70, 75));
     box(gfx, x + 0.8, 7.0, z + 0.8, 0.35, 4.0, 0.35, backend.Color.rgb(70, 70, 75));
     box(gfx, x - 0.8, 7.0, z - 0.8, 0.35, 4.0, 0.35, backend.Color.rgb(70, 70, 75));
@@ -146,7 +144,7 @@ fn waterTower(gfx: backend.Backend, x: f32, z: f32) void {
 fn tree(gfx: backend.Backend, x: f32, z: f32) void {
     shadow(gfx, x, z, 1.6, 1.6);
     box(gfx, x, 1.2, z, 0.35, 2.4, 0.35, backend.Color.rgb(70, 50, 30));
-    box(gfx, x, 3.2, z, 1.8, 1.6, 1.8, backend.Color.rgb(40, 90, 45));
+    box(gfx, x, 3.2, z, 1.8, 1.6, 1.8, texture_bank.colorOf(.foliage));
 }
 
 fn gateArch(gfx: backend.Backend, x: f32, z: f32) void {
@@ -163,8 +161,8 @@ fn districtSign(gfx: backend.Backend, x: f32, z: f32, tall: bool) void {
 
 fn safehouse(gfx: backend.Backend, lit: bool) void {
     shadow(gfx, SAFEHOUSE_X, SAFEHOUSE_Z, 5.0, 4.5);
-    box(gfx, SAFEHOUSE_X, 2.5, SAFEHOUSE_Z, 4.5, 5.0, 4.0, backend.Color.rgb(68, 72, 78));
-    box(gfx, SAFEHOUSE_X, 5.2, SAFEHOUSE_Z, 4.8, 0.35, 4.3, backend.Color.rgb(40, 40, 42));
+    box(gfx, SAFEHOUSE_X, 2.5, SAFEHOUSE_Z, 4.5, 5.0, 4.0, texture_bank.colorOf(.concrete));
+    box(gfx, SAFEHOUSE_X, 5.2, SAFEHOUSE_Z, 4.8, 0.35, 4.3, texture_bank.colorOf(.roof_tar));
     box(gfx, SAFEHOUSE_X, 1.1, SAFEHOUSE_Z + 2.05, 1.4, 2.2, 0.2, backend.Color.rgb(30, 120, 70));
     const win = if (lit) backend.Color.rgb(255, 200, 100) else backend.Color.rgb(80, 100, 120);
     box(gfx, SAFEHOUSE_X - 1.2, 3.4, SAFEHOUSE_Z + 2.0, 0.8, 1.0, 0.15, win);
@@ -206,11 +204,9 @@ pub fn drawMinimalScene(
 
     if (cam_opt) |c| gfx.setCamera(c) else gfx.setCamera(followCamera(p, 19.0, 20.0));
 
-    // Larger playable ground
     gfx.drawGround(320.0, backend.Color.rgb(56, 60, 50));
     lotGrid(gfx);
 
-    // Multi-avenue grid (N-S + E-W)
     avenue(gfx, 12, 20, 80.0, true);
     avenue(gfx, 40, 20, 80.0, true);
     avenue(gfx, 60, 20, 70.0, true);
@@ -240,16 +236,16 @@ pub fn drawMinimalScene(
     sidewalk(gfx, 30, 40, 80, 2.0);
     sidewalk(gfx, 30, 35, 80, 2.0);
 
-    // Alleys + dumpsters
     box(gfx, -4, 0.04, 20, 3.0, 0.08, 50.0, backend.Color.rgb(28, 26, 26));
     dumpster(gfx, -3.5, 17.0);
     dumpster(gfx, -3.5, 24.0);
     dumpster(gfx, 25.0, 32.0);
     dumpster(gfx, 58.0, 32.0);
 
-    // Buildings from expanded cityscape table
     for (cityscape.BUILDINGS) |b| {
-        building(gfx, b.x, b.z, b.w, b.h, b.d, cityscape.colorOf(b), nightish);
+        // Tint toward brick/stucco material bank for surface identity
+        const base = cityscape.colorOf(b);
+        building(gfx, b.x, b.z, b.w, b.h, b.d, base, nightish);
     }
 
     waterTower(gfx, 16.0, 29.0);
@@ -276,9 +272,9 @@ pub fn drawMinimalScene(
     gateArch(gfx, 50.0, 20.0);
     gateArch(gfx, 12.0, 40.0);
 
-    districtSign(gfx, 10.0, 26.0, false); // Little Italy
-    districtSign(gfx, 38.0, 38.0, true); // Hell's Kitchen edge
-    districtSign(gfx, 70.0, 22.0, true); // toward midtown
+    districtSign(gfx, 10.0, 26.0, false);
+    districtSign(gfx, 38.0, 38.0, true);
+    districtSign(gfx, 70.0, 22.0, true);
 
     for (cityscape.JOBS) |jb| {
         const near = near_job and dist2(p.x, p.y, jb.x, jb.z) < 36;
@@ -292,5 +288,5 @@ pub fn drawMinimalScene(
         box(gfx, v.x, 1.05, v.y - 0.4, 1.7, 0.45, 1.5, backend.Color.rgb(25, 35, 50));
     }
 
-    sim_actor.drawBoss(gfx, p.x, p.y, anim_time_s, boss_moving);
+    sim_actor.drawBossMapped(gfx, p.x, p.y, boss_yaw, anim_time_s, boss_moving, boss_cm);
 }

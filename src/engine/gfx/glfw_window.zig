@@ -23,6 +23,16 @@ pub const c = struct {
     pub const GLFW_KEY_R: c_int = 82;
     pub const GLFW_KEY_H: c_int = 72;
     pub const GLFW_KEY_X: c_int = 88;
+    pub const GLFW_KEY_M: c_int = 77;
+    pub const GLFW_KEY_C: c_int = 67;
+    pub const GLFW_KEY_LEFT_SHIFT: c_int = 340;
+    pub const GLFW_KEY_RIGHT_SHIFT: c_int = 344;
+    pub const GLFW_KEY_LEFT_BRACKET: c_int = 91;
+    pub const GLFW_KEY_RIGHT_BRACKET: c_int = 93;
+    pub const GLFW_KEY_UP: c_int = 265;
+    pub const GLFW_KEY_DOWN: c_int = 264;
+    pub const GLFW_KEY_LEFT: c_int = 263;
+    pub const GLFW_KEY_RIGHT: c_int = 262;
     pub const GLFW_KEY_TAB: c_int = 258;
     pub const GLFW_KEY_ENTER: c_int = 257;
     pub const GLFW_KEY_1: c_int = 49;
@@ -126,7 +136,6 @@ pub const Window = struct {
         return c.glfwGetMouseButton(self.handle, c.GLFW_MOUSE_BUTTON_RIGHT) == c.GLFW_PRESS;
     }
 
-    /// Cursor in normalized 0..1 (origin top-left).
     pub fn cursorNorm(self: *Window) struct { x: f32, y: f32 } {
         var x: f64 = 0;
         var y: f64 = 0;

@@ -2,25 +2,31 @@
 
 **NYC mob life** — 1930s / 1980s · real-time free-roam + empire.
 
-**Version:** `0.5.0-alpha`
+**Version:** `0.5.1-alpha`
 
-**Open world:** Multi-avenue grid (~−20…90 X, −10…70 Z), 40+ buildings, denser street dressing, more job poles.
+## Controls
 
-## Build (WSL / Linux GPU)
+| Key | Action |
+|-----|--------|
+| WASD | Move |
+| Shift | Sprint |
+| E | Interact |
+| **M** | City map (WASD pan, Q/E zoom) |
+| **C** | Character map |
+| **[ ]** | Camera zoom |
+| Q/E | Camera orbit |
+| Esc | Empire menu |
+| F5/F9 | Save/Load |
+
+## Build
 
 ```bash
 git pull
-sudo apt install -y libglfw3-dev libgl1-mesa-dev
 zig build -Dgpu=true -Doptimize=ReleaseFast
 ./zig-out/bin/empire
 ```
 
-## Windows cross from WSL
-
-```bash
-zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
-  -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
-```
+Windows cross: see prior notes (`-Dtarget=x86_64-windows-gnu -Dglfw_prefix=...`).
 
 ## Assets
 
@@ -30,5 +36,6 @@ zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
 
 ## Docs
 
+- [`docs/GRAPHICS_DETAIL.md`](docs/GRAPHICS_DETAIL.md) — detail path vs GTA 4
 - [`docs/RESOURCE_SYSTEM.md`](docs/RESOURCE_SYSTEM.md)
 - [`docs/MESH_SKINS.md`](docs/MESH_SKINS.md)

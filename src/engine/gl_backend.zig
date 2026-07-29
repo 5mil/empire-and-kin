@@ -1,5 +1,4 @@
 //! GPU Backend — GLFW window + OpenGL 3.3 core.
-//! Optional -Dtouch=true: mouse injects virtual pad (Android control practice).
 
 const std = @import("std");
 const build_options = @import("build_options");
@@ -52,21 +51,12 @@ fn beginFrameImpl() void {
     if (window) |*w| {
         w.poll();
         rend.resize(w.width, w.height);
-        // Mouse → touch zones (practice Android pad on desktop)
         if (build_options.enable_touch) {
             const cur = w.cursorNorm();
             const left = w.mouseLeftDown();
             const right = w.mouseRightDown();
-            if (left) {
-                touch.setPointer(cur.x, cur.y, true);
-            } else {
-                touch.setPointer(-1, -1, false);
-            }
-            if (right) {
-                touch.setPointer2(cur.x, cur.y, true);
-            } else {
-                touch.setPointer2(-1, -1, false);
-            }
+            if (left) touch.setPointer(cur.x, cur.y, true) else touch.setPointer(-1, -1, false);
+            if (right) touch.setPointer2(cur.x, cur.y, true) else touch.setPointer2(-1, -1, false);
         }
     }
 }
@@ -76,14 +66,6 @@ fn endFrameImpl() void {
     while (i < text_count) : (i += 1) {
         const q = text_queue[i];
         rend.drawText(q.t[0..q.len], q.x, q.y, q.c);
-    }
-    if (build_options.enable_touch) {
-        if (window) |w| {
-            const ww: i32 = @intCast(w.width);
-            const hh: i32 = @intCast(w.height);
-            rend.drawText("STICK", @divTrunc(ww * 12, 100), @divTrunc(hh * 92, 100), backend.Color.rgb(180, 200, 220));
-            rend.drawText("[E] LMB zones", @divTrunc(ww * 70, 100), @divTrunc(hh * 92, 100), backend.Color.rgb(120, 255, 180));
-        }
     }
     if (window) |*w| w.swap();
 }
@@ -100,12 +82,21 @@ pub fn pollRawKeys() input.RawKeys {
         raw.a = w.keyDown(k.GLFW_KEY_A);
         raw.s = w.keyDown(k.GLFW_KEY_S);
         raw.d = w.keyDown(k.GLFW_KEY_D);
+        raw.up = w.keyDown(k.GLFW_KEY_UP);
+        raw.down = w.keyDown(k.GLFW_KEY_DOWN);
+        raw.left = w.keyDown(k.GLFW_KEY_LEFT);
+        raw.right = w.keyDown(k.GLFW_KEY_RIGHT);
         raw.e = w.keyDown(k.GLFW_KEY_E);
         raw.f = w.keyDown(k.GLFW_KEY_F);
         raw.q = w.keyDown(k.GLFW_KEY_Q);
         raw.r = w.keyDown(k.GLFW_KEY_R);
         raw.h = w.keyDown(k.GLFW_KEY_H);
         raw.x = w.keyDown(k.GLFW_KEY_X);
+        raw.m = w.keyDown(k.GLFW_KEY_M);
+        raw.c = w.keyDown(k.GLFW_KEY_C);
+        raw.shift = w.keyDown(k.GLFW_KEY_LEFT_SHIFT) or w.keyDown(k.GLFW_KEY_RIGHT_SHIFT);
+        raw.bracket_l = w.keyDown(k.GLFW_KEY_LEFT_BRACKET);
+        raw.bracket_r = w.keyDown(k.GLFW_KEY_RIGHT_BRACKET);
         raw.tab = w.keyDown(k.GLFW_KEY_TAB);
         raw.enter = w.keyDown(k.GLFW_KEY_ENTER);
         raw.escape = w.keyDown(k.GLFW_KEY_ESCAPE);
@@ -118,7 +109,6 @@ pub fn pollRawKeys() input.RawKeys {
         raw.f5 = w.keyDown(k.GLFW_KEY_F5);
         raw.f9 = w.keyDown(k.GLFW_KEY_F9);
     }
-    // Merge virtual pad when touch mode on
     if (build_options.enable_touch) {
         const t = touch.toRawKeys();
         if (t.w) raw.w = true;
@@ -146,7 +136,6 @@ fn shouldCloseImpl() bool {
     if (window) |*w| return w.shouldClose();
     return true;
 }
-
 fn drawTextImpl(text: []const u8, x: i32, y: i32, color: backend.Color) void {
     if (text_count >= text_queue.len) return;
     const n = @min(text.len, 95);
@@ -157,7 +146,6 @@ fn drawTextImpl(text: []const u8, x: i32, y: i32, color: backend.Color) void {
     text_queue[text_count].c = color;
     text_count += 1;
 }
-
 fn clearImpl(color: backend.Color) void {
     rend.beginFrame(color);
 }

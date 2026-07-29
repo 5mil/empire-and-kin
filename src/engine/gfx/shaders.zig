@@ -1,4 +1,4 @@
-//! GLSL 330 core — tier-up: half-Lambert + distance fog + horizon tint.
+//! GLSL 330 core — half-Lambert + distance fog + procedural surface grain.
 
 pub const lit_vert =
     \\#version 330 core
@@ -31,16 +31,30 @@ pub const lit_frag =
     \\uniform float uFogDensity;
     \\uniform vec3 uCamPos;
     \\out vec4 FragColor;
+    \\float hash(vec2 p) {
+    \\    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+    \\}
+    \\float noise(vec2 p) {
+    \\    vec2 i = floor(p);
+    \\    vec2 f = fract(p);
+    \\    float a = hash(i);
+    \\    float b = hash(i + vec2(1.0, 0.0));
+    \\    float c = hash(i + vec2(0.0, 1.0));
+    \\    float d = hash(i + vec2(1.0, 1.0));
+    \\    vec2 u = f * f * (3.0 - 2.0 * f);
+    \\    return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+    \\}
     \\void main() {
     \\    vec3 n = normalize(vNormal);
     \\    float ndl = max(dot(n, normalize(-uLightDir)), 0.0);
     \\    float half_lambert = ndl * 0.5 + 0.5;
-    \\    float rim = pow(1.0 - max(dot(n, normalize(uCamPos - vWorldPos)), 0.0), 3.0) * 0.12;
-    \\    vec3 base = vColor.rgb * uTint.rgb;
-    \\    vec3 lit = base * (uAmbient + vec3(half_lambert * 0.9)) + vec3(rim);
+    \\    float rim = pow(1.0 - max(dot(n, normalize(uCamPos - vWorldPos)), 0.0), 3.0) * 0.14;
+    \\    // Locked-in surface grain (asphalt/brick readability without external maps)
+    \\    float g = noise(vWorldPos.xz * 2.5) * 0.08 + noise(vWorldPos.xz * 9.0) * 0.04;
+    \\    vec3 base = vColor.rgb * uTint.rgb * (1.0 + g);
+    \\    vec3 lit = base * (uAmbient + vec3(half_lambert * 0.92)) + vec3(rim);
     \\    float dist = length(vWorldPos - uCamPos);
-    \\    float fog = 1.0 - exp(-uFogDensity * dist);
-    \\    fog = clamp(fog, 0.0, 0.85);
+    \\    float fog = clamp(1.0 - exp(-uFogDensity * dist), 0.0, 0.88);
     \\    vec3 color = mix(lit, uFogColor, fog);
     \\    FragColor = vec4(color, vColor.a * uTint.a);
     \\}

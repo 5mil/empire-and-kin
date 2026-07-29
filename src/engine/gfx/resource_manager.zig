@@ -1,6 +1,5 @@
 //! Resource management — ground-up asset cache for many CC0 meshes.
 //! Designed for scale: hash paths, cache GPU meshes, scan directories, lazy load.
-//! Superior ops model vs ad-hoc loaders: one registry, ref-count ready, category tags.
 
 const std = @import("std");
 const mesh = @import("mesh.zig");
@@ -74,7 +73,6 @@ pub const ResourceManager = struct {
         self.scan_root_count += 1;
     }
 
-    /// Recursively find .glb / .gltf under scan roots and load into cache (cap MAX_CACHED).
     pub fn ingestTree(self: *ResourceManager) void {
         var i: usize = 0;
         while (i < self.scan_root_count) : (i += 1) {
@@ -117,7 +115,7 @@ pub const ResourceManager = struct {
         };
         defer model.deinit();
 
-        var draw_verts = self.allocator.alloc(mesh.Vertex, model.vertices.len) catch return null;
+        const draw_verts = self.allocator.alloc(mesh.Vertex, model.vertices.len) catch return null;
         defer self.allocator.free(draw_verts);
 
         var is_skinned = false;

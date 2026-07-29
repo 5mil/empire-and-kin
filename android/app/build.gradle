@@ -1,0 +1,27 @@
+plugins {
+    id 'com.android.application'
+}
+android {
+    namespace 'com.fivemil.empireandkin'
+    compileSdk 34
+    defaultConfig {
+        applicationId "com.fivemil.empireandkin"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "0.5.2-device"
+        ndk { abiFilters 'arm64-v8a' }
+    }
+    buildTypes {
+        release { minifyEnabled false }
+        debug { debuggable true }
+    }
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['src/main/jniLibs']
+            manifest.srcFile 'src/main/AndroidManifest.xml'
+        }
+    }
+    packaging { jniLibs { useLegacyPackaging = true } }
+}
+dependencies {}

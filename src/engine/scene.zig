@@ -5,21 +5,20 @@ const living = @import("../game/living.zig");
 const action = @import("../game/action.zig");
 const era_mod = @import("../game/era.zig");
 const sim_actor = @import("sim_actor.zig");
+const cityscape = @import("cityscape.zig");
 
 pub const SAFEHOUSE_X: f32 = 10.0;
 pub const SAFEHOUSE_Z: f32 = 18.0;
 
-/// Wall-clock for procedural anim (set each frame from main).
 pub var anim_time_s: f32 = 0;
-/// Boss horizontal motion this frame.
 pub var boss_moving: bool = false;
 
 pub fn followCamera(p: player.Player, height: f32, back: f32) backend.Camera {
     return .{
-        .position = .{ .x = p.x + 4.5, .y = height, .z = p.y - back },
-        .target = .{ .x = p.x, .y = 0.8, .z = p.y },
+        .position = .{ .x = p.x + 5.0, .y = height, .z = p.y - back },
+        .target = .{ .x = p.x, .y = 1.0, .z = p.y },
         .up = .{ .x = 0, .y = 1, .z = 0 },
-        .fov_deg = 46,
+        .fov_deg = 48,
     };
 }
 
@@ -32,38 +31,47 @@ fn shadow(gfx: backend.Backend, x: f32, z: f32, w: f32, d: f32) void {
 }
 
 fn lotGrid(gfx: backend.Backend) void {
-    const col = backend.Color.rgb(72, 78, 68);
-    var ix: i32 = -2;
-    while (ix <= 12) : (ix += 1) {
+    const col = backend.Color.rgb(70, 76, 66);
+    var ix: i32 = -4;
+    while (ix <= 14) : (ix += 1) {
         const x = @as(f32, @floatFromInt(ix)) * 8.0;
-        box(gfx, x, 0.02, 20.0, 0.08, 0.03, 90.0, col);
+        box(gfx, x, 0.02, 25.0, 0.07, 0.03, 120.0, col);
     }
-    var iz: i32 = 0;
-    while (iz <= 8) : (iz += 1) {
-        const z = @as(f32, @floatFromInt(iz)) * 8.0 + 4.0;
-        box(gfx, 20.0, 0.02, z, 100.0, 0.03, 0.08, col);
+    var iz: i32 = -2;
+    while (iz <= 10) : (iz += 1) {
+        const z = @as(f32, @floatFromInt(iz)) * 8.0;
+        box(gfx, 30.0, 0.02, z, 140.0, 0.03, 0.07, col);
     }
 }
 
 fn building(gfx: backend.Backend, x: f32, z: f32, w: f32, h: f32, d: f32, col: backend.Color, lit: bool) void {
     shadow(gfx, x, z, w * 1.05, d * 1.05);
     box(gfx, x, h * 0.5, z, w, h, d, col);
-    box(gfx, x, h + 0.15, z, w + 0.3, 0.3, d + 0.3, backend.Color.rgb(45, 42, 40));
-    box(gfx, x + w * 0.3, h + 0.7, z - d * 0.2, 0.5, 1.0, 0.5, backend.Color.rgb(60, 55, 50));
-    box(gfx, x, 1.0, z + d * 0.5 - 0.05, 1.2, 2.0, 0.15, backend.Color.rgb(55, 40, 30));
-    const win = if (lit) backend.Color.rgb(255, 230, 140) else backend.Color.rgb(90, 110, 140);
-    box(gfx, x - w * 0.25, 3.2, z + d * 0.5 - 0.02, 0.9, 1.1, 0.12, win);
-    box(gfx, x + w * 0.25, 3.2, z + d * 0.5 - 0.02, 0.9, 1.1, 0.12, win);
+    // cornice
+    box(gfx, x, h + 0.12, z, w + 0.25, 0.28, d + 0.25, backend.Color.rgb(42, 40, 38));
+    // chimney
+    box(gfx, x + w * 0.28, h + 0.65, z - d * 0.18, 0.45, 0.9, 0.45, backend.Color.rgb(58, 52, 48));
+    // door
+    box(gfx, x, 1.0, z + d * 0.5 - 0.04, 1.1, 2.0, 0.14, backend.Color.rgb(52, 38, 28));
+    const win = if (lit) backend.Color.rgb(255, 228, 135) else backend.Color.rgb(88, 108, 138);
+    box(gfx, x - w * 0.22, 3.1, z + d * 0.5 - 0.02, 0.85, 1.05, 0.1, win);
+    box(gfx, x + w * 0.22, 3.1, z + d * 0.5 - 0.02, 0.85, 1.05, 0.1, win);
     if (h > 5.5) {
-        box(gfx, x - w * 0.25, 5.2, z + d * 0.5 - 0.02, 0.9, 1.1, 0.12, win);
-        box(gfx, x + w * 0.25, 5.2, z + d * 0.5 - 0.02, 0.9, 1.1, 0.12, win);
+        box(gfx, x - w * 0.22, 5.0, z + d * 0.5 - 0.02, 0.85, 1.05, 0.1, win);
+        box(gfx, x + w * 0.22, 5.0, z + d * 0.5 - 0.02, 0.85, 1.05, 0.1, win);
     }
-    box(gfx, x, 2.3, z + d * 0.5 + 0.4, w * 0.7, 0.12, 1.2, backend.Color.rgb(140, 40, 40));
-    box(gfx, x - w * 0.5 - 0.15, h * 0.45, z, 0.2, h * 0.7, 1.2, backend.Color.rgb(70, 75, 80));
+    if (h > 8.0) {
+        box(gfx, x - w * 0.22, 7.0, z + d * 0.5 - 0.02, 0.85, 1.0, 0.1, win);
+        box(gfx, x + w * 0.22, 7.0, z + d * 0.5 - 0.02, 0.85, 1.0, 0.1, win);
+    }
+    // awning
+    box(gfx, x, 2.25, z + d * 0.5 + 0.35, w * 0.65, 0.1, 1.0, backend.Color.rgb(130, 38, 38));
+    // fire escape strip
+    box(gfx, x - w * 0.48, h * 0.42, z, 0.18, h * 0.65, 1.1, backend.Color.rgb(68, 72, 78));
 }
 
 fn sidewalk(gfx: backend.Backend, x: f32, z: f32, w: f32, d: f32) void {
-    box(gfx, x, 0.06, z, w, 0.12, d, backend.Color.rgb(110, 108, 102));
+    box(gfx, x, 0.06, z, w, 0.12, d, backend.Color.rgb(108, 106, 100));
 }
 
 fn crosswalk(gfx: backend.Backend, x: f32, z: f32, along_x: bool) void {
@@ -77,8 +85,29 @@ fn crosswalk(gfx: backend.Backend, x: f32, z: f32, along_x: bool) void {
     }
 }
 
-fn jobBeacon(gfx: backend.Backend, x: f32, z: f32, near: bool, active: bool) void {
-    if (!active) return;
+fn avenue(gfx: backend.Backend, x: f32, z: f32, len: f32, along_z: bool) void {
+    const asphalt = backend.Color.rgb(30, 30, 32);
+    if (along_z) {
+        box(gfx, x, 0.03, z, 11.0, 0.08, len, asphalt);
+        // center line dashes
+        var i: i32 = 0;
+        const n: i32 = @intFromFloat(len / 6.0);
+        while (i < n) : (i += 1) {
+            const zz = z - len * 0.5 + @as(f32, @floatFromInt(i)) * 6.0 + 3.0;
+            box(gfx, x, 0.05, zz, 0.22, 0.04, 2.0, backend.Color.rgb(175, 155, 55));
+        }
+    } else {
+        box(gfx, x, 0.03, z, len, 0.07, 11.0, asphalt);
+        var i: i32 = 0;
+        const n: i32 = @intFromFloat(len / 6.0);
+        while (i < n) : (i += 1) {
+            const xx = x - len * 0.5 + @as(f32, @floatFromInt(i)) * 6.0 + 3.0;
+            box(gfx, xx, 0.05, z, 2.0, 0.04, 0.22, backend.Color.rgb(175, 155, 55));
+        }
+    }
+}
+
+fn jobBeacon(gfx: backend.Backend, x: f32, z: f32, near: bool) void {
     shadow(gfx, x, z, 2.2, 2.2);
     const base = if (near) backend.Color.rgb(50, 180, 120) else backend.Color.rgb(30, 100, 70);
     box(gfx, x, 0.15, z, 1.8, 0.2, 1.8, base);
@@ -126,6 +155,12 @@ fn gateArch(gfx: backend.Backend, x: f32, z: f32) void {
     box(gfx, x, 3.2, z, 3.4, 0.35, 0.5, backend.Color.rgb(100, 90, 70));
 }
 
+fn districtSign(gfx: backend.Backend, x: f32, z: f32, tall: bool) void {
+    const h: f32 = if (tall) 2.2 else 1.6;
+    box(gfx, x, h * 0.5, z, 0.15, h, 0.15, backend.Color.rgb(40, 40, 45));
+    box(gfx, x, h + 0.2, z, 2.4, 0.5, 0.12, backend.Color.rgb(30, 90, 50));
+}
+
 fn safehouse(gfx: backend.Backend, lit: bool) void {
     shadow(gfx, SAFEHOUSE_X, SAFEHOUSE_Z, 5.0, 4.5);
     box(gfx, SAFEHOUSE_X, 2.5, SAFEHOUSE_Z, 4.5, 5.0, 4.0, backend.Color.rgb(68, 72, 78));
@@ -144,6 +179,12 @@ pub fn nearSafehouse(p: player.Player) bool {
     return dx * dx + dz * dz < 4.0 * 4.0;
 }
 
+fn dist2(ax: f32, ay: f32, bx: f32, by: f32) f32 {
+    const dx = ax - bx;
+    const dy = ay - by;
+    return dx * dx + dy * dy;
+}
+
 pub fn drawMinimalScene(
     gfx: backend.Backend,
     p: player.Player,
@@ -155,100 +196,94 @@ pub fn drawMinimalScene(
 ) void {
     const nightish = period == .night or period == .evening;
     const clear_col = switch (period) {
-        .night => if (era == .nyc_1980s) backend.Color.rgb(8, 10, 28) else backend.Color.rgb(10, 12, 26),
-        .dawn => backend.Color.rgb(70, 55, 85),
-        .day => if (era == .nyc_1980s) backend.Color.rgb(70, 120, 170) else backend.Color.rgb(95, 145, 190),
-        .dusk => backend.Color.rgb(130, 70, 50),
-        .evening => if (era == .nyc_1980s) backend.Color.rgb(20, 22, 48) else backend.Color.rgb(28, 30, 48),
+        .night => if (era == .nyc_1980s) backend.Color.rgb(6, 8, 24) else backend.Color.rgb(8, 10, 22),
+        .dawn => backend.Color.rgb(65, 50, 80),
+        .day => if (era == .nyc_1980s) backend.Color.rgb(65, 115, 165) else backend.Color.rgb(90, 140, 185),
+        .dusk => backend.Color.rgb(125, 65, 48),
+        .evening => if (era == .nyc_1980s) backend.Color.rgb(18, 20, 44) else backend.Color.rgb(24, 26, 44),
     };
     gfx.clear(clear_col);
 
-    if (cam_opt) |c| gfx.setCamera(c) else gfx.setCamera(followCamera(p, 17.5, 18.0));
+    if (cam_opt) |c| gfx.setCamera(c) else gfx.setCamera(followCamera(p, 19.0, 20.0));
 
-    gfx.drawGround(200.0, backend.Color.rgb(58, 62, 52));
+    // Larger playable ground
+    gfx.drawGround(320.0, backend.Color.rgb(56, 60, 50));
     lotGrid(gfx);
-    box(gfx, 12, 0.03, 20, 11.0, 0.08, 72.0, backend.Color.rgb(32, 32, 34));
-    box(gfx, 12, 0.03, 20, 58.0, 0.07, 11.0, backend.Color.rgb(32, 32, 34));
-    box(gfx, 40, 0.03, 20, 30.0, 0.07, 11.0, backend.Color.rgb(30, 30, 32));
-    box(gfx, 45, 0.03, 20, 11.0, 0.08, 40.0, backend.Color.rgb(30, 30, 32));
+
+    // Multi-avenue grid (N-S + E-W)
+    avenue(gfx, 12, 20, 80.0, true);
+    avenue(gfx, 40, 20, 80.0, true);
+    avenue(gfx, 60, 20, 70.0, true);
+    avenue(gfx, 30, 20, 100.0, false);
+    avenue(gfx, 30, 40, 100.0, false);
+    avenue(gfx, 30, 0, 90.0, false);
 
     crosswalk(gfx, 12, 15.2, true);
     crosswalk(gfx, 12, 24.8, true);
     crosswalk(gfx, 6.8, 20, false);
     crosswalk(gfx, 17.2, 20, false);
-    crosswalk(gfx, 30, 20, false);
+    crosswalk(gfx, 40, 15.2, true);
+    crosswalk(gfx, 40, 24.8, true);
+    crosswalk(gfx, 34.8, 20, false);
+    crosswalk(gfx, 45.2, 20, false);
+    crosswalk(gfx, 12, 35.0, true);
+    crosswalk(gfx, 40, 35.0, true);
 
-    box(gfx, 12, 0.05, 12, 0.25, 0.04, 2.0, backend.Color.rgb(180, 160, 60));
-    box(gfx, 12, 0.05, 20, 0.25, 0.04, 2.0, backend.Color.rgb(180, 160, 60));
-    box(gfx, 12, 0.05, 28, 0.25, 0.04, 2.0, backend.Color.rgb(180, 160, 60));
+    sidewalk(gfx, 12, 25.5, 90, 2.2);
+    sidewalk(gfx, 12, 14.5, 90, 2.2);
+    sidewalk(gfx, 6.5, 20, 2.2, 70);
+    sidewalk(gfx, 17.5, 20, 2.2, 70);
+    sidewalk(gfx, 40, 25.5, 50, 2.0);
+    sidewalk(gfx, 40, 14.5, 50, 2.0);
+    sidewalk(gfx, 34.5, 20, 2.0, 50);
+    sidewalk(gfx, 45.5, 20, 2.0, 50);
+    sidewalk(gfx, 30, 40, 80, 2.0);
+    sidewalk(gfx, 30, 35, 80, 2.0);
 
-    sidewalk(gfx, 12, 25.5, 55, 2.2);
-    sidewalk(gfx, 12, 14.5, 55, 2.2);
-    sidewalk(gfx, 6.5, 20, 2.2, 55);
-    sidewalk(gfx, 17.5, 20, 2.2, 55);
-    sidewalk(gfx, 45, 25.5, 25, 2.0);
-    sidewalk(gfx, 45, 14.5, 25, 2.0);
+    // Alleys + dumpsters
+    box(gfx, -4, 0.04, 20, 3.0, 0.08, 50.0, backend.Color.rgb(28, 26, 26));
+    dumpster(gfx, -3.5, 17.0);
+    dumpster(gfx, -3.5, 24.0);
+    dumpster(gfx, 25.0, 32.0);
+    dumpster(gfx, 58.0, 32.0);
 
-    box(gfx, 0.5, 0.04, 20, 3.0, 0.08, 40.0, backend.Color.rgb(30, 28, 28));
-    dumpster(gfx, 0.8, 17.0);
-    dumpster(gfx, 0.8, 24.0);
+    // Buildings from expanded cityscape table
+    for (cityscape.BUILDINGS) |b| {
+        building(gfx, b.x, b.z, b.w, b.h, b.d, cityscape.colorOf(b), nightish);
+    }
 
-    building(gfx, 3.5, 28.5, 5.2, 6.5, 4.2, backend.Color.rgb(98, 78, 68), nightish);
-    building(gfx, 11.5, 29.2, 5.0, 7.5, 4.0, backend.Color.rgb(70, 74, 82), nightish);
-    building(gfx, 19.5, 28.3, 5.2, 5.8, 4.2, backend.Color.rgb(90, 72, 64), nightish);
-    building(gfx, 27.0, 28.8, 4.5, 6.2, 3.8, backend.Color.rgb(82, 70, 62), nightish);
-    building(gfx, 3.5, 11.5, 5.0, 5.5, 4.0, backend.Color.rgb(85, 76, 70), nightish);
-    building(gfx, 11.5, 10.8, 5.0, 6.5, 4.0, backend.Color.rgb(68, 72, 80), nightish);
-    building(gfx, 19.5, 11.5, 5.2, 5.5, 4.0, backend.Color.rgb(92, 80, 72), nightish);
-    building(gfx, 27.0, 11.2, 4.5, 5.8, 3.8, backend.Color.rgb(78, 68, 60), nightish);
-
-    building(gfx, 41.0, 28.2, 5.5, 7.0, 4.0, backend.Color.rgb(60, 65, 72), nightish);
-    building(gfx, 49.0, 28.0, 5.5, 6.5, 4.0, backend.Color.rgb(55, 58, 65), nightish);
-    building(gfx, 41.0, 11.5, 5.5, 6.0, 4.0, backend.Color.rgb(65, 62, 58), nightish);
-    building(gfx, 49.0, 11.3, 5.5, 5.8, 4.0, backend.Color.rgb(58, 60, 68), nightish);
-
-    waterTower(gfx, 11.5, 29.2);
-    waterTower(gfx, 49.0, 28.0);
+    waterTower(gfx, 16.0, 29.0);
+    waterTower(gfx, 48.0, 29.5);
+    waterTower(gfx, 30.0, 50.0);
     safehouse(gfx, nightish);
 
-    lamp(gfx, 7, 20, nightish);
-    lamp(gfx, 17, 20, nightish);
-    lamp(gfx, 12, 15.5, nightish);
-    lamp(gfx, 12, 25.5, nightish);
-    lamp(gfx, 2, 20, nightish);
-    lamp(gfx, 24, 20, nightish);
-    lamp(gfx, 35, 20, nightish);
-    lamp(gfx, 45, 20, nightish);
+    for (cityscape.LAMPS) |lp| lamp(gfx, lp.x, lp.z, nightish);
+
     hydrant(gfx, 8.2, 16.2);
     hydrant(gfx, 15.5, 24.2);
     hydrant(gfx, 43.0, 16.5);
+    hydrant(gfx, 36.0, 36.0);
+    hydrant(gfx, 58.0, 18.0);
 
-    tree(gfx, 4.0, 16.0);
-    tree(gfx, 20.0, 25.0);
-    tree(gfx, 9.0, 27.0);
+    for (cityscape.TREES) |t| tree(gfx, t.x, t.z);
 
-    parkedCar(gfx, 5.5, 22.5, backend.Color.rgb(50, 55, 70));
-    parkedCar(gfx, 18.5, 17.5, backend.Color.rgb(90, 40, 35));
-    parkedCar(gfx, 8.0, 15.0, backend.Color.rgb(35, 45, 40));
-    parkedCar(gfx, 22.0, 23.0, backend.Color.rgb(40, 50, 55));
-    parkedCar(gfx, 43.0, 22.0, backend.Color.rgb(45, 50, 55));
+    for (cityscape.PARKED) |pc| {
+        parkedCar(gfx, pc.x, pc.z, backend.Color.rgb(pc.r, pc.g, pc.b));
+    }
 
     gateArch(gfx, 30.0, 20.0);
-    gateArch(gfx, -1.0, 20.0);
-    gateArch(gfx, 42.0, 20.0);
+    gateArch(gfx, -2.0, 20.0);
+    gateArch(gfx, 50.0, 20.0);
+    gateArch(gfx, 12.0, 40.0);
 
-    const n1 = near_job and dist2(p.x, p.y, 16, 22) < 36;
-    const n2 = near_job and dist2(p.x, p.y, 8, 28) < 36;
-    const n3 = near_job and dist2(p.x, p.y, 22, 12) < 36;
-    const n4 = near_job and dist2(p.x, p.y, 12, 16) < 36;
-    const n5 = near_job and dist2(p.x, p.y, 26, 18) < 36;
-    const n6 = near_job and dist2(p.x, p.y, 45, 22) < 36;
-    jobBeacon(gfx, 16.0, 22.0, n1, true);
-    jobBeacon(gfx, 8.0, 28.0, n2, true);
-    jobBeacon(gfx, 22.0, 12.0, n3, true);
-    jobBeacon(gfx, 12.0, 16.0, n4, true);
-    jobBeacon(gfx, 26.0, 18.0, n5, true);
-    jobBeacon(gfx, 45.0, 22.0, n6, true);
+    districtSign(gfx, 10.0, 26.0, false); // Little Italy
+    districtSign(gfx, 38.0, 38.0, true); // Hell's Kitchen edge
+    districtSign(gfx, 70.0, 22.0, true); // toward midtown
+
+    for (cityscape.JOBS) |jb| {
+        const near = near_job and dist2(p.x, p.y, jb.x, jb.z) < 36;
+        jobBeacon(gfx, jb.x, jb.z, near);
+    }
 
     if (car) |v| {
         shadow(gfx, v.x, v.y, 2.4, 3.8);
@@ -257,12 +292,5 @@ pub fn drawMinimalScene(
         box(gfx, v.x, 1.05, v.y - 0.4, 1.7, 0.45, 1.5, backend.Color.rgb(25, 35, 50));
     }
 
-    // Animated boss (procedural walk until Quaternius GLB lands)
     sim_actor.drawBoss(gfx, p.x, p.y, anim_time_s, boss_moving);
-}
-
-fn dist2(ax: f32, ay: f32, bx: f32, by: f32) f32 {
-    const dx = ax - bx;
-    const dy = ay - by;
-    return dx * dx + dy * dy;
 }

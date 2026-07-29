@@ -2,34 +2,33 @@
 
 **NYC mob life** — 1930s / 1980s · real-time free-roam + empire.
 
-**Version:** `0.4.2-alpha`  
-**Stack:** Zig · GLFW + OpenGL 3.3 · GLES path
+**Version:** `0.5.0-alpha`
 
-## Auto-fetch free meshes (WSL / Linux / macOS)
+**Open world:** Multi-avenue grid (~−20…90 X, −10…70 Z), 40+ buildings, denser street dressing, more job poles.
 
-```bash
-chmod +x tools/fetch_cc0_assets.sh
-./tools/fetch_cc0_assets.sh
-```
-
-Pulls Kenney city/car/nature packs, Poly Haven sample models, and Khronos loader tests into `assets/cc0/`. See [`tools/fetch_cc0_assets.md`](tools/fetch_cc0_assets.md).
-
-## Headless playtest
+## Build (WSL / Linux GPU)
 
 ```bash
-zig build run-headless
-```
-
-## GPU (Linux / WSL)
-
-```bash
+git pull
 sudo apt install -y libglfw3-dev libgl1-mesa-dev
 zig build -Dgpu=true -Doptimize=ReleaseFast
 ./zig-out/bin/empire
+```
+
+## Windows cross from WSL
+
+```bash
+zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
+  -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
+```
+
+## Assets
+
+```bash
+./tools/fetch_cc0_assets.sh
 ```
 
 ## Docs
 
 - [`docs/RESOURCE_SYSTEM.md`](docs/RESOURCE_SYSTEM.md)
 - [`docs/MESH_SKINS.md`](docs/MESH_SKINS.md)
-- [`assets/catalog.json`](assets/catalog.json)

@@ -1,4 +1,4 @@
-//! CPU-side mesh data and unit primitives for GPU upload.
+//! CPU-side mesh data: static + skinned vertices.
 
 const math = @import("math.zig");
 
@@ -23,9 +23,29 @@ pub const Vertex = extern struct {
     }
 };
 
+/// Per-vertex skinning influences (glTF JOINTS_0 / WEIGHTS_0).
+pub const SkinInfluence = extern struct {
+    joints: [4]u16 = .{ 0, 0, 0, 0 },
+    weights: [4]f32 = .{ 1, 0, 0, 0 },
+};
+
 pub const Mesh = struct {
     vertices: []const Vertex,
     indices: []const u32,
+};
+
+/// Mesh plus optional skin channels (same length as vertices when present).
+pub const SkinnedMesh = struct {
+    vertices: []Vertex,
+    indices: []u32,
+    influences: ?[]SkinInfluence = null,
+    /// Inverse bind matrices, column-major 16 floats each, length = joint count.
+    inverse_binds: ?[]f32 = null,
+    joint_count: u32 = 0,
+
+    pub fn isSkinned(self: SkinnedMesh) bool {
+        return self.influences != null and self.inverse_binds != null and self.joint_count > 0;
+    }
 };
 
 pub fn buildBox(sx: f32, sy: f32, sz: f32, col: [4]f32, verts: *[24]Vertex, inds: *[36]u32) Mesh {

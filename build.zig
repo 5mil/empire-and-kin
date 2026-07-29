@@ -8,6 +8,7 @@ pub fn build(b: *std.Build) void {
     const android = b.option(bool, "android", "Android / mobile backend (touch)") orelse false;
     const gles = b.option(bool, "gles", "EGL + OpenGL ES 3.0 (device graphics)") orelse false;
     const touch = b.option(bool, "touch", "Enable virtual touch overlay on GPU") orelse false;
+    const android_lib = b.option(bool, "android_lib", "Also build libempire.so (needs GLESv3)") orelse false;
 
     const glfw_prefix = b.option([]const u8, "glfw_prefix", "Path to Windows GLFW SDK (for cross-compile)");
     const glfw_lib = b.option([]const u8, "glfw_lib", "GLFW link name (glfw3dll or glfw3)") orelse "glfw3dll";
@@ -106,48 +107,54 @@ pub fn build(b: *std.Build) void {
     run_h.step.dependOn(&b.addInstallArtifact(headless, .{}).step);
     b.step("run-headless", "Run NullBackend").dependOn(&run_h.step);
 
-    const android_opts = b.addOptions();
-    android_opts.addOption(bool, "enable_gpu", false);
-    android_opts.addOption(bool, "enable_android", true);
-    android_opts.addOption(bool, "enable_gles", false);
-    android_opts.addOption(bool, "enable_touch", true);
-    const android_exe = b.addExecutable(.{
-        .name = "empire-android",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = false,
-        }),
-    });
-    android_exe.root_module.addOptions("build_options", android_opts);
-    b.installArtifact(android_exe);
-    const run_android = b.addRunArtifact(android_exe);
-    run_android.step.dependOn(&b.addInstallArtifact(android_exe, .{}).step);
-    b.step("run-android", "Android touch backend (no window)").dependOn(&run_android.step);
-
-    const lib_opts = b.addOptions();
-    lib_opts.addOption(bool, "enable_gpu", false);
-    lib_opts.addOption(bool, "enable_android", true);
-    lib_opts.addOption(bool, "enable_gles", true);
-    lib_opts.addOption(bool, "enable_touch", true);
-    const lib = b.addLibrary(.{
-        .name = "empire",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/android_lib.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-        .linkage = .dynamic,
-    });
-    lib.root_module.addOptions("build_options", lib_opts);
-    if (ndk_sysroot) |sys| {
-        lib.root_module.addIncludePath(.{ .cwd_relative = b.fmt("{s}/usr/include", .{sys}) });
-        lib.root_module.addLibraryPath(.{ .cwd_relative = b.fmt("{s}/usr/lib/aarch64-linux-android/24", .{sys}) });
+    // Android exe is only installed when -Dandroid=true (touch logic backend, no GLES)
+    if (android) {
+        const android_opts = b.addOptions();
+        android_opts.addOption(bool, "enable_gpu", false);
+        android_opts.addOption(bool, "enable_android", true);
+        android_opts.addOption(bool, "enable_gles", false);
+        android_opts.addOption(bool, "enable_touch", true);
+        const android_exe = b.addExecutable(.{
+            .name = "empire-android",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/main.zig"),
+                .target = target,
+                .optimize = optimize,
+                .link_libc = false,
+            }),
+        });
+        android_exe.root_module.addOptions("build_options", android_opts);
+        b.installArtifact(android_exe);
+        const run_android = b.addRunArtifact(android_exe);
+        run_android.step.dependOn(&b.addInstallArtifact(android_exe, .{}).step);
+        b.step("run-android", "Android touch backend (no window)").dependOn(&run_android.step);
     }
-    lib.root_module.linkSystemLibrary("EGL", .{});
-    lib.root_module.linkSystemLibrary("GLESv3", .{});
-    b.installArtifact(lib);
-    b.step("android-lib", "Build libempire.so (GLES) for APK").dependOn(&b.addInstallArtifact(lib, .{}).step);
+
+    // libempire.so only when explicitly requested (needs GLESv3 on host or NDK)
+    if (android_lib or gles) {
+        const lib_opts = b.addOptions();
+        lib_opts.addOption(bool, "enable_gpu", false);
+        lib_opts.addOption(bool, "enable_android", true);
+        lib_opts.addOption(bool, "enable_gles", true);
+        lib_opts.addOption(bool, "enable_touch", true);
+        const lib = b.addLibrary(.{
+            .name = "empire",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/android_lib.zig"),
+                .target = target,
+                .optimize = optimize,
+                .link_libc = true,
+            }),
+            .linkage = .dynamic,
+        });
+        lib.root_module.addOptions("build_options", lib_opts);
+        if (ndk_sysroot) |sys| {
+            lib.root_module.addIncludePath(.{ .cwd_relative = b.fmt("{s}/usr/include", .{sys}) });
+            lib.root_module.addLibraryPath(.{ .cwd_relative = b.fmt("{s}/usr/lib/aarch64-linux-android/24", .{sys}) });
+        }
+        lib.root_module.linkSystemLibrary("EGL", .{});
+        lib.root_module.linkSystemLibrary("GLESv3", .{});
+        b.installArtifact(lib);
+        b.step("android-lib", "Build libempire.so (GLES) for APK").dependOn(&b.addInstallArtifact(lib, .{}).step);
+    }
 }

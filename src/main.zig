@@ -62,15 +62,15 @@ const play_draw = @import("engine/play_draw.zig");
 
 const gfx_mod = @import("engine/gfx_select.zig").BackendMod;
 
-pub fn main(init: std.process.Init) !void {
-    const io = init.io;
+pub fn main() !void {
+    _ = build_options;
 
     std.debug.print("Empire & Kin - ALPHA\n", .{});
     const gfx = gfx_mod.getBackend();
     try gfx.init("Empire & Kin", 1280, 720);
 
     var boot: boot_mod.BootState = .{};
-    boot.has_save = (save.readFromDisk(io) catch null) != null;
+    boot.has_save = (save.readFromDisk() catch null) != null;
 
     var clock = time.Clock{ .time_scale = balance.TIME_SCALE_DEMO };
     var the_kin = crew.createStarterCrew();
@@ -196,7 +196,7 @@ pub fn main(init: std.process.Init) !void {
                 ws.event_interval = balance.EVENT_INTERVAL;
                 ws.rival_interval = balance.RIVAL_INTERVAL;
                 if (boot.load_on_start) {
-                    if (save.readFromDisk(io) catch null) |data| {
+                    if (save.readFromDisk() catch null) |data| {
                         save.applyFull(data, &eco, &the_kin, &clock, &boss, districts[0..], &goal, &stash, &emp);
                     }
                 }
@@ -229,12 +229,12 @@ pub fn main(init: std.process.Init) !void {
 
         if (edge_f5.pressed(raw.f5)) {
             const snap = save.captureFull(eco, the_kin, clock, boss, &districts, goal, stash, emp);
-            save.writeToDisk(io, snap) catch {};
+            save.writeToDisk(snap) catch {};
             toast.show("Saved.", balance.TOAST_SAVE_SEC);
             feed.push("Quick-saved");
         }
         if (edge_f9.pressed(raw.f9)) {
-            if (save.readFromDisk(io) catch null) |data| {
+            if (save.readFromDisk() catch null) |data| {
                 save.applyFull(data, &eco, &the_kin, &clock, &boss, districts[0..], &goal, &stash, &emp);
                 toast.show("Loaded.", balance.TOAST_SAVE_SEC);
                 feed.push("Loaded save");
@@ -249,7 +249,6 @@ pub fn main(init: std.process.Init) !void {
         const downed = death.isDown(boss);
         if (!downed) _ = ctrl.tick(raw, &boss, if (in_car) 0 else dt);
 
-        // Procedural walk: detect horizontal motion
         const dx = boss.x - prev_boss_x;
         const dy = boss.y - prev_boss_y;
         scene.boss_moving = (dx * dx + dy * dy) > 0.0001;
@@ -509,7 +508,7 @@ pub fn main(init: std.process.Init) !void {
     }
 
     const final_snap = save.captureFull(eco, the_kin, clock, boss, &districts, goal, stash, emp);
-    save.writeToDisk(io, final_snap) catch {};
+    save.writeToDisk(final_snap) catch {};
     gfx.shutdown();
     std.debug.print("=== EXIT === Saved | ${d} | {s}\n", .{ eco.treasury, era_mod.name(selected_era) });
 }

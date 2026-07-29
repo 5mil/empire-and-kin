@@ -1,4 +1,4 @@
-//! Frame renderer: lit meshes + optional GLB models + bitmap HUD + fog.
+//! Frame renderer: lit meshes + ResourceManager GLB cache + HUD + fog.
 
 const std = @import("std");
 const gl = @import("gl.zig");
@@ -63,7 +63,6 @@ pub const Renderer = struct {
         gl.glBlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         self.resize(self.width, self.height);
 
-        // Attempt CC0 GLB mesh/skin load (no-op if files missing)
         if (g_models == null) {
             g_models = model_registry.Registry.init(std.heap.page_allocator);
             g_models.?.tryLoadDefaults();
@@ -165,10 +164,9 @@ pub const Renderer = struct {
         self.drawMesh(self.box, math.Mat4.mul(t, s), color);
     }
 
-    /// Draw loaded boss GLB if present; returns true if drawn.
     pub fn drawBossMesh(self: *Renderer, pos: backend.Vec3, scale: f32, tint: backend.Color) bool {
-        if (g_models) |reg| {
-            if (reg.boss_gpu) |m| {
+        if (g_models) |*reg| {
+            if (reg.getBossGpu()) |m| {
                 const t = math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z });
                 const s = math.Mat4.scaleVec(.{ .x = scale, .y = scale, .z = scale });
                 self.drawMesh(m, math.Mat4.mul(t, s), tint);
@@ -188,6 +186,15 @@ pub const Renderer = struct {
 
     pub fn drawVehicle(self: *Renderer, pos: backend.Vec3, yaw: f32, occupied: bool, color: backend.Color) void {
         _ = occupied;
+        if (g_models) |*reg| {
+            if (reg.vehicle_gpu()) |m| {
+                const t = math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z });
+                const r = math.Mat4.rotateY(yaw);
+                const s = math.Mat4.scaleVec(.{ .x = 1.0, .y = 1.0, .z = 1.0 });
+                self.drawMesh(m, math.Mat4.mul(t, math.Mat4.mul(r, s)), color);
+                return;
+            }
+        }
         const t = math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z });
         const r = math.Mat4.rotateY(yaw);
         const s = math.Mat4.scaleVec(.{ .x = 2.0, .y = 1.0, .z = 3.6 });

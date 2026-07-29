@@ -22,7 +22,7 @@ const tips = [_][]const u8{
 pub fn handle(h: *Hints, raw: input.RawKeys, edge_h: *input.ButtonEdge, edge_x: *input.ButtonEdge) void {
     if (edge_h.pressed(raw.h)) {
         h.dismissed = false;
-        h.index = (h.index + 1) % tips.len;
+        h.index = @intCast((h.index + 1) % tips.len);
     }
     if (edge_x.pressed(raw.x)) h.dismissed = true;
 }

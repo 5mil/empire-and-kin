@@ -1,0 +1,135 @@
+{
+  "version": 2,
+  "policy": "CC0 or verified public domain only — premium free quality, no EA/SL rips",
+  "format": "glTF 2.0 / GLB",
+  "max_cached_runtime": 256,
+  "scan_roots": [
+    "assets/cc0/characters",
+    "assets/cc0/buildings",
+    "assets/cc0/vehicles",
+    "assets/cc0/props",
+    "assets/cc0/environment",
+    "assets/cc0/textures"
+  ],
+  "sources": [
+    {
+      "id": "kenney-all-in-1",
+      "name": "Kenney Game Assets All-in-1",
+      "license": "CC0",
+      "url": "https://kenney.itch.io/kenney-game-assets",
+      "quality": "premium free consistent low-poly",
+      "note": "60k+ assets single download — primary bulk import",
+      "targets": ["characters", "buildings", "vehicles", "props"]
+    },
+    {
+      "id": "kenney-city-commercial",
+      "name": "Kenney City Kit Commercial",
+      "license": "CC0",
+      "url": "https://kenney.nl/assets",
+      "targets": ["buildings"]
+    },
+    {
+      "id": "kenney-city-roads",
+      "name": "Kenney City Kit Roads",
+      "license": "CC0",
+      "url": "https://kenney.nl/assets/city-kit-roads",
+      "targets": ["environment"]
+    },
+    {
+      "id": "kenney-city-industrial",
+      "name": "Kenney City Kit Industrial",
+      "license": "CC0",
+      "url": "https://kenney.nl/assets/city-kit-industrial",
+      "targets": ["buildings"]
+    },
+    {
+      "id": "kenney-city-suburban",
+      "name": "Kenney City Kit Suburban",
+      "license": "CC0",
+      "url": "https://kenney.nl/assets/city-kit-suburban",
+      "targets": ["buildings"]
+    },
+    {
+      "id": "kenney-car-kit",
+      "name": "Kenney Car Kit",
+      "license": "CC0",
+      "url": "https://kenney-assets.itch.io/car-kit",
+      "targets": ["vehicles"]
+    },
+    {
+      "id": "kenney-nature",
+      "name": "Kenney Nature Kit",
+      "license": "CC0",
+      "url": "https://kenney.nl/assets/nature-kit",
+      "targets": ["props"]
+    },
+    {
+      "id": "kenney-characters",
+      "name": "Kenney Character Assets (Kay Lousberg)",
+      "license": "CC0",
+      "url": "https://kenney.itch.io/kenney-character-assets",
+      "targets": ["characters"],
+      "note": "rigged + skins + animations"
+    },
+    {
+      "id": "quaternius-base",
+      "name": "Quaternius Universal Base Characters",
+      "license": "CC0",
+      "url": "https://quaternius.com/packs/universalbasecharacters.html",
+      "targets": ["characters"]
+    },
+    {
+      "id": "quaternius-ual",
+      "name": "Quaternius Universal Animation Library",
+      "license": "CC0",
+      "url": "https://quaternius.com/",
+      "targets": ["characters"]
+    },
+    {
+      "id": "kaykit-anims",
+      "name": "KayKit Character Animations",
+      "license": "CC0",
+      "url": "https://kaylousberg.itch.io/kaykit-character-animations",
+      "targets": ["characters"]
+    },
+    {
+      "id": "polyhaven",
+      "name": "Poly Haven models/textures/HDRI",
+      "license": "CC0",
+      "url": "https://polyhaven.com/all",
+      "api": "https://api.polyhaven.com/assets",
+      "quality": "photogrammetry / high-res PBR",
+      "targets": ["props", "environment", "textures"]
+    },
+    {
+      "id": "os3d",
+      "name": "Open Source 3D Assets registry",
+      "license": "CC0 focus",
+      "url": "https://opensource3dassets.com/",
+      "targets": ["props", "environment"]
+    },
+    {
+      "id": "polygonal-mind",
+      "name": "Polygonal Mind CC0 GLB",
+      "license": "CC0",
+      "url": "https://github.com/ToxSam/cc0-models-Polygonal-Mind",
+      "targets": ["environment", "props"]
+    },
+    {
+      "id": "khronos-samples",
+      "name": "Khronos glTF Sample Assets",
+      "license": "varies — prefer CC0",
+      "url": "https://github.com/KhronosGroup/glTF-Sample-Assets",
+      "targets": ["characters"],
+      "note": "pipeline validation"
+    },
+    {
+      "id": "mesh2motion",
+      "name": "Mesh2Motion",
+      "license": "FOSS tool",
+      "url": "https://mesh2motion.org/",
+      "targets": ["characters"],
+      "note": "auto-rig + export animated GLB"
+    }
+  ]
+}

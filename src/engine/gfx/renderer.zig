@@ -1,4 +1,4 @@
-//! Frame renderer: lit meshes + bitmap HUD + distance fog.
+//! Frame renderer: lit meshes + optional GLB models + bitmap HUD + fog.
 
 const std = @import("std");
 const gl = @import("gl.zig");
@@ -8,6 +8,9 @@ const gpu_mesh = @import("gpu_mesh.zig");
 const shaders = @import("shader_select.zig").shaders;
 const font = @import("font.zig");
 const backend = @import("../backend.zig");
+const model_registry = @import("model_registry.zig");
+
+pub var g_models: ?model_registry.Registry = null;
 
 pub const Renderer = struct {
     width: u32 = 1280,
@@ -59,9 +62,19 @@ pub const Renderer = struct {
         gl.glEnable(gl.BLEND);
         gl.glBlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         self.resize(self.width, self.height);
+
+        // Attempt CC0 GLB mesh/skin load (no-op if files missing)
+        if (g_models == null) {
+            g_models = model_registry.Registry.init(std.heap.page_allocator);
+            g_models.?.tryLoadDefaults();
+        }
     }
 
     pub fn shutdown(self: *Renderer) void {
+        if (g_models) |*reg| {
+            reg.deinit();
+            g_models = null;
+        }
         self.box.destroy();
         self.ground.destroy();
         if (self.ui_vao != 0) gl.glDeleteVertexArrays(1, &self.ui_vao);
@@ -113,7 +126,7 @@ pub const Renderer = struct {
         self.view_proj = math.Mat4.mul(proj, view);
     }
 
-    fn drawMesh(self: *Renderer, m: gpu_mesh.GpuMesh, model: math.Mat4, tint: backend.Color) void {
+    pub fn drawMesh(self: *Renderer, m: gpu_mesh.GpuMesh, model: math.Mat4, tint: backend.Color) void {
         gl.glUseProgram(self.lit_prog);
         const mvp = math.Mat4.mul(self.view_proj, model);
         const loc_mvp = gl.glGetUniformLocation(self.lit_prog, "uMVP");
@@ -152,7 +165,21 @@ pub const Renderer = struct {
         self.drawMesh(self.box, math.Mat4.mul(t, s), color);
     }
 
+    /// Draw loaded boss GLB if present; returns true if drawn.
+    pub fn drawBossMesh(self: *Renderer, pos: backend.Vec3, scale: f32, tint: backend.Color) bool {
+        if (g_models) |reg| {
+            if (reg.boss_gpu) |m| {
+                const t = math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z });
+                const s = math.Mat4.scaleVec(.{ .x = scale, .y = scale, .z = scale });
+                self.drawMesh(m, math.Mat4.mul(t, s), tint);
+                return true;
+            }
+        }
+        return false;
+    }
+
     pub fn drawPlayerProxy(self: *Renderer, pos: backend.Vec3, facing_yaw: f32, color: backend.Color) void {
+        if (self.drawBossMesh(pos, 1.0, color)) return;
         const t = math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z });
         const r = math.Mat4.rotateY(facing_yaw);
         const s = math.Mat4.scaleVec(.{ .x = 0.7, .y = 1.6, .z = 0.7 });
@@ -197,7 +224,7 @@ pub const Renderer = struct {
     }
 
     pub fn drawText(self: *Renderer, text: []const u8, x: i32, y: i32, color: backend.Color) void {
-        const scale: f32 = 2.75; // life-sim readable
+        const scale: f32 = 2.75;
         const r = @as(f32, @floatFromInt(color.r)) / 255.0;
         const g = @as(f32, @floatFromInt(color.g)) / 255.0;
         const b = @as(f32, @floatFromInt(color.b)) / 255.0;

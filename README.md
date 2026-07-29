@@ -2,18 +2,14 @@
 
 **NYC mob life** — 1930s / 1980s · real-time free-roam + empire.
 
-**Version:** `0.3.2-alpha`  
+**Version:** `0.4.0-alpha`  
 **Stack:** Zig · GLFW + OpenGL 3.3 (PC) · GLES 3.0 path (Android)
 
-Life-sim readability + **free CC0 art/animation pipeline** (Kenney, Quaternius, Poly Haven, Mesh2Motion).  
-Not EA Sims 4 parity — see [`docs/VISUAL.md`](docs/VISUAL.md) and [`docs/FIDELITY_PIPELINE.md`](docs/FIDELITY_PIPELINE.md).
+**Mesh/skins:** GLB loader + JOINTS/WEIGHTS + CPU skinning (bind pose). Drop CC0 GLB under `assets/cc0/` — see [`docs/MESH_SKINS.md`](docs/MESH_SKINS.md).
 
-- [`docs/HANDOVER.md`](docs/HANDOVER.md)  
-- [`docs/ART_SOURCES.md`](docs/ART_SOURCES.md)  
-- [`assets/manifest.json`](assets/manifest.json) — approved free packs  
-- [`tools/fetch_cc0_assets.sh`](tools/fetch_cc0_assets.sh) — prepare download dirs  
+Not Sims 4 / Second Life product parity — open pipeline toward comparable *technical* mesh readiness.
 
-## Windows build (WSL)
+## Windows build
 
 ```bash
 export GLFW_WIN=$HOME/glfw-3.4.bin.WIN64
@@ -21,17 +17,15 @@ zig build -Dtarget=x86_64-windows-gnu -Dgpu=true \
   -Dglfw_prefix=$GLFW_WIN -Doptimize=ReleaseFast
 ```
 
-## Free assets
+## CC0 character mesh
 
 ```bash
-chmod +x tools/fetch_cc0_assets.sh
 ./tools/fetch_cc0_assets.sh
-# then download Kenney / Quaternius / Poly Haven into assets/cc0/
+# Download Quaternius character → assets/cc0/characters/character.glb
 ```
 
-## Android
+## Docs
 
-```bash
-zig build run-android
-zig build android-lib -Doptimize=ReleaseFast
-```
+- [`docs/MESH_SKINS.md`](docs/MESH_SKINS.md)  
+- [`docs/FIDELITY_PIPELINE.md`](docs/FIDELITY_PIPELINE.md)  
+- [`docs/VISUAL.md`](docs/VISUAL.md)  

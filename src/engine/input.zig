@@ -32,6 +32,11 @@ pub const RawKeys = struct {
     f9: bool = false,
     h: bool = false,
     x: bool = false,
+    m: bool = false,
+    c: bool = false,
+    shift: bool = false,
+    bracket_l: bool = false,
+    bracket_r: bool = false,
 };
 
 pub const ButtonEdge = struct {
@@ -63,6 +68,11 @@ pub const Mapper = struct {
             mx /= len;
             my /= len;
         }
+        // Sprint
+        if (raw.shift) {
+            mx *= 1.45;
+            my *= 1.45;
+        }
         return .{
             .move_x = mx,
             .move_y = my,
@@ -74,5 +84,5 @@ pub const Mapper = struct {
 };
 
 pub fn bindingHelp() []const u8 {
-    return "WASD/Arrows move | E interact | F attack | Esc/Space pause";
+    return "WASD move | Shift sprint | E interact | M map | C character | [ ] camera zoom | Q/E orbit";
 }

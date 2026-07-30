@@ -1,4 +1,4 @@
-//! OpenGL ES 3.0 — same lighting model as desktop (fog + rim).
+//! OpenGL ES 3.0 — lit + optional albedo (Phase 1 parity with desktop).
 
 pub const lit_vert =
     \\#version 300 es
@@ -32,17 +32,30 @@ pub const lit_frag =
     \\uniform vec3 uFogColor;
     \\uniform float uFogDensity;
     \\uniform vec3 uCamPos;
+    \\uniform sampler2D uAlbedo;
+    \\uniform int uUseTexture;
+    \\uniform float uUvScale;
     \\out vec4 FragColor;
     \\void main() {
     \\    vec3 n = normalize(vNormal);
     \\    float ndl = max(dot(n, normalize(-uLightDir)), 0.0);
     \\    float half_lambert = ndl * 0.5 + 0.5;
     \\    float rim = pow(1.0 - max(dot(n, normalize(uCamPos - vWorldPos)), 0.0), 3.0) * 0.12;
-    \\    vec3 base = vColor.rgb * uTint.rgb;
+    \\    vec3 an = abs(n);
+    \\    float sum = an.x + an.y + an.z + 1e-4;
+    \\    float ax = an.x / sum; float ay = an.y / sum; float az = an.z / sum;
+    \\    float s = max(uUvScale, 0.05);
+    \\    vec3 tex = vec3(1.0);
+    \\    if (uUseTexture != 0) {
+    \\        vec3 tx = texture(uAlbedo, vWorldPos.zy * s).rgb;
+    \\        vec3 ty = texture(uAlbedo, vWorldPos.xz * s).rgb;
+    \\        vec3 tz = texture(uAlbedo, vWorldPos.xy * s).rgb;
+    \\        tex = tx * ax + ty * ay + tz * az;
+    \\    }
+    \\    vec3 base = tex * vColor.rgb * uTint.rgb;
     \\    vec3 lit = base * (uAmbient + vec3(half_lambert * 0.9)) + vec3(rim);
     \\    float dist = length(vWorldPos - uCamPos);
-    \\    float fog = 1.0 - exp(-uFogDensity * dist);
-    \\    fog = clamp(fog, 0.0, 0.85);
+    \\    float fog = clamp(1.0 - exp(-uFogDensity * dist), 0.0, 0.85);
     \\    vec3 color = mix(lit, uFogColor, fog);
     \\    FragColor = vec4(color, vColor.a * uTint.a);
     \\}

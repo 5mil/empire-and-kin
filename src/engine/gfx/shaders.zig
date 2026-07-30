@@ -1,5 +1,4 @@
-//! GLSL 330 core — half-Lambert + distance fog + multi-octave procedural surface grain.
-//! Grain is the locked-in stand-in for asphalt/brick micro-detail until real CC0 maps are uploaded.
+//! GLSL 330 core — lit + fog + grain + optional albedo sample (Phase 1 textures).
 
 pub const lit_vert =
     \\#version 330 core
@@ -31,6 +30,9 @@ pub const lit_frag =
     \\uniform vec3 uFogColor;
     \\uniform float uFogDensity;
     \\uniform vec3 uCamPos;
+    \\uniform sampler2D uAlbedo;
+    \\uniform int uUseTexture;
+    \\uniform float uUvScale;
     \\out vec4 FragColor;
     \\float hash(vec2 p) {
     \\    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -59,15 +61,27 @@ pub const lit_frag =
     \\    vec3 n = normalize(vNormal);
     \\    float ndl = max(dot(n, normalize(-uLightDir)), 0.0);
     \\    float half_lambert = ndl * 0.5 + 0.5;
-    \\    float rim = pow(1.0 - max(dot(n, normalize(uCamPos - vWorldPos)), 0.0), 3.0) * 0.16;
-    \\    // Multi-octave locked surface grain — asphalt/brick readability without external maps
-    \\    float g = fbm(vWorldPos.xz * 1.8) * 0.10 + noise(vWorldPos.xz * 11.0) * 0.045;
-    \\    // Slight directional streak (road wear)
-    \\    float streak = noise(vec2(vWorldPos.x * 0.35, vWorldPos.z * 4.5)) * 0.03;
-    \\    vec3 base = vColor.rgb * uTint.rgb * (1.0 + g + streak);
-    \\    // Soft specular lobe for wetter / metal-leaning surfaces (driven by brightness)
-    \\    float gloss_hint = smoothstep(0.35, 0.75, length(vColor.rgb));
-    \\    float spec = pow(max(dot(reflect(normalize(uLightDir), n), normalize(uCamPos - vWorldPos)), 0.0), 24.0) * 0.12 * gloss_hint;
+    \\    float rim = pow(1.0 - max(dot(n, normalize(uCamPos - vWorldPos)), 0.0), 3.0) * 0.14;
+    \\    vec3 an = abs(n);
+    \\    float s = max(uUvScale, 0.05);
+    \\    vec2 uv_y = vWorldPos.xz * s;
+    \\    vec2 uv_x = vWorldPos.zy * s;
+    \\    vec2 uv_z = vWorldPos.xy * s;
+    \\    float ax = an.x; float ay = an.y; float az = an.z;
+    \\    float sum = ax + ay + az + 1e-4;
+    \\    ax /= sum; ay /= sum; az /= sum;
+    \\    vec3 tex = vec3(1.0);
+    \\    if (uUseTexture != 0) {
+    \\        vec3 tx = texture(uAlbedo, uv_x).rgb;
+    \\        vec3 ty = texture(uAlbedo, uv_y).rgb;
+    \\        vec3 tz = texture(uAlbedo, uv_z).rgb;
+    \\        tex = tx * ax + ty * ay + tz * az;
+    \\    }
+    \\    float g = fbm(vWorldPos.xz * 1.8) * 0.06 + noise(vWorldPos.xz * 11.0) * 0.03;
+    \\    float streak = noise(vec2(vWorldPos.x * 0.35, vWorldPos.z * 4.5)) * 0.02;
+    \\    vec3 base = tex * vColor.rgb * uTint.rgb * (1.0 + g + streak);
+    \\    float gloss_hint = smoothstep(0.35, 0.75, length(base));
+    \\    float spec = pow(max(dot(reflect(normalize(uLightDir), n), normalize(uCamPos - vWorldPos)), 0.0), 24.0) * 0.10 * gloss_hint;
     \\    vec3 lit = base * (uAmbient + vec3(half_lambert * 0.90)) + vec3(rim + spec);
     \\    float dist = length(vWorldPos - uCamPos);
     \\    float fog = clamp(1.0 - exp(-uFogDensity * dist), 0.0, 0.88);

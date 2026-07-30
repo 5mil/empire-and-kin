@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "policy": "CC0 or verified public domain only — premium free quality, no EA/SL rips",
   "format": "glTF 2.0 / GLB",
   "max_cached_runtime": 256,
@@ -9,9 +9,23 @@
     "assets/cc0/vehicles",
     "assets/cc0/props",
     "assets/cc0/environment",
-    "assets/cc0/textures"
+    "assets/cc0/textures",
+    "assets/generated/characters",
+    "assets/generated/buildings",
+    "assets/generated/vehicles",
+    "assets/generated/props",
+    "assets/generated/environment"
   ],
   "sources": [
+    {
+      "id": "trellis-2",
+      "name": "TRELLIS.2 image-to-3D (Microsoft)",
+      "license": "MIT (model/code) — input images must be legal",
+      "url": "https://microsoft.github.io/TRELLIS.2/",
+      "quality": "textured GLB from single image",
+      "note": "Offline generation only. Output lands in assets/generated/",
+      "targets": ["props", "vehicles", "buildings", "characters"]
+    },
     {
       "id": "kenney-all-in-1",
       "name": "Kenney Game Assets All-in-1",
@@ -130,6 +144,14 @@
       "url": "https://mesh2motion.org/",
       "targets": ["characters"],
       "note": "auto-rig + export animated GLB"
+    },
+    {
+      "id": "material-maker",
+      "name": "Material Maker",
+      "license": "MIT",
+      "url": "https://github.com/RodZill4/material-maker",
+      "targets": ["textures"],
+      "note": "node-graph PBR materials"
     }
   ]
 }

@@ -17,19 +17,35 @@ If the goal is literally GTA 4, the correct path is a different engine, a differ
 
 ---
 
+## Art generation (TRELLIS.2 + open tools)
+
+Custom meshes beyond Kenney kits are produced offline:
+
+1. Concept image (owned / PD / FLUX)  
+2. **TRELLIS.2** (Microsoft, MIT) → textured GLB  
+3. Optional Material Maker / CHORD PBR polish  
+4. Drop under `assets/generated/` → `ResourceManager` ingest  
+
+Full details: **`docs/ART_GENERATION_PIPELINE.md`**  
+Helper: `tools/run_trellis_image_to_3d.py`
+
+Kenney / Quaternius / Poly Haven remain the high-volume default. TRELLIS fills unique period props, vehicles, and facades.
+
+---
+
 ## Current baseline (what “GTA 1” actually is today)
 
 | System | State |
 |--------|--------|
 | City | Box buildings + procedural material colors + avenue geometry |
-| Surfaces | Procedural 64² tiles + shader fBm grain (no GL texture sample yet) |
+| Surfaces | Procedural 64² tiles + shader fBm grain (GPU texture upload in progress) |
 | Player | Multi-box procedural humanoid + character map tints |
 | NPCs | Same procedural ped boxes |
 | Cars | Colored boxes; arcade drive (`speed`, `max_speed`, face dir) |
 | Physics | Collision resolve only — no suspension, grip curve, or body |
 | Telemetry | None (no speedo / RPM / gear / damage dial) |
-| Mesh pipeline | GLB loader + CPU skin bind-pose **exists**; anim clips / GPU skin / textures not wired |
-| Assets | `tools/fetch_cc0_assets.sh` + `ResourceManager` ready |
+| Mesh pipeline | GLB loader + CPU skin bind-pose **exists**; anim clips / GPU skin / textures not fully wired |
+| Assets | `tools/fetch_cc0_assets.sh` + `ResourceManager` ready; `assets/generated/` for TRELLIS output |
 
 Everything below builds on that substrate.
 
@@ -37,7 +53,7 @@ Everything below builds on that substrate.
 
 ## Non-negotiables (every phase)
 
-1. **CC0 / PD only** — Kenney, Quaternius, KayKit, Poly Haven, Khronos samples. Catalog in `assets/catalog.json`.
+1. **CC0 / PD only** — Kenney, Quaternius, KayKit, Poly Haven, Khronos samples, TRELLIS outputs from legal inputs. Catalog in `assets/catalog.json`.
 2. **Backend stays** — game logic never imports GL; `engine.Backend` vtable only.
 3. **Android path** — same GLB + texture assets, GLES shaders; no desktop-only deps in loaders.
 4. **Measurable exits** — a phase is done when the listed playtest criteria pass on GPU build.
@@ -51,7 +67,7 @@ Everything below builds on that substrate.
 0.5.x  material identity + maps + character sheet     ← done
 ─────────────────────────────────────────────────────
 1.0    textured surfaces (real GL sample)
-2.0    mesh city (Kenney buildings on footprints)
+2.0    mesh city (Kenney + TRELLIS pieces on footprints)
 3.0    real people (skinned + animated)
 4.0    real cars (meshes + wheels)
 5.0    driving physics (raycast vehicle)
@@ -72,8 +88,8 @@ Everything below builds on that substrate.
 | Item | File / action |
 |------|----------------|
 | PNG loader (stb-style or pure Zig) | `src/engine/gfx/image.zig` |
-| Upload `texture_bank` tiles → GL textures | `texture_bank` + `renderer` / `gl_backend` |
-| Optional Poly Haven albedo swap | `assets/cc0/textures/asphalt_*.png` etc. after `fetch_cc0_assets.sh` |
+| Upload `texture_bank` tiles → GL textures | `texture_gpu.zig` + `renderer` / `gl_backend` |
+| Optional Poly Haven / Material Maker albedo | `assets/cc0/textures/` or generated maps |
 | UVs on ground plane + building sides | `mesh.zig` / ground draw path |
 | Shader: sample albedo × grain | `shaders.zig` (`sampler2D uAlbedo`) |
 
@@ -87,7 +103,7 @@ Everything below builds on that substrate.
 
 ---
 
-## Phase 2 — Mesh city (Kenney on cityscape footprints)
+## Phase 2 — Mesh city (Kenney + TRELLIS on footprints)
 
 **Goal:** Replace a critical mass of box buildings with GLB city kit pieces.
 
@@ -95,10 +111,11 @@ Everything below builds on that substrate.
 | Item | File / action |
 |------|----------------|
 | Run fetch | `./tools/fetch_cc0_assets.sh --kenney-only` |
+| Custom pieces | TRELLIS image→GLB → `assets/generated/buildings/` |
 | Placement table | `src/engine/cityscape.zig` → each `BuildingSpec` may hold `mesh_id` or category key |
 | Draw path | `scene.zig` / `renderer.drawMesh` at building transform |
 | Fallback | If no GLB, keep box + material color (never blank world) |
-| Props | Lamps, dumpsters, hydrants → Kenney prop GLBs where available |
+| Props | Lamps, dumpsters, hydrants → Kenney or TRELLIS GLBs |
 
 ### Exit criteria
 - [ ] ≥ 12 buildings drawn as GLB in one district  
@@ -117,10 +134,10 @@ Everything below builds on that substrate.
 ### Work
 | Item | File / action |
 |------|----------------|
-| Quaternius / KayKit GLB | `assets/cc0/characters/` via fetch or manual itch drop |
-| Animation channel sample | `src/engine/gfx/anim_clip.zig` — read glTF animations → joint matrices/frame |
-| CPU skin per frame → later GPU palette | extend `skin.zig`; optional `shaders` bone UBO |
-| Character map → mesh slots | suit/hair as tint or swap materials; scale from `height_scale` / `bulk_scale` |
+| Quaternius / KayKit GLB | `assets/cc0/characters/` via fetch |
+| Animation channel sample | `src/engine/gfx/anim_clip.zig` |
+| CPU skin per frame → later GPU palette | extend `skin.zig` |
+| Character map → mesh slots | suit/hair as tint or swap materials |
 | Ped variants | 4–8 palette / mesh variants from one base |
 | `sim_actor` path | Prefer mesh; fall back to procedural if load fails |
 
@@ -142,11 +159,11 @@ Everything below builds on that substrate.
 | Item | File / action |
 |------|----------------|
 | Kenney Car Kit GLBs | `assets/cc0/vehicles/` |
+| Custom period cars | TRELLIS from concept images → `assets/generated/vehicles/` |
 | Vehicle def | `src/game/vehicle_def.zig` — mesh id, wheel local offsets, wheel radius |
 | Draw | Body mesh + 4 wheel meshes; wheel spin from `omega = speed / radius` |
 | Steering visual | Front wheels yaw with input  
 | Damage tint | Darken / swap material as `health` drops |
-| Garage / fleet UI | Already has panels — bind to real mesh previews later |
 
 ### Exit criteria
 - [ ] Enter sedan/truck/taxi/motorcycle → each has distinct mesh  
@@ -164,7 +181,7 @@ Everything below builds on that substrate.
 
 ### Model (keep pure Zig, no PhysX)
 
-**Raycast vehicle** (standard indie approach, same family as many GTA-likes):
+**Raycast vehicle** (standard indie approach):
 
 ```
 per wheel:
@@ -181,19 +198,17 @@ body:
 ### Work
 | Item | File / action |
 |------|----------------|
-| Core sim | `src/game/vehicle_phys.zig` — `Chassis`, `Wheel`, integrate at fixed dt |
+| Core sim | `src/game/vehicle_phys.zig` |
 | Input map | Throttle / brake / steer / handbrake → forces |
-| Surface grip | Asphalt vs dirt_alley from material under ray (query cityscape) |
-| Arcade assist | Optional “assist” curve so 1930s era cars stay drivable |
+| Surface grip | Asphalt vs dirt_alley from material under ray |
+| Arcade assist | Optional assist so 1930s era cars stay drivable |
 | Replace `action.drive` | Call phys integrate; sync `Vehicle.x/y`, yaw, speed |
-| Camera | Existing `FollowCam` — lower FOV slightly at high speed |
 
 ### Exit criteria
 - [ ] Acceleration and braking feel different by vehicle type  
 - [ ] Body rolls on turn; nose dives on brake (visible mesh tilt)  
 - [ ] Handbrake induces controllable slide  
 - [ ] Hit wall → speed loss + optional bounce, not teleport  
-- [ ] Motorcycle more tippy / higher max speed than truck  
 
 **Estimate:** 2 sprints (tuning is most of the time).
 
@@ -201,24 +216,21 @@ body:
 
 ## Phase 6 — Vehicle telemetry (instruments)
 
-**Goal:** While driving, the player sees real feedback — not just a number in a corner.
+**Goal:** While driving, the player sees real feedback.
 
 ### Work
 | Item | File / action |
 |------|----------------|
-| Telemetry state | `src/game/telemetry.zig` — speed mph/kph, RPM, gear, slip, damage, heat |
-| Derive | RPM from wheel omega × gear ratio table; gear auto or sequential |
-| HUD | `src/engine/vehicle_hud.zig` — speedo arc, RPM bar, gear letter, damage pips, wanted stars when chasing |
-| Audio hooks (later) | Engine pitch from RPM (placeholder print / optional SDL later) |
-| Era flavor | 1930s analog dials vs 1980s digital strip (same data, different draw) |
+| Telemetry state | `src/game/telemetry.zig` — speed, RPM, gear, slip, damage |
+| HUD | `src/engine/vehicle_hud.zig` |
+| Era flavor | 1930s analog dials vs 1980s digital strip |
 
 ### Exit criteria
 - [ ] Driving shows speed + RPM + gear updating every frame  
-- [ ] Redline flash near max RPM  
 - [ ] Damage section reacts to wall hits  
 - [ ] HUD hidden on foot; appears on enter  
 
-**Estimate:** 1 sprint (mostly UI + wiring).
+**Estimate:** 1 sprint.
 
 ---
 
@@ -229,16 +241,13 @@ body:
 ### Work
 | Item | File / action |
 |------|----------------|
-| Traffic sim | `src/game/traffic.zig` — spline or lane graph along avenues; simple follow + stop |
+| Traffic sim | `src/game/traffic.zig` |
 | Spawn budget | Cap active cars / peds; recycle off-camera |
-| Ped AI | Wander sidewalks, cross at crosswalks, flee on gunfire / high wanted |
-| Ambient | Parked mesh density already in cityscape; add moving traffic |
-| Heat interaction | Cops prefer road network; chase uses vehicle phys |
+| Ped AI | Wander sidewalks, cross at crosswalks |
 
 ### Exit criteria
 - [ ] ≥ 12 moving cars on avenues without tanking FPS  
-- [ ] Peds use sidewalks; crosswalks matter  
-- [ ] Player can cause traffic pile-up that clears over time  
+- [ ] Peds use sidewalks  
 
 **Estimate:** 2 sprints.
 
@@ -251,17 +260,13 @@ body:
 ### Work
 | Item | File / action |
 |------|----------------|
-| Day/night already exists | Strengthen lamp contribution; simple blob shadows already present |
 | LOD | Distance switch: full mesh → low mesh → box impostor |
-| Fog / horizon | Already in lit shader — tune per era |
-| Texture mips | Generate or load mip chain for asphalt/brick |
-| Optional shadow map | One cascade directional if budget allows |
+| Texture mips | Generate or load mip chain |
 | Streaming hint | Unload LRU in ResourceManager when > 256 |
 
 ### Exit criteria
 - [ ] Far blocks do not all draw full mesh  
-- [ ] Night lamps actually light nearby facades (even if crude)  
-- [ ] No obvious pop when approaching a district  
+- [ ] Night lamps light nearby facades  
 
 **Estimate:** 1–2 sprints.
 
@@ -274,15 +279,15 @@ Phase 1 (textures)
     ↓
 Phase 2 (mesh buildings) ──┐
     ↓                      │
-Phase 3 (people)           ├── assets from fetch script
+Phase 3 (people)           ├── Kenney fetch + TRELLIS generated
     ↓                      │
 Phase 4 (car meshes) ──────┘
     ↓
-Phase 5 (physics)  ← needs car mesh transforms + wheel offsets
+Phase 5 (physics)
     ↓
-Phase 6 (telemetry) ← needs phys state (RPM, speed, slip)
+Phase 6 (telemetry)
     ↓
-Phase 7 (traffic) ← needs phys + meshes
+Phase 7 (traffic)
     ↓
 Phase 8 (polish)
 ```
@@ -315,11 +320,10 @@ When a new player boots the GPU build and:
 
 ---
 
-## Immediate next step (start Phase 1)
+## Immediate next step
 
-1. `git pull`  
-2. Implement `image.zig` + GL texture upload from `texture_bank.generateTile`  
-3. Sample albedo in `lit_frag`  
-4. Optional: run `./tools/fetch_cc0_assets.sh` on a machine with network for Poly Haven asphalt/brick  
+1. Continue Phase 1: GL texture upload from `texture_bank` + sample in lit shader  
+2. In parallel: install TRELLIS.2 on a GPU machine and generate one prop into `assets/generated/props/`  
+3. Confirm `ResourceManager` ingests the new GLB  
 
-After Phase 1 ships, Phase 2 (Kenney buildings on footprints) is the largest visible jump.
+See **`docs/ART_GENERATION_PIPELINE.md`** for TRELLIS setup and conventions.

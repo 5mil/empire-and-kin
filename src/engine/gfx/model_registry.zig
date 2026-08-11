@@ -25,7 +25,6 @@ pub const Registry = struct {
         self.* = .{ .allocator = self.allocator, .res = resource_manager.ResourceManager.init(self.allocator) };
     }
 
-    /// Mass-ingest all GLBs under standard CC0 + generated trees.
     pub fn tryLoadDefaults(self: *Registry) void {
         self.res.addScanRoot("assets/cc0");
         self.res.addScanRoot("assets/cc0/characters");
@@ -52,16 +51,7 @@ pub const Registry = struct {
         }
         if (self.boss_id == null) self.boss_id = self.res.firstOf(.character);
 
-        // Collect building variants from cache (firstOf + walk slots)
-        self.building_count = 0;
-        var i: usize = 0;
-        while (i < resource_manager.MAX_CACHED) : (i += 1) {
-            if (!self.res.slots[i].used) continue;
-            if (self.res.slots[i].category != .building) continue;
-            if (self.building_count >= MAX_BUILDING_VARIANTS) break;
-            self.building_ids[self.building_count] = self.res.slots[i].id;
-            self.building_count += 1;
-        }
+        self.building_count = self.res.collectCategory(.building, self.building_ids[0..]);
         if (self.building_count == 0) {
             const prefer_bld = [_][]const u8{
                 "assets/cc0/buildings/building.glb",
@@ -95,7 +85,6 @@ pub const Registry = struct {
         });
     }
 
-    /// Stable variant pick from world position so nearby footprints can differ.
     pub fn buildingIdAt(self: *const Registry, x: f32, z: f32) ?resource_manager.AssetId {
         if (self.building_count == 0) return self.building_id;
         const hx: i32 = @intFromFloat(x * 10.0);

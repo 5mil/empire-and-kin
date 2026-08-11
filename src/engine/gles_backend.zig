@@ -1,6 +1,4 @@
 //! GLES 3.0 backend — visual parity with desktop GLBackend.
-//!
-//! Host calls empire_gles_attach(window, w, h) before the game loop.
 
 const std = @import("std");
 const backend = @import("backend.zig");
@@ -78,7 +76,6 @@ fn endFrameImpl() void {
         const q = text_queue[i];
         rend.drawText(q.t[0..q.len], q.x, q.y, q.c);
     }
-    // On-screen stick labels (bitmap font)
     if (egl) |e| {
         const w: i32 = @intCast(e.width);
         const h: i32 = @intCast(e.height);
@@ -131,6 +128,10 @@ fn drawBoxImpl(pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Color) 
 fn drawPlayerProxyImpl(pos: backend.Vec3, facing_yaw: f32, color: backend.Color) void {
     if (attached) rend.drawPlayerProxy(pos, facing_yaw, color);
 }
+fn drawBuildingImpl(pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Color) bool {
+    if (!attached) return false;
+    return rend.drawBuilding(pos, w, h, d, color);
+}
 
 pub fn getBackend() backend.Backend {
     return .{ .vtable = .{
@@ -147,5 +148,6 @@ pub fn getBackend() backend.Backend {
         .drawGround = drawGroundImpl,
         .drawBox = drawBoxImpl,
         .drawPlayerProxy = drawPlayerProxyImpl,
+        .drawBuilding = drawBuildingImpl,
     } };
 }

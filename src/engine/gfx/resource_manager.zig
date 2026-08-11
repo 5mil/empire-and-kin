@@ -49,7 +49,7 @@ pub const ResourceManager = struct {
     allocator: std.mem.Allocator,
     slots: [MAX_CACHED]Slot = [_]Slot{.{}} ** MAX_CACHED,
     count: usize = 0,
-    scan_roots: [8][]const u8 = undefined,
+    scan_roots: [12][]const u8 = undefined,
     scan_root_count: usize = 0,
 
     pub fn init(allocator: std.mem.Allocator) ResourceManager {
@@ -195,6 +195,19 @@ pub const ResourceManager = struct {
             if (self.slots[i].used and self.slots[i].category == cat) return self.slots[i].id;
         }
         return null;
+    }
+
+    /// Fill `out` with up to `out.len` asset ids of the given category. Returns count.
+    pub fn collectCategory(self: *const ResourceManager, cat: Category, out: []AssetId) usize {
+        var n: usize = 0;
+        var i: usize = 0;
+        while (i < MAX_CACHED and n < out.len) : (i += 1) {
+            if (self.slots[i].used and self.slots[i].category == cat) {
+                out[n] = self.slots[i].id;
+                n += 1;
+            }
+        }
+        return n;
     }
 
     pub fn countCategory(self: *ResourceManager, cat: Category) usize {

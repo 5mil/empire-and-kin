@@ -1,0 +1,19 @@
+{
+  "id": "veh.sedan.period.01",
+  "kind": "vehicle",
+  "era": "nyc_1930s",
+  "fallback": {
+    "material": "metal",
+    "prim": "box_vehicle"
+  },
+  "prefer": [
+    "assets/cc0/vehicles/sedan.glb",
+    "assets/generated/vehicles/sedan_period_01/sedan_period_01.glb"
+  ],
+  "generate": {
+    "tool": "trellis2",
+    "prompt": "1930s period sedan car, clean silhouette, plain background, game-ready vehicle",
+    "res": 512,
+    "out": "assets/generated/vehicles/sedan_period_01"
+  }
+}

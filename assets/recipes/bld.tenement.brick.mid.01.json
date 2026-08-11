@@ -1,0 +1,22 @@
+{
+  "id": "bld.tenement.brick.mid.01",
+  "kind": "building",
+  "era": "nyc_1930s",
+  "footprint": { "w": 5.0, "h": 7.0, "d": 4.0 },
+  "style": ["brick", "fire_escape"],
+  "fallback": {
+    "material": "brick",
+    "prim": "box_building"
+  },
+  "prefer": [
+    "assets/cc0/buildings/building.glb",
+    "assets/cc0/buildings/house.glb",
+    "assets/generated/buildings/tenement_brick_mid_01/tenement_brick_mid_01.glb"
+  ],
+  "generate": {
+    "tool": "trellis2",
+    "prompt": "1930s NYC brick tenement building, orthographic front three-quarter, plain background, game-ready low poly",
+    "res": 512,
+    "out": "assets/generated/buildings/tenement_brick_mid_01"
+  }
+}

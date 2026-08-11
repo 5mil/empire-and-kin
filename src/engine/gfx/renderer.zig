@@ -136,6 +136,8 @@ pub const Renderer = struct {
         const loc_fog = gl.glGetUniformLocation(self.lit_prog, "uFogColor");
         const loc_dens = gl.glGetUniformLocation(self.lit_prog, "uFogDensity");
         const loc_cam = gl.glGetUniformLocation(self.lit_prog, "uCamPos");
+        const loc_use = gl.glGetUniformLocation(self.lit_prog, "uUseTexture");
+        if (loc_use >= 0) gl.glUniform1i(loc_use, 0);
         gl.glUniformMatrix4fv(loc_mvp, 1, gl.FALSE, mvp.ptr());
         gl.glUniformMatrix4fv(loc_model, 1, gl.FALSE, model.ptr());
         gl.glUniform3f(loc_light, self.light_dir[0], self.light_dir[1], self.light_dir[2]);
@@ -162,6 +164,21 @@ pub const Renderer = struct {
         const t = math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z });
         const s = math.Mat4.scaleVec(.{ .x = w, .y = h, .z = d });
         self.drawMesh(self.box, math.Mat4.mul(t, s), color);
+    }
+
+    /// Phase 2: place a building GLB at footprint center, scaled to w×h×d.
+    /// Assumes source mesh is roughly unit-sized; non-uniform scale fits the footprint.
+    pub fn drawBuilding(self: *Renderer, pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Color) bool {
+        if (g_models) |*reg| {
+            if (reg.building_gpu_at(pos.x, pos.z)) |m| {
+                // Lift so base sits near y=0; center of unit mesh ~0.5 after scale.h
+                const t = math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z });
+                const s = math.Mat4.scaleVec(.{ .x = w, .y = h, .z = d });
+                self.drawMesh(m, math.Mat4.mul(t, s), color);
+                return true;
+            }
+        }
+        return false;
     }
 
     pub fn drawBossMesh(self: *Renderer, pos: backend.Vec3, scale: f32, tint: backend.Color) bool {

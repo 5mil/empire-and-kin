@@ -2,7 +2,6 @@ const std = @import("std");
 
 /// Thin renderer/input abstraction.
 /// Game code depends on this — not on a specific engine.
-/// Implement with Magister/Arcis/RealCity (or raylib/SDL) later.
 
 pub const Key = enum {
     w,
@@ -59,11 +58,12 @@ pub const VTable = struct {
     shouldClose: *const fn () bool,
     drawText: *const fn (text: []const u8, x: i32, y: i32, color: Color) void,
     clear: *const fn (color: Color) void,
-    /// Step 3 scene primitives
     setCamera: *const fn (cam: Camera) void,
     drawGround: *const fn (size: f32, color: Color) void,
     drawBox: *const fn (pos: Vec3, w: f32, h: f32, d: f32, color: Color) void,
     drawPlayerProxy: *const fn (pos: Vec3, facing_yaw: f32, color: Color) void,
+    /// Phase 2: draw a building mesh scaled to footprint. Returns true if a GLB was used.
+    drawBuilding: *const fn (pos: Vec3, w: f32, h: f32, d: f32, color: Color) bool,
 };
 
 pub const Backend = struct {
@@ -107,5 +107,8 @@ pub const Backend = struct {
     }
     pub fn drawPlayerProxy(self: Backend, pos: Vec3, facing_yaw: f32, color: Color) void {
         self.vtable.drawPlayerProxy(pos, facing_yaw, color);
+    }
+    pub fn drawBuilding(self: Backend, pos: Vec3, w: f32, h: f32, d: f32, color: Color) bool {
+        return self.vtable.drawBuilding(pos, w, h, d, color);
     }
 };

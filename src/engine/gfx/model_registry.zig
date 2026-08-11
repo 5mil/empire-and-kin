@@ -1,15 +1,19 @@
 //! High-level model registry built on ResourceManager.
-//! Scans assets/cc0/** for GLB, picks character/building/vehicle slots.
+//! Scans assets/cc0/** and assets/generated/** for GLB.
 
 const std = @import("std");
 const gpu_mesh = @import("gpu_mesh.zig");
 const resource_manager = @import("resource_manager.zig");
+
+pub const MAX_BUILDING_VARIANTS: usize = 16;
 
 pub const Registry = struct {
     allocator: std.mem.Allocator,
     res: resource_manager.ResourceManager,
     boss_id: ?resource_manager.AssetId = null,
     building_id: ?resource_manager.AssetId = null,
+    building_ids: [MAX_BUILDING_VARIANTS]resource_manager.AssetId = undefined,
+    building_count: usize = 0,
     vehicle_id: ?resource_manager.AssetId = null,
 
     pub fn init(allocator: std.mem.Allocator) Registry {
@@ -21,7 +25,7 @@ pub const Registry = struct {
         self.* = .{ .allocator = self.allocator, .res = resource_manager.ResourceManager.init(self.allocator) };
     }
 
-    /// Mass-ingest all GLBs under standard CC0 trees + named fallbacks.
+    /// Mass-ingest all GLBs under standard CC0 + generated trees.
     pub fn tryLoadDefaults(self: *Registry) void {
         self.res.addScanRoot("assets/cc0");
         self.res.addScanRoot("assets/cc0/characters");
@@ -29,9 +33,12 @@ pub const Registry = struct {
         self.res.addScanRoot("assets/cc0/vehicles");
         self.res.addScanRoot("assets/cc0/props");
         self.res.addScanRoot("assets/cc0/environment");
+        self.res.addScanRoot("assets/generated");
+        self.res.addScanRoot("assets/generated/buildings");
+        self.res.addScanRoot("assets/generated/props");
+        self.res.addScanRoot("assets/generated/vehicles");
         self.res.ingestTree();
 
-        // Prefer explicit names if present
         const prefer_boss = [_][]const u8{
             "assets/cc0/characters/character.glb",
             "assets/cc0/characters/Character.glb",
@@ -45,32 +52,60 @@ pub const Registry = struct {
         }
         if (self.boss_id == null) self.boss_id = self.res.firstOf(.character);
 
-        const prefer_bld = [_][]const u8{
-            "assets/cc0/buildings/building.glb",
-            "assets/cc0/buildings/house.glb",
-        };
-        for (prefer_bld) |p| {
-            if (self.res.loadPath(p)) |id| {
-                self.building_id = id;
-                break;
+        // Collect building variants from cache (firstOf + walk slots)
+        self.building_count = 0;
+        var i: usize = 0;
+        while (i < resource_manager.MAX_CACHED) : (i += 1) {
+            if (!self.res.slots[i].used) continue;
+            if (self.res.slots[i].category != .building) continue;
+            if (self.building_count >= MAX_BUILDING_VARIANTS) break;
+            self.building_ids[self.building_count] = self.res.slots[i].id;
+            self.building_count += 1;
+        }
+        if (self.building_count == 0) {
+            const prefer_bld = [_][]const u8{
+                "assets/cc0/buildings/building.glb",
+                "assets/cc0/buildings/house.glb",
+            };
+            for (prefer_bld) |p| {
+                if (self.res.loadPath(p)) |id| {
+                    self.building_ids[0] = id;
+                    self.building_count = 1;
+                    break;
+                }
+            }
+            if (self.building_count == 0) {
+                if (self.res.firstOf(.building)) |id| {
+                    self.building_ids[0] = id;
+                    self.building_count = 1;
+                }
             }
         }
-        if (self.building_id == null) self.building_id = self.res.firstOf(.building);
+        if (self.building_count > 0) self.building_id = self.building_ids[0];
 
         self.vehicle_id = self.res.firstOf(.vehicle);
 
-        std.debug.print("[models] cache={d} chars={d} bld={d} veh={d} props={d}\n", .{
+        std.debug.print("[models] cache={d} chars={d} bld={d} variants={d} veh={d} props={d}\n", .{
             self.res.totalCached(),
             self.res.countCategory(.character),
             self.res.countCategory(.building),
+            self.building_count,
             self.res.countCategory(.vehicle),
             self.res.countCategory(.prop),
         });
     }
 
+    /// Stable variant pick from world position so nearby footprints can differ.
+    pub fn buildingIdAt(self: *const Registry, x: f32, z: f32) ?resource_manager.AssetId {
+        if (self.building_count == 0) return self.building_id;
+        const hx: i32 = @intFromFloat(x * 10.0);
+        const hz: i32 = @intFromFloat(z * 10.0);
+        const h: u32 = @bitCast(hx *% 73856093 ^ hz *% 19349663);
+        return self.building_ids[h % self.building_count];
+    }
+
     pub fn boss_gpu(self: *const Registry) ?gpu_mesh.GpuMesh {
         const id = self.boss_id orelse return null;
-        // const cast for getGpu — need mut; use workaround
         return @constCast(&self.res).getGpu(id);
     }
 
@@ -79,12 +114,16 @@ pub const Registry = struct {
         return @constCast(&self.res).getGpu(id);
     }
 
+    pub fn building_gpu_at(self: *const Registry, x: f32, z: f32) ?gpu_mesh.GpuMesh {
+        const id = self.buildingIdAt(x, z) orelse return null;
+        return @constCast(&self.res).getGpu(id);
+    }
+
     pub fn vehicle_gpu(self: *const Registry) ?gpu_mesh.GpuMesh {
         const id = self.vehicle_id orelse return null;
         return @constCast(&self.res).getGpu(id);
     }
 
-    // Back-compat fields for older renderer hooks
     pub fn getBossGpu(self: *Registry) ?gpu_mesh.GpuMesh {
         return self.boss_gpu();
     }

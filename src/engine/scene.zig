@@ -48,8 +48,13 @@ fn lotGrid(gfx: backend.Backend) void {
     }
 }
 
+/// Phase 2: try GLB mesh scaled to footprint; else procedural box building.
 fn building(gfx: backend.Backend, x: f32, z: f32, w: f32, h: f32, d: f32, col: backend.Color, lit: bool) void {
     shadow(gfx, x, z, w * 1.05, d * 1.05);
+    // Center at mid-height so unit-ish meshes and boxes share the same transform.
+    if (gfx.drawBuilding(.{ .x = x, .y = h * 0.5, .z = z }, w, h, d, col)) {
+        return;
+    }
     box(gfx, x, h * 0.5, z, w, h, d, col);
     box(gfx, x, h + 0.12, z, w + 0.25, 0.28, d + 0.25, texture_bank.colorOf(.roof_tar));
     box(gfx, x + w * 0.28, h + 0.65, z - d * 0.18, 0.45, 0.9, 0.45, backend.Color.rgb(58, 52, 48));
@@ -161,8 +166,11 @@ fn districtSign(gfx: backend.Backend, x: f32, z: f32, tall: bool) void {
 
 fn safehouse(gfx: backend.Backend, lit: bool) void {
     shadow(gfx, SAFEHOUSE_X, SAFEHOUSE_Z, 5.0, 4.5);
-    box(gfx, SAFEHOUSE_X, 2.5, SAFEHOUSE_Z, 4.5, 5.0, 4.0, texture_bank.colorOf(.concrete));
-    box(gfx, SAFEHOUSE_X, 5.2, SAFEHOUSE_Z, 4.8, 0.35, 4.3, texture_bank.colorOf(.roof_tar));
+    // Prefer mesh if a building GLB is available at this footprint.
+    if (!gfx.drawBuilding(.{ .x = SAFEHOUSE_X, .y = 2.5, .z = SAFEHOUSE_Z }, 4.5, 5.0, 4.0, texture_bank.colorOf(.concrete))) {
+        box(gfx, SAFEHOUSE_X, 2.5, SAFEHOUSE_Z, 4.5, 5.0, 4.0, texture_bank.colorOf(.concrete));
+        box(gfx, SAFEHOUSE_X, 5.2, SAFEHOUSE_Z, 4.8, 0.35, 4.3, texture_bank.colorOf(.roof_tar));
+    }
     box(gfx, SAFEHOUSE_X, 1.1, SAFEHOUSE_Z + 2.05, 1.4, 2.2, 0.2, backend.Color.rgb(30, 120, 70));
     const win = if (lit) backend.Color.rgb(255, 200, 100) else backend.Color.rgb(80, 100, 120);
     box(gfx, SAFEHOUSE_X - 1.2, 3.4, SAFEHOUSE_Z + 2.0, 0.8, 1.0, 0.15, win);
@@ -243,7 +251,6 @@ pub fn drawMinimalScene(
     dumpster(gfx, 58.0, 32.0);
 
     for (cityscape.BUILDINGS) |b| {
-        // Tint toward brick/stucco material bank for surface identity
         const base = cityscape.colorOf(b);
         building(gfx, b.x, b.z, b.w, b.h, b.d, base, nightish);
     }

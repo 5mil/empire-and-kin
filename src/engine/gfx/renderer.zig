@@ -1,5 +1,6 @@
 //! Frame renderer: lit meshes + ResourceManager GLB cache + HUD + fog.
-//! Phase 1: texture_bank tiles uploaded as real GL textures and sampled in lit shader.
+//! Phase 1: texture_bank tiles as real GL textures.
+//! Phase 2: building + prop GLBs on cityscape footprints.
 
 const std = @import("std");
 const gl = @import("gl.zig");
@@ -49,7 +50,6 @@ pub const Renderer = struct {
         const ground_m = mesh.buildGround(1, .{ 1, 1, 1, 1 }, &g_v, &g_i);
         self.ground = gpu_mesh.GpuMesh.create(ground_m);
 
-        // Phase 1: upload all procedural material tiles as real GL textures.
         self.tex_bank.init();
 
         gl.glGenVertexArrays(1, &self.ui_vao);
@@ -133,7 +133,6 @@ pub const Renderer = struct {
         self.view_proj = math.Mat4.mul(proj, view);
     }
 
-    /// Core draw: optional material binds real albedo from texture_bank.
     pub fn drawMeshTextured(
         self: *Renderer,
         m: gpu_mesh.GpuMesh,
@@ -195,7 +194,6 @@ pub const Renderer = struct {
 
     pub fn drawGround(self: *Renderer, size: f32, color: backend.Color) void {
         const model = math.Mat4.scaleVec(.{ .x = size, .y = 1, .z = size });
-        // Always sample asphalt for the large ground plane — kills flat green/gray.
         self.drawMeshTextured(self.ground, model, color, .asphalt);
     }
 
@@ -206,14 +204,26 @@ pub const Renderer = struct {
         self.drawMeshTextured(self.box, math.Mat4.mul(t, s), color, mid);
     }
 
-    /// Phase 2: place a building GLB at footprint center, scaled to w×h×d.
     pub fn drawBuilding(self: *Renderer, pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Color) bool {
         if (g_models) |*reg| {
             if (reg.building_gpu_at(pos.x, pos.z)) |m| {
                 const t = math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z });
                 const s = math.Mat4.scaleVec(.{ .x = w, .y = h, .z = d });
-                // GLB may carry its own materials; still apply brick-ish sample for consistency.
                 const mid = materialFromColor(color) orelse .brick;
+                self.drawMeshTextured(m, math.Mat4.mul(t, s), color, mid);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// Phase 2: street prop (lamp, tree, hydrant, dumpster, …).
+    pub fn drawProp(self: *Renderer, pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Color) bool {
+        if (g_models) |*reg| {
+            if (reg.prop_gpu_at(pos.x, pos.z)) |m| {
+                const t = math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z });
+                const s = math.Mat4.scaleVec(.{ .x = w, .y = h, .z = d });
+                const mid = materialFromColor(color);
                 self.drawMeshTextured(m, math.Mat4.mul(t, s), color, mid);
                 return true;
             }
@@ -334,9 +344,7 @@ pub const Renderer = struct {
     }
 };
 
-/// Map a draw tint to the closest locked-in MaterialId so boxes get real albedo.
 fn materialFromColor(c: backend.Color) ?texture_bank.MaterialId {
-    // Exact matches from texture_bank.colorOf first
     inline for (texture_bank.materials) |m| {
         if (c.r == m.tint_r and c.g == m.tint_g and c.b == m.tint_b) {
             return m.id;
@@ -348,37 +356,29 @@ fn materialFromColor(c: backend.Color) ?texture_bank.MaterialId {
     const bf: f32 = @as(f32, @floatFromInt(c.b));
     const lum = (rf + gf + bf) / 3.0;
 
-    // Warm brick / brown building facades (cityscape RGB ranges)
     if (rf > gf + 8 and rf > bf + 8 and lum > 45 and lum < 120 and rf < 160) {
         if (lum < 70) return .brick_dark;
         return .brick;
     }
-    // Cool gray / concrete / metal towers
     if (@abs(rf - gf) < 12 and @abs(gf - bf) < 18 and lum > 35 and lum < 100) {
         if (lum < 55) return .metal;
         return .concrete;
     }
-    // Sidewalk-ish light gray
     if (lum > 95 and lum < 145 and @abs(rf - gf) < 15 and @abs(gf - bf) < 20) {
         return .sidewalk;
     }
-    // Dark asphalt / road
     if (lum < 45 and @abs(rf - gf) < 10 and @abs(gf - bf) < 12) {
         return .asphalt;
     }
-    // Green foliage
     if (gf > rf + 15 and gf > bf + 10 and lum > 30 and lum < 120) {
         return .foliage;
     }
-    // Yellow painted line
     if (rf > 150 and gf > 130 and bf < 100) {
         return .painted_line;
     }
-    // Dirt
     if (rf > gf and gf > bf and lum > 40 and lum < 90 and rf < 100) {
         return .dirt_alley;
     }
-    // Default building mass → brick so facades never stay flat tint
     if (lum > 40 and lum < 130) return .brick;
     return null;
 }

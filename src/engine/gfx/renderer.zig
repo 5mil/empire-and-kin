@@ -1,4 +1,5 @@
 //! Frame renderer: lit meshes + ResourceManager GLB cache + HUD + fog.
+//! Phase 1: texture_bank tiles uploaded as real GL textures and sampled in lit shader.
 
 const std = @import("std");
 const gl = @import("gl.zig");
@@ -9,6 +10,8 @@ const shaders = @import("shader_select.zig").shaders;
 const font = @import("font.zig");
 const backend = @import("../backend.zig");
 const model_registry = @import("model_registry.zig");
+const texture_bank = @import("texture_bank.zig");
+const texture_gpu = @import("texture_gpu.zig");
 
 pub var g_models: ?model_registry.Registry = null;
 
@@ -27,6 +30,7 @@ pub const Renderer = struct {
     ambient: [3]f32 = .{ 0.55, 0.55, 0.58 },
     fog_color: [3]f32 = .{ 0.45, 0.55, 0.65 },
     fog_density: f32 = 0.012,
+    tex_bank: texture_gpu.GpuBank = .{},
 
     pub fn init(self: *Renderer, width: u32, height: u32) !void {
         self.width = if (width == 0) 1280 else width;
@@ -44,6 +48,9 @@ pub const Renderer = struct {
         var g_i: [6]u32 = undefined;
         const ground_m = mesh.buildGround(1, .{ 1, 1, 1, 1 }, &g_v, &g_i);
         self.ground = gpu_mesh.GpuMesh.create(ground_m);
+
+        // Phase 1: upload all procedural material tiles as real GL textures.
+        self.tex_bank.init();
 
         gl.glGenVertexArrays(1, &self.ui_vao);
         gl.glGenBuffers(1, &self.ui_vbo);
@@ -74,6 +81,7 @@ pub const Renderer = struct {
             reg.deinit();
             g_models = null;
         }
+        self.tex_bank.deinit();
         self.box.destroy();
         self.ground.destroy();
         if (self.ui_vao != 0) gl.glDeleteVertexArrays(1, &self.ui_vao);
@@ -125,7 +133,14 @@ pub const Renderer = struct {
         self.view_proj = math.Mat4.mul(proj, view);
     }
 
-    pub fn drawMesh(self: *Renderer, m: gpu_mesh.GpuMesh, model: math.Mat4, tint: backend.Color) void {
+    /// Core draw: optional material binds real albedo from texture_bank.
+    pub fn drawMeshTextured(
+        self: *Renderer,
+        m: gpu_mesh.GpuMesh,
+        model: math.Mat4,
+        tint: backend.Color,
+        material: ?texture_bank.MaterialId,
+    ) void {
         gl.glUseProgram(self.lit_prog);
         const mvp = math.Mat4.mul(self.view_proj, model);
         const loc_mvp = gl.glGetUniformLocation(self.lit_prog, "uMVP");
@@ -137,7 +152,22 @@ pub const Renderer = struct {
         const loc_dens = gl.glGetUniformLocation(self.lit_prog, "uFogDensity");
         const loc_cam = gl.glGetUniformLocation(self.lit_prog, "uCamPos");
         const loc_use = gl.glGetUniformLocation(self.lit_prog, "uUseTexture");
-        if (loc_use >= 0) gl.glUniform1i(loc_use, 0);
+        const loc_scale = gl.glGetUniformLocation(self.lit_prog, "uUvScale");
+        const loc_albedo = gl.glGetUniformLocation(self.lit_prog, "uAlbedo");
+
+        if (material) |mid| {
+            if (self.tex_bank.ready) {
+                self.tex_bank.bind(mid, gl.TEXTURE0);
+                if (loc_use >= 0) gl.glUniform1i(loc_use, 1);
+                if (loc_albedo >= 0) gl.glUniform1i(loc_albedo, 0);
+                if (loc_scale >= 0) gl.glUniform1f(loc_scale, texture_gpu.uvScale(mid));
+            } else {
+                if (loc_use >= 0) gl.glUniform1i(loc_use, 0);
+            }
+        } else {
+            if (loc_use >= 0) gl.glUniform1i(loc_use, 0);
+        }
+
         gl.glUniformMatrix4fv(loc_mvp, 1, gl.FALSE, mvp.ptr());
         gl.glUniformMatrix4fv(loc_model, 1, gl.FALSE, model.ptr());
         gl.glUniform3f(loc_light, self.light_dir[0], self.light_dir[1], self.light_dir[2]);
@@ -153,28 +183,38 @@ pub const Renderer = struct {
         gl.glUniform1f(loc_dens, self.fog_density);
         gl.glUniform3f(loc_cam, self.cam.position.x, self.cam.position.y, self.cam.position.z);
         m.draw();
+
+        if (material != null) {
+            texture_gpu.GpuBank.unbind(gl.TEXTURE0);
+        }
+    }
+
+    pub fn drawMesh(self: *Renderer, m: gpu_mesh.GpuMesh, model: math.Mat4, tint: backend.Color) void {
+        self.drawMeshTextured(m, model, tint, null);
     }
 
     pub fn drawGround(self: *Renderer, size: f32, color: backend.Color) void {
         const model = math.Mat4.scaleVec(.{ .x = size, .y = 1, .z = size });
-        self.drawMesh(self.ground, model, color);
+        // Always sample asphalt for the large ground plane — kills flat green/gray.
+        self.drawMeshTextured(self.ground, model, color, .asphalt);
     }
 
     pub fn drawBox(self: *Renderer, pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Color) void {
         const t = math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z });
         const s = math.Mat4.scaleVec(.{ .x = w, .y = h, .z = d });
-        self.drawMesh(self.box, math.Mat4.mul(t, s), color);
+        const mid = materialFromColor(color);
+        self.drawMeshTextured(self.box, math.Mat4.mul(t, s), color, mid);
     }
 
     /// Phase 2: place a building GLB at footprint center, scaled to w×h×d.
-    /// Assumes source mesh is roughly unit-sized; non-uniform scale fits the footprint.
     pub fn drawBuilding(self: *Renderer, pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Color) bool {
         if (g_models) |*reg| {
             if (reg.building_gpu_at(pos.x, pos.z)) |m| {
-                // Lift so base sits near y=0; center of unit mesh ~0.5 after scale.h
                 const t = math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z });
                 const s = math.Mat4.scaleVec(.{ .x = w, .y = h, .z = d });
-                self.drawMesh(m, math.Mat4.mul(t, s), color);
+                // GLB may carry its own materials; still apply brick-ish sample for consistency.
+                const mid = materialFromColor(color) orelse .brick;
+                self.drawMeshTextured(m, math.Mat4.mul(t, s), color, mid);
                 return true;
             }
         }
@@ -293,6 +333,55 @@ pub const Renderer = struct {
         self.flushUi(&vert_buf, vcount);
     }
 };
+
+/// Map a draw tint to the closest locked-in MaterialId so boxes get real albedo.
+fn materialFromColor(c: backend.Color) ?texture_bank.MaterialId {
+    // Exact matches from texture_bank.colorOf first
+    inline for (texture_bank.materials) |m| {
+        if (c.r == m.tint_r and c.g == m.tint_g and c.b == m.tint_b) {
+            return m.id;
+        }
+    }
+
+    const rf: f32 = @as(f32, @floatFromInt(c.r));
+    const gf: f32 = @as(f32, @floatFromInt(c.g));
+    const bf: f32 = @as(f32, @floatFromInt(c.b));
+    const lum = (rf + gf + bf) / 3.0;
+
+    // Warm brick / brown building facades (cityscape RGB ranges)
+    if (rf > gf + 8 and rf > bf + 8 and lum > 45 and lum < 120 and rf < 160) {
+        if (lum < 70) return .brick_dark;
+        return .brick;
+    }
+    // Cool gray / concrete / metal towers
+    if (@abs(rf - gf) < 12 and @abs(gf - bf) < 18 and lum > 35 and lum < 100) {
+        if (lum < 55) return .metal;
+        return .concrete;
+    }
+    // Sidewalk-ish light gray
+    if (lum > 95 and lum < 145 and @abs(rf - gf) < 15 and @abs(gf - bf) < 20) {
+        return .sidewalk;
+    }
+    // Dark asphalt / road
+    if (lum < 45 and @abs(rf - gf) < 10 and @abs(gf - bf) < 12) {
+        return .asphalt;
+    }
+    // Green foliage
+    if (gf > rf + 15 and gf > bf + 10 and lum > 30 and lum < 120) {
+        return .foliage;
+    }
+    // Yellow painted line
+    if (rf > 150 and gf > 130 and bf < 100) {
+        return .painted_line;
+    }
+    // Dirt
+    if (rf > gf and gf > bf and lum > 40 and lum < 90 and rf < 100) {
+        return .dirt_alley;
+    }
+    // Default building mass → brick so facades never stay flat tint
+    if (lum > 40 and lum < 130) return .brick;
+    return null;
+}
 
 fn compileProgram(vs_src: []const u8, fs_src: []const u8) !gl.GLuint {
     const vs = try compileShader(gl.VERTEX_SHADER, vs_src);

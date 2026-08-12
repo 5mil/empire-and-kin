@@ -64,6 +64,8 @@ pub const VTable = struct {
     drawPlayerProxy: *const fn (pos: Vec3, facing_yaw: f32, color: Color) void,
     /// Phase 2: draw a building mesh scaled to footprint. Returns true if a GLB was used.
     drawBuilding: *const fn (pos: Vec3, w: f32, h: f32, d: f32, color: Color) bool,
+    /// Phase 2: street prop mesh (lamp, tree, hydrant…). Returns true if a GLB was used.
+    drawProp: *const fn (pos: Vec3, w: f32, h: f32, d: f32, color: Color) bool,
 };
 
 pub const Backend = struct {
@@ -110,5 +112,8 @@ pub const Backend = struct {
     }
     pub fn drawBuilding(self: Backend, pos: Vec3, w: f32, h: f32, d: f32, color: Color) bool {
         return self.vtable.drawBuilding(pos, w, h, d, color);
+    }
+    pub fn drawProp(self: Backend, pos: Vec3, w: f32, h: f32, d: f32, color: Color) bool {
+        return self.vtable.drawProp(pos, w, h, d, color);
     }
 };

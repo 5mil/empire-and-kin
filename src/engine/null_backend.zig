@@ -91,6 +91,14 @@ fn drawBuildingImpl(pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Co
     _ = color;
     return false;
 }
+fn drawPropImpl(pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Color) bool {
+    _ = pos;
+    _ = w;
+    _ = h;
+    _ = d;
+    _ = color;
+    return false;
+}
 pub fn getBackend() backend.Backend {
     return .{
         .vtable = .{
@@ -108,6 +116,7 @@ pub fn getBackend() backend.Backend {
             .drawBox = drawBoxImpl,
             .drawPlayerProxy = drawPlayerProxyImpl,
             .drawBuilding = drawBuildingImpl,
+            .drawProp = drawPropImpl,
         },
     };
 }

@@ -18,11 +18,61 @@ pub const Category = enum {
     unknown,
 
     pub fn fromPath(path: []const u8) Category {
-        if (std.mem.indexOf(u8, path, "character") != null or std.mem.indexOf(u8, path, "Characters") != null) return .character;
-        if (std.mem.indexOf(u8, path, "building") != null or std.mem.indexOf(u8, path, "City") != null) return .building;
-        if (std.mem.indexOf(u8, path, "vehicle") != null or std.mem.indexOf(u8, path, "car") != null or std.mem.indexOf(u8, path, "Car") != null) return .vehicle;
-        if (std.mem.indexOf(u8, path, "prop") != null or std.mem.indexOf(u8, path, "nature") != null) return .prop;
-        if (std.mem.indexOf(u8, path, "environment") != null or std.mem.indexOf(u8, path, "road") != null) return .environment;
+        const lower_path = path; // path segments are usually lowercase from our layout
+        if (std.mem.indexOf(u8, lower_path, "character") != null or
+            std.mem.indexOf(u8, lower_path, "Characters") != null or
+            std.mem.indexOf(u8, lower_path, "CesiumMan") != null or
+            std.mem.indexOf(u8, lower_path, "Rigged") != null)
+            return .character;
+
+        // Kenney City Kit + generic buildings
+        if (std.mem.indexOf(u8, lower_path, "building") != null or
+            std.mem.indexOf(u8, lower_path, "Building") != null or
+            std.mem.indexOf(u8, lower_path, "/City") != null or
+            std.mem.indexOf(u8, lower_path, "city-kit") != null or
+            std.mem.indexOf(u8, lower_path, "commercial") != null or
+            std.mem.indexOf(u8, lower_path, "suburban") != null or
+            std.mem.indexOf(u8, lower_path, "industrial") != null or
+            std.mem.indexOf(u8, lower_path, "tenement") != null or
+            std.mem.indexOf(u8, lower_path, "house") != null or
+            std.mem.indexOf(u8, lower_path, "skyscraper") != null)
+            return .building;
+
+        if (std.mem.indexOf(u8, lower_path, "vehicle") != null or
+            std.mem.indexOf(u8, lower_path, "car") != null or
+            std.mem.indexOf(u8, lower_path, "Car") != null or
+            std.mem.indexOf(u8, lower_path, "truck") != null or
+            std.mem.indexOf(u8, lower_path, "sedan") != null)
+            return .vehicle;
+
+        // Street furniture / nature — props
+        if (std.mem.indexOf(u8, lower_path, "prop") != null or
+            std.mem.indexOf(u8, lower_path, "nature") != null or
+            std.mem.indexOf(u8, lower_path, "tree") != null or
+            std.mem.indexOf(u8, lower_path, "Tree") != null or
+            std.mem.indexOf(u8, lower_path, "lamp") != null or
+            std.mem.indexOf(u8, lower_path, "hydrant") != null or
+            std.mem.indexOf(u8, lower_path, "dumpster") != null or
+            std.mem.indexOf(u8, lower_path, "barrel") != null or
+            std.mem.indexOf(u8, lower_path, "crate") != null or
+            std.mem.indexOf(u8, lower_path, "bench") != null or
+            std.mem.indexOf(u8, lower_path, "Duck") != null or
+            std.mem.indexOf(u8, lower_path, "Box.glb") != null)
+            return .prop;
+
+        if (std.mem.indexOf(u8, lower_path, "environment") != null or
+            std.mem.indexOf(u8, lower_path, "road") != null or
+            std.mem.indexOf(u8, lower_path, "Road") != null or
+            std.mem.indexOf(u8, lower_path, "sidewalk") != null)
+            return .environment;
+
+        // Folder-based fallback from our scan roots
+        if (std.mem.indexOf(u8, lower_path, "/buildings/") != null) return .building;
+        if (std.mem.indexOf(u8, lower_path, "/vehicles/") != null) return .vehicle;
+        if (std.mem.indexOf(u8, lower_path, "/characters/") != null) return .character;
+        if (std.mem.indexOf(u8, lower_path, "/props/") != null) return .prop;
+        if (std.mem.indexOf(u8, lower_path, "/environment/") != null) return .environment;
+
         return .unknown;
     }
 };
@@ -197,7 +247,6 @@ pub const ResourceManager = struct {
         return null;
     }
 
-    /// Fill `out` with up to `out.len` asset ids of the given category. Returns count.
     pub fn collectCategory(self: *const ResourceManager, cat: Category, out: []AssetId) usize {
         var n: usize = 0;
         var i: usize = 0;

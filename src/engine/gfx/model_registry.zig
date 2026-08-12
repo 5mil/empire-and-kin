@@ -5,7 +5,8 @@ const std = @import("std");
 const gpu_mesh = @import("gpu_mesh.zig");
 const resource_manager = @import("resource_manager.zig");
 
-pub const MAX_BUILDING_VARIANTS: usize = 16;
+pub const MAX_BUILDING_VARIANTS: usize = 32;
+pub const MAX_PROP_VARIANTS: usize = 24;
 
 pub const Registry = struct {
     allocator: std.mem.Allocator,
@@ -15,6 +16,8 @@ pub const Registry = struct {
     building_ids: [MAX_BUILDING_VARIANTS]resource_manager.AssetId = undefined,
     building_count: usize = 0,
     vehicle_id: ?resource_manager.AssetId = null,
+    prop_ids: [MAX_PROP_VARIANTS]resource_manager.AssetId = undefined,
+    prop_count: usize = 0,
 
     pub fn init(allocator: std.mem.Allocator) Registry {
         return .{ .allocator = allocator, .res = resource_manager.ResourceManager.init(allocator) };
@@ -75,13 +78,21 @@ pub const Registry = struct {
 
         self.vehicle_id = self.res.firstOf(.vehicle);
 
+        self.prop_count = self.res.collectCategory(.prop, self.prop_ids[0..]);
+        if (self.prop_count == 0) {
+            if (self.res.firstOf(.prop)) |id| {
+                self.prop_ids[0] = id;
+                self.prop_count = 1;
+            }
+        }
+
         std.debug.print("[models] cache={d} chars={d} bld={d} variants={d} veh={d} props={d}\n", .{
             self.res.totalCached(),
             self.res.countCategory(.character),
             self.res.countCategory(.building),
             self.building_count,
             self.res.countCategory(.vehicle),
-            self.res.countCategory(.prop),
+            self.prop_count,
         });
     }
 
@@ -91,6 +102,14 @@ pub const Registry = struct {
         const hz: i32 = @intFromFloat(z * 10.0);
         const h: u32 = @bitCast(hx *% 73856093 ^ hz *% 19349663);
         return self.building_ids[h % self.building_count];
+    }
+
+    pub fn propIdAt(self: *const Registry, x: f32, z: f32) ?resource_manager.AssetId {
+        if (self.prop_count == 0) return null;
+        const hx: i32 = @intFromFloat(x * 17.0);
+        const hz: i32 = @intFromFloat(z * 31.0);
+        const h: u32 = @bitCast(hx *% 2654435761 ^ hz *% 2246822519);
+        return self.prop_ids[h % self.prop_count];
     }
 
     pub fn boss_gpu(self: *const Registry) ?gpu_mesh.GpuMesh {
@@ -105,6 +124,11 @@ pub const Registry = struct {
 
     pub fn building_gpu_at(self: *const Registry, x: f32, z: f32) ?gpu_mesh.GpuMesh {
         const id = self.buildingIdAt(x, z) orelse return null;
+        return @constCast(&self.res).getGpu(id);
+    }
+
+    pub fn prop_gpu_at(self: *const Registry, x: f32, z: f32) ?gpu_mesh.GpuMesh {
+        const id = self.propIdAt(x, z) orelse return null;
         return @constCast(&self.res).getGpu(id);
     }
 

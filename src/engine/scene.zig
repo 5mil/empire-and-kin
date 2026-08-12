@@ -51,7 +51,6 @@ fn lotGrid(gfx: backend.Backend) void {
 /// Phase 2: try GLB mesh scaled to footprint; else procedural box building.
 fn building(gfx: backend.Backend, x: f32, z: f32, w: f32, h: f32, d: f32, col: backend.Color, lit: bool) void {
     shadow(gfx, x, z, w * 1.05, d * 1.05);
-    // Center at mid-height so unit-ish meshes and boxes share the same transform.
     if (gfx.drawBuilding(.{ .x = x, .y = h * 0.5, .z = z }, w, h, d, col)) {
         return;
     }
@@ -119,8 +118,13 @@ fn jobBeacon(gfx: backend.Backend, x: f32, z: f32, near: bool) void {
 }
 
 fn lamp(gfx: backend.Backend, x: f32, z: f32, on: bool) void {
-    box(gfx, x, 1.5, z, 0.22, 3.0, 0.22, texture_bank.colorOf(.metal));
     const glow = if (on) backend.Color.rgb(255, 230, 150) else backend.Color.rgb(70, 70, 75);
+    // Prefer prop mesh; center roughly mid-pole height.
+    if (gfx.drawProp(.{ .x = x, .y = 1.6, .z = z }, 0.6, 3.2, 0.6, texture_bank.colorOf(.metal))) {
+        if (on) box(gfx, x, 3.2, z, 0.4, 0.25, 0.4, glow);
+        return;
+    }
+    box(gfx, x, 1.5, z, 0.22, 3.0, 0.22, texture_bank.colorOf(.metal));
     box(gfx, x, 3.2, z, 0.55, 0.4, 0.55, glow);
 }
 
@@ -131,11 +135,13 @@ fn parkedCar(gfx: backend.Backend, x: f32, z: f32, col: backend.Color) void {
 }
 
 fn hydrant(gfx: backend.Backend, x: f32, z: f32) void {
+    if (gfx.drawProp(.{ .x = x, .y = 0.4, .z = z }, 0.45, 0.9, 0.45, backend.Color.rgb(180, 40, 35))) return;
     box(gfx, x, 0.4, z, 0.35, 0.8, 0.35, backend.Color.rgb(180, 40, 35));
 }
 
 fn dumpster(gfx: backend.Backend, x: f32, z: f32) void {
     shadow(gfx, x, z, 1.6, 2.2);
+    if (gfx.drawProp(.{ .x = x, .y = 0.6, .z = z }, 1.4, 1.2, 2.0, backend.Color.rgb(55, 70, 50))) return;
     box(gfx, x, 0.6, z, 1.4, 1.2, 2.0, backend.Color.rgb(55, 70, 50));
 }
 
@@ -148,6 +154,7 @@ fn waterTower(gfx: backend.Backend, x: f32, z: f32) void {
 
 fn tree(gfx: backend.Backend, x: f32, z: f32) void {
     shadow(gfx, x, z, 1.6, 1.6);
+    if (gfx.drawProp(.{ .x = x, .y = 2.0, .z = z }, 2.0, 4.0, 2.0, texture_bank.colorOf(.foliage))) return;
     box(gfx, x, 1.2, z, 0.35, 2.4, 0.35, backend.Color.rgb(70, 50, 30));
     box(gfx, x, 3.2, z, 1.8, 1.6, 1.8, texture_bank.colorOf(.foliage));
 }
@@ -166,7 +173,6 @@ fn districtSign(gfx: backend.Backend, x: f32, z: f32, tall: bool) void {
 
 fn safehouse(gfx: backend.Backend, lit: bool) void {
     shadow(gfx, SAFEHOUSE_X, SAFEHOUSE_Z, 5.0, 4.5);
-    // Prefer mesh if a building GLB is available at this footprint.
     if (!gfx.drawBuilding(.{ .x = SAFEHOUSE_X, .y = 2.5, .z = SAFEHOUSE_Z }, 4.5, 5.0, 4.0, texture_bank.colorOf(.concrete))) {
         box(gfx, SAFEHOUSE_X, 2.5, SAFEHOUSE_Z, 4.5, 5.0, 4.0, texture_bank.colorOf(.concrete));
         box(gfx, SAFEHOUSE_X, 5.2, SAFEHOUSE_Z, 4.8, 0.35, 4.3, texture_bank.colorOf(.roof_tar));

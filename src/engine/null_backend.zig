@@ -106,6 +106,15 @@ fn drawCharacterImpl(pos: backend.Vec3, facing_yaw: f32, scale: f32, color: back
     _ = color;
     return false;
 }
+fn drawVehicleImpl(pos: backend.Vec3, yaw: f32, wheel_spin: f32, steer: f32, health: u8, color: backend.Color) bool {
+    _ = pos;
+    _ = yaw;
+    _ = wheel_spin;
+    _ = steer;
+    _ = health;
+    _ = color;
+    return false;
+}
 pub fn getBackend() backend.Backend {
     return .{
         .vtable = .{
@@ -125,6 +134,7 @@ pub fn getBackend() backend.Backend {
             .drawBuilding = drawBuildingImpl,
             .drawProp = drawPropImpl,
             .drawCharacter = drawCharacterImpl,
+            .drawVehicle = drawVehicleImpl,
         },
     };
 }

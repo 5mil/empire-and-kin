@@ -29,6 +29,9 @@ pub const Vehicle = struct {
     max_speed: f32,
     health: u8,
     occupied: bool = false,
+    yaw: f32 = 0,
+    wheel_spin: f32 = 0,
+    steer: f32 = 0,
 };
 
 pub fn spawnVehicle(vtype: VehicleType, x: f32, y: f32) Vehicle {
@@ -46,6 +49,9 @@ pub fn spawnVehicle(vtype: VehicleType, x: f32, y: f32) Vehicle {
         .max_speed = max_spd,
         .health = 100,
         .occupied = false,
+        .yaw = 0,
+        .wheel_spin = 0,
+        .steer = 0,
     };
 }
 
@@ -74,16 +80,29 @@ pub fn drive(v: *Vehicle, p: *player.Player, dx: f32, dy: f32, dt: f64) void {
     const input_mag = @sqrt(dx * dx + dy * dy);
     if (input_mag > 0.15) {
         v.speed = @min(v.max_speed, v.speed + 10.0 * dt32);
-        p.facing_yaw = std.math.atan2(dy, dx);
+        const desired = std.math.atan2(dy, dx);
+        // steer angle before snapping body yaw (visual only)
+        var delta = desired - v.yaw;
+        while (delta > std.math.pi) delta -= 2.0 * std.math.pi;
+        while (delta < -std.math.pi) delta += 2.0 * std.math.pi;
+        const target_steer = std.math.clamp(delta, -0.45, 0.45);
+        v.steer = v.steer + (target_steer - v.steer) * @min(1.0, 8.0 * dt32);
+        p.facing_yaw = desired;
+        v.yaw = desired;
     } else {
         v.speed = @max(0, v.speed - 14.0 * dt32);
+        v.steer = v.steer * @max(0.0, 1.0 - 4.0 * dt32);
     }
+    // wheel spin: omega = speed / radius (~0.32)
+    const radius: f32 = 0.32;
+    v.wheel_spin += (v.speed / radius) * dt32;
     const dist = v.speed * dt32;
     const mx = if (input_mag > 0.15) dx else @cos(p.facing_yaw);
     const my = if (input_mag > 0.15) dy else @sin(p.facing_yaw);
     const resolved = collision.resolveMove(v.x, v.y, mx * dist, my * dist, 1.1);
     if (resolved.x == v.x and resolved.z == v.y and dist > 0.01) {
         v.speed *= 0.4; // hit wall
+        if (v.health > 5) v.health -= 1;
     }
     v.x = resolved.x;
     v.y = resolved.z;

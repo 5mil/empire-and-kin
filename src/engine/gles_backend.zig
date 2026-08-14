@@ -136,6 +136,10 @@ fn drawPropImpl(pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Color)
     if (!attached) return false;
     return rend.drawProp(pos, w, h, d, color);
 }
+fn drawCharacterImpl(pos: backend.Vec3, facing_yaw: f32, scale: f32, color: backend.Color) bool {
+    if (!attached) return false;
+    return rend.drawCharacter(pos, facing_yaw, scale, color);
+}
 
 pub fn getBackend() backend.Backend {
     return .{ .vtable = .{
@@ -154,5 +158,6 @@ pub fn getBackend() backend.Backend {
         .drawPlayerProxy = drawPlayerProxyImpl,
         .drawBuilding = drawBuildingImpl,
         .drawProp = drawPropImpl,
+        .drawCharacter = drawCharacterImpl,
     } };
 }

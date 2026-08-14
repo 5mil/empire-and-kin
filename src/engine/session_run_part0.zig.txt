@@ -1,1 +1,183 @@
-PLACEHOLDER
+//! Full play session (extracted from main). Keep main.zig tiny.
+//! Future: split GameState + per-mode ticks further.
+
+const backend = @import("backend.zig");
+const gfx_select = @import("gfx_select.zig");
+const build_options = @import("build_options");
+
+const std = @import("std");
+const city = @import("../game/city.zig");
+const crew = @import("../game/crew.zig");
+const economy = @import("../game/economy.zig");
+const save = @import("../game/save.zig");
+const time = @import("../game/time.zig");
+const player = @import("../game/player.zig");
+const world = @import("../game/world.zig");
+const living = @import("../game/living.zig");
+const empire_mod = @import("../game/empire.zig");
+const action = @import("../game/action.zig");
+const properties = @import("../game/properties.zig");
+const garage = @import("../game/garage.zig");
+const era_mod = @import("../game/era.zig");
+const balance = @import("../game/balance.zig");
+const goals = @import("../game/goals.zig");
+const heat = @import("../game/heat.zig");
+const peds = @import("../game/peds.zig");
+const traffic = @import("../game/traffic.zig");
+const stash_mod = @import("../game/stash.zig");
+const lookout_mod = @import("../game/lookout.zig");
+const rival_mod = @import("../game/rival.zig");
+const news = @import("../game/news.zig");
+const events = @import("../game/events.zig");
+const respect = @import("../game/respect.zig");
+const weather_mod = @import("../game/weather.zig");
+const loan_mod = @import("../game/loan.zig");
+const day_cycle = @import("../game/day_cycle.zig");
+const crew_talk = @import("../game/crew_talk.zig");
+const tipjar = @import("../game/tipjar.zig");
+const inventory_mod = @import("../game/inventory.zig");
+const ambush = @import("../game/ambush.zig");
+const cop_car = @import("../game/cop_car.zig");
+const radio = @import("../game/radio.zig");
+const turf = @import("../game/turf.zig");
+const bartender = @import("../game/bartender.zig");
+const medkit = @import("../game/medkit.zig");
+const reputation_tick = @import("../game/reputation_tick.zig");
+const milestone = @import("../game/milestone.zig");
+const death = @import("../game/death.zig");
+const heat_spike = @import("../game/heat_spike.zig");
+const payday = @import("../game/payday.zig");
+const intimidate = @import("../game/intimidate.zig");
+const scene = @import("scene.zig");
+const input = @import("input.zig");
+const controller = @import("controller.zig");
+const empire_ui = @import("empire_ui.zig");
+const wanted_ui = @import("wanted_ui.zig");
+const mission_ui = @import("mission_ui.zig");
+const boot_mod = @import("boot.zig");
+const world_sim = @import("world_sim.zig");
+const hints = @import("hints.zig");
+const combat_ui = @import("combat_ui.zig");
+const toast_mod = @import("toast.zig");
+const camera = @import("camera.zig");
+const choice_mod = @import("choice.zig");
+const feed_mod = @import("feed.zig");
+const interact = @import("interact.zig");
+const gameover = @import("gameover.zig");
+const play_draw = @import("play_draw.zig");
+
+pub fn run(gfx: backend.Backend) !void {
+    _ = build_options;
+
+    var boot: boot_mod.BootState = .{};
+    boot.has_save = (save.readFromDisk() catch null) != null;
+
+    var clock = time.Clock{ .time_scale = balance.TIME_SCALE_DEMO };
+    var the_kin = crew.createStarterCrew();
+    var eco = economy.init();
+    eco.treasury = balance.STARTING_TREASURY;
+    var boss = player.create("Vinnie \"The Chin\"");
+    boss.x = 10;
+    boss.y = 20;
+
+    var emp: empire_mod.Empire = .{};
+    _ = empire_mod.addRacket(&emp, .speakeasy, .little_italy);
+    _ = empire_mod.addRacket(&emp, .protection, .hells_kitchen);
+    _ = empire_mod.assignCrewToRacket(&emp, 0, 1);
+
+    var portfolio = properties.createStarterPortfolio();
+    var fleet = garage.createStarterFleet();
+    _ = garage.setActive(&fleet, 0);
+
+    var districts = [_]city.District{
+        city.createDistrict(.little_italy),
+        city.createDistrict(.hells_kitchen),
+        city.createDistrict(.brooklyn_waterfront),
+    };
+
+    var jobs = [_]mission_ui.ActiveJob{
+        mission_ui.spawnJob(401, .bootlegging, 16.0, 22.0),
+        mission_ui.spawnJob(402, .protection, 8.0, 28.0),
+        mission_ui.spawnJob(403, .smuggling, 22.0, 12.0),
+        mission_ui.spawnJob(404, .protection, 12.0, 16.0),
+        mission_ui.spawnJob(405, .hit, 26.0, 18.0),
+    };
+    jobs[0].duration = balance.BOOTLEG_DURATION;
+    jobs[1].duration = balance.PROTECTION_DURATION;
+    jobs[2].duration = balance.SMUGGLING_DURATION;
+    jobs[3].duration = balance.PROTECTION_DURATION;
+    jobs[4].duration = 5.0;
+
+    var streets: living.StreetLife = .{};
+    var police: living.PoliceState = .{};
+    var chase: action.ChaseState = .{};
+    var ctrl: controller.Controller = .{};
+    var menu: empire_ui.EmpireMenu = .{};
+    var ws: world_sim.WorldSim = .{};
+    var tip: hints.Hints = .{};
+    var cui: combat_ui.CombatUI = .{};
+    var toast: toast_mod.Toast = .{};
+    var follow: camera.FollowCam = .{};
+    var choice: choice_mod.Choice = .{};
+    var goal: goals.Goal = .{};
+    var feed: feed_mod.Feed = .{};
+    var street_peds: peds.StreetPeds = .{};
+    street_peds.init();
+    var cars: traffic.Traffic = .{};
+    var stash: stash_mod.Stash = .{};
+    var lookout: lookout_mod.Lookout = .{};
+    var rival: rival_mod.Rival = .{};
+    var loan: loan_mod.Loan = .{};
+    var dayw: day_cycle.DayWatch = .{};
+    var inv: inventory_mod.Inventory = .{};
+    _ = inv.add(.medkit);
+    var patrol_car: cop_car.CopCar = .{};
+    var marks: milestone.Flags = .{};
+    var weather = weather_mod.Weather.clear;
+    var selected_era: era_mod.Era = .nyc_1930s;
+    var world_ready = false;
+    var heal_accum: f32 = 0;
+    var heat_accum: f32 = 0;
+    var safehouse_cd: f64 = 0;
+    var street_event_cd: f64 = balance.STREET_EVENT_INTERVAL;
+    var news_cd: f64 = 60.0;
+    var banter_cd: f64 = 40.0;
+    var weather_cd: f64 = 90.0;
+    var ambush_cd: f64 = balance.AMBUSH_CHECK_INTERVAL;
+    var radio_cd: f64 = 55.0;
+    var turf_cd: f64 = 90.0;
+    var day_count: u32 = 0;
+    var prev_boss_x: f32 = boss.x;
+    var prev_boss_y: f32 = boss.y;
+
+    var edge_ord: [5]input.ButtonEdge = .{ .{}, .{}, .{}, .{}, .{} };
+    var edge_tab: input.ButtonEdge = .{};
+    var edge_q: input.ButtonEdge = .{};
+    var edge_nav_e: input.ButtonEdge = .{};
+    var edge_enter: input.ButtonEdge = .{};
+    var edge_r: input.ButtonEdge = .{};
+    var edge_f: input.ButtonEdge = .{};
+    var edge_interact: input.ButtonEdge = .{};
+    var edge_f5: input.ButtonEdge = .{};
+    var edge_f9: input.ButtonEdge = .{};
+    var edge_1: input.ButtonEdge = .{};
+    var edge_2: input.ButtonEdge = .{};
+    var edge_h: input.ButtonEdge = .{};
+    var edge_x: input.ButtonEdge = .{};
+    var frame_seed: u32 = 0;
+
+    feed.push("Welcome to Little Italy");
+
+    while (!gfx.shouldClose()) {
+        gfx.beginFrame();
+        const dt = gfx.deltaTime();
+        scene.anim_time_s += @as(f32, @floatCast(dt));
+        const raw = gfx_select.BackendMod.pollRawKeys();
+        frame_seed +%= 1;
+        toast.tick(dt);
+        lookout_mod.tick(&lookout, dt);
+        if (menu.collect_cooldown > 0) menu.collect_cooldown -= dt;
+        if (safehouse_cd > 0) safehouse_cd -= dt;
+        if (street_event_cd > 0) street_event_cd -= dt;
+        if (news_cd > 0) news_cd -= dt;
+        if (banter_cd > 0) banter_cd -= dt;

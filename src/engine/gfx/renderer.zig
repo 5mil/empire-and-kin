@@ -1,6 +1,7 @@
 //! Frame renderer: lit meshes + ResourceManager GLB cache + HUD + fog.
 //! Phase 1: texture_bank tiles as real GL textures.
 //! Phase 2: building + prop GLBs on cityscape footprints.
+//! Phase 3: character GLBs with facing + scale.
 
 const std = @import("std");
 const gl = @import("gl.zig");
@@ -217,7 +218,6 @@ pub const Renderer = struct {
         return false;
     }
 
-    /// Phase 2: street prop (lamp, tree, hydrant, dumpster, …).
     pub fn drawProp(self: *Renderer, pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Color) bool {
         if (g_models) |*reg| {
             if (reg.prop_gpu_at(pos.x, pos.z)) |m| {
@@ -225,6 +225,21 @@ pub const Renderer = struct {
                 const s = math.Mat4.scaleVec(.{ .x = w, .y = h, .z = d });
                 const mid = materialFromColor(color);
                 self.drawMeshTextured(m, math.Mat4.mul(t, s), color, mid);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// Phase 3: character mesh with facing + uniform scale.
+    pub fn drawCharacter(self: *Renderer, pos: backend.Vec3, facing_yaw: f32, scale: f32, color: backend.Color) bool {
+        if (g_models) |*reg| {
+            const mesh_opt = reg.character_gpu_at(pos.x, pos.z) orelse reg.boss_gpu();
+            if (mesh_opt) |m| {
+                const t = math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z });
+                const r = math.Mat4.rotateY(facing_yaw);
+                const s = math.Mat4.scaleVec(.{ .x = scale, .y = scale, .z = scale });
+                self.drawMesh(m, math.Mat4.mul(t, math.Mat4.mul(r, s)), color);
                 return true;
             }
         }
@@ -244,7 +259,7 @@ pub const Renderer = struct {
     }
 
     pub fn drawPlayerProxy(self: *Renderer, pos: backend.Vec3, facing_yaw: f32, color: backend.Color) void {
-        if (self.drawBossMesh(pos, 1.0, color)) return;
+        if (self.drawCharacter(pos, facing_yaw, 1.0, color)) return;
         const t = math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z });
         const r = math.Mat4.rotateY(facing_yaw);
         const s = math.Mat4.scaleVec(.{ .x = 0.7, .y = 1.6, .z = 0.7 });

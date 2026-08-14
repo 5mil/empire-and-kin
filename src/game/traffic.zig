@@ -32,7 +32,7 @@ pub const Traffic = struct {
         for (self.cars) |c| {
             // Face travel direction on the avenue (along +X / -X).
             const yaw: f32 = if (c.speed >= 0) 0.0 else 3.14159265;
-            if (gfx.drawVehicle(.{ .x = c.x, .y = 0.0, .z = c.z }, yaw, c.wheel_spin, 0.0, 100, c.color)) continue;
+            if (gfx.drawVehicle(.{ .x = c.x, .y = 0.0, .z = c.z }, yaw, 0.0, 0.0, c.wheel_spin, 0.0, 100, c.color)) continue;
             gfx.drawBox(.{ .x = c.x, .y = 0.45, .z = c.z }, 1.8, 0.9, 3.0, c.color);
             gfx.drawBox(.{ .x = c.x, .y = 0.95, .z = c.z - 0.2 }, 1.5, 0.4, 1.2, backend.Color.rgb(25, 35, 50));
         }

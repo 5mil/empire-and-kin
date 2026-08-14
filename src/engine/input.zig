@@ -84,5 +84,5 @@ pub const Mapper = struct {
 };
 
 pub fn bindingHelp() []const u8 {
-    return "WASD move | Shift sprint | E interact | M map | C character | [ ] camera zoom | Q/E orbit";
+    return "WASD move | Shift sprint/handbrake | E interact | M map | C character | [ ] camera zoom | Q/E orbit";
 }

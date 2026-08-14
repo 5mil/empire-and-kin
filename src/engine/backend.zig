@@ -68,6 +68,8 @@ pub const VTable = struct {
     drawProp: *const fn (pos: Vec3, w: f32, h: f32, d: f32, color: Color) bool,
     /// Phase 3: character mesh with facing + uniform scale. Returns true if a GLB was used.
     drawCharacter: *const fn (pos: Vec3, facing_yaw: f32, scale: f32, color: Color) bool,
+    /// Phase 4: vehicle body mesh + procedural wheels (spin/steer). Returns true if a body GLB was used.
+    drawVehicle: *const fn (pos: Vec3, yaw: f32, wheel_spin: f32, steer: f32, health: u8, color: Color) bool,
 };
 
 pub const Backend = struct {
@@ -120,5 +122,8 @@ pub const Backend = struct {
     }
     pub fn drawCharacter(self: Backend, pos: Vec3, facing_yaw: f32, scale: f32, color: Color) bool {
         return self.vtable.drawCharacter(pos, facing_yaw, scale, color);
+    }
+    pub fn drawVehicle(self: Backend, pos: Vec3, yaw: f32, wheel_spin: f32, steer: f32, health: u8, color: Color) bool {
+        return self.vtable.drawVehicle(pos, yaw, wheel_spin, steer, health, color);
     }
 };

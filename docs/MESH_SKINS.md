@@ -1,11 +1,11 @@
-# Mesh + skins operational path (`0.4.0`)
+# Mesh + skins operational path
 
 ## Honest scope
 
 **Sims 4** and **Second Life** ship years of CAS, high-res textures, full skeletal animation graphs, and content pipelines.  
-This release makes **mesh skins operational** in Empire & Kin’s engine — load GLB, read joints/weights, CPU-skin to bind pose, draw on PC GL and GLES-capable path — **not** product parity with those platforms.
+This project makes **mesh characters operational** — load GLB, bind-pose skin, draw with facing + scale + walk bob on PC GL and GLES — **not** product parity with those platforms.
 
-## What works now
+## What works now (Phase 3)
 
 | Feature | Status |
 |---------|--------|
@@ -14,18 +14,20 @@ This release makes **mesh skins operational** in Empire & Kin’s engine — loa
 | JOINTS_0 + WEIGHTS_0 | Yes |
 | inverseBindMatrices | Yes |
 | CPU skinning (bind pose) | Yes |
+| Character mesh draw + yaw + scale | Yes |
+| Walk bob / idle | Yes (procedural) |
+| CharacterMap tint / height / bulk | Yes |
+| 8 street peds mesh or procedural | Yes |
 | GPU skinning shader | Not yet |
-| Animation clip playback | Not yet (next) |
-| Second Life avatar system | Out of scope |
-| Sims 4 CAS | Out of scope |
+| Animation clip playback | Not yet |
+| Second Life / Sims 4 CAS | Out of scope |
 
 ## How to use
 
-1. Drop a CC0 character GLB (Quaternius recommended):
-   `assets/cc0/characters/character.glb`
-2. Optional building:
-   `assets/cc0/buildings/building.glb`
-3. Run GPU build — registry auto-loads on init (wire `model_registry.tryLoadDefaults` from renderer/backend init).
+1. Drop CC0 character GLBs (Quaternius recommended):
+   `assets/cc0/characters/*.glb`
+2. Optional: `./tools/fetch_cc0_assets.sh --samples-only` for Khronos rigged samples
+3. Run GPU build — registry auto-loads characters on init
 
 ## Tooling (free)
 
@@ -39,3 +41,5 @@ This release makes **mesh skins operational** in Empire & Kin’s engine — loa
 2. GPU skinning (uniform bone palette)  
 3. Texture (baseColorTexture) upload  
 4. LOD / multiple primitives per mesh  
+
+See **docs/PHASE3_PEOPLE.md**.

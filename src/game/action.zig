@@ -3,7 +3,7 @@ const player = @import("player.zig");
 const combat = @import("combat.zig");
 const missions = @import("missions.zig");
 const city = @import("city.zig");
-const collision = @import("collision.zig");
+const vehicle_phys = @import("vehicle_phys.zig");
 
 pub const VehicleType = enum {
     sedan,
@@ -32,6 +32,14 @@ pub const Vehicle = struct {
     yaw: f32 = 0,
     wheel_spin: f32 = 0,
     steer: f32 = 0,
+    // Phase 5 physics
+    vx: f32 = 0,
+    vz: f32 = 0,
+    yaw_rate: f32 = 0,
+    body_y: f32 = 0.42,
+    vy: f32 = 0,
+    pitch: f32 = 0,
+    roll: f32 = 0,
 };
 
 pub fn spawnVehicle(vtype: VehicleType, x: f32, y: f32) Vehicle {
@@ -40,6 +48,11 @@ pub fn spawnVehicle(vtype: VehicleType, x: f32, y: f32) Vehicle {
         .truck => 11.0,
         .motorcycle => 20.0,
         .taxi => 15.0,
+    };
+    const rest: f32 = switch (vtype) {
+        .truck => 0.55,
+        .motorcycle => 0.38,
+        else => 0.42,
     };
     return .{
         .vtype = vtype,
@@ -52,6 +65,13 @@ pub fn spawnVehicle(vtype: VehicleType, x: f32, y: f32) Vehicle {
         .yaw = 0,
         .wheel_spin = 0,
         .steer = 0,
+        .vx = 0,
+        .vz = 0,
+        .yaw_rate = 0,
+        .body_y = rest,
+        .vy = 0,
+        .pitch = 0,
+        .roll = 0,
     };
 }
 
@@ -64,6 +84,10 @@ pub fn enterVehicle(v: *Vehicle, p: *player.Player) void {
 pub fn exitVehicle(v: *Vehicle, p: *player.Player) void {
     v.occupied = false;
     v.speed = 0;
+    v.vx = 0;
+    v.vz = 0;
+    v.yaw_rate = 0;
+    v.steer = 0;
     p.x = v.x;
     p.y = v.y;
 }
@@ -74,40 +98,14 @@ pub fn nearVehicle(v: Vehicle, p: player.Player, radius: f32) bool {
     return (dx * dx + dy * dy) <= (radius * radius);
 }
 
-pub fn drive(v: *Vehicle, p: *player.Player, dx: f32, dy: f32, dt: f64) void {
+/// Phase 5: throttle = move_y, steer = move_x, handbrake = Shift.
+pub fn drive(v: *Vehicle, p: *player.Player, move_x: f32, move_y: f32, handbrake: bool, dt: f64) void {
     if (!v.occupied) return;
-    const dt32: f32 = @floatCast(dt);
-    const input_mag = @sqrt(dx * dx + dy * dy);
-    if (input_mag > 0.15) {
-        v.speed = @min(v.max_speed, v.speed + 10.0 * dt32);
-        const desired = std.math.atan2(dy, dx);
-        // steer angle before snapping body yaw (visual only)
-        var delta = desired - v.yaw;
-        while (delta > std.math.pi) delta -= 2.0 * std.math.pi;
-        while (delta < -std.math.pi) delta += 2.0 * std.math.pi;
-        const target_steer = std.math.clamp(delta, -0.45, 0.45);
-        v.steer = v.steer + (target_steer - v.steer) * @min(1.0, 8.0 * dt32);
-        p.facing_yaw = desired;
-        v.yaw = desired;
-    } else {
-        v.speed = @max(0, v.speed - 14.0 * dt32);
-        v.steer = v.steer * @max(0.0, 1.0 - 4.0 * dt32);
-    }
-    // wheel spin: omega = speed / radius (~0.32)
-    const radius: f32 = 0.32;
-    v.wheel_spin += (v.speed / radius) * dt32;
-    const dist = v.speed * dt32;
-    const mx = if (input_mag > 0.15) dx else @cos(p.facing_yaw);
-    const my = if (input_mag > 0.15) dy else @sin(p.facing_yaw);
-    const resolved = collision.resolveMove(v.x, v.y, mx * dist, my * dist, 1.1);
-    if (resolved.x == v.x and resolved.z == v.y and dist > 0.01) {
-        v.speed *= 0.4; // hit wall
-        if (v.health > 5) v.health -= 1;
-    }
-    v.x = resolved.x;
-    v.y = resolved.z;
+    const mapped = vehicle_phys.inputsFromMove(move_x, move_y);
+    vehicle_phys.integrate(v, mapped.throttle, mapped.steer, handbrake, dt);
     p.x = v.x;
     p.y = v.y;
+    p.facing_yaw = v.yaw;
 }
 
 pub const ChaseState = struct {

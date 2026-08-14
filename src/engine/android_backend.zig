@@ -246,6 +246,41 @@ fn drawPlayerProxyImpl(pos: backend.Vec3, facing_yaw: f32, color: backend.Color)
     player_z = pos.z;
 }
 
+fn drawBuildingImpl(pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Color) bool {
+    _ = pos;
+    _ = w;
+    _ = h;
+    _ = d;
+    _ = color;
+    return false;
+}
+fn drawPropImpl(pos: backend.Vec3, w: f32, h: f32, d: f32, color: backend.Color) bool {
+    _ = pos;
+    _ = w;
+    _ = h;
+    _ = d;
+    _ = color;
+    return false;
+}
+fn drawCharacterImpl(pos: backend.Vec3, facing_yaw: f32, scale: f32, color: backend.Color) bool {
+    _ = pos;
+    _ = facing_yaw;
+    _ = scale;
+    _ = color;
+    return false;
+}
+fn drawVehicleImpl(pos: backend.Vec3, yaw: f32, pitch: f32, roll: f32, wheel_spin: f32, steer: f32, health: u8, color: backend.Color) bool {
+    _ = pos;
+    _ = yaw;
+    _ = pitch;
+    _ = roll;
+    _ = wheel_spin;
+    _ = steer;
+    _ = health;
+    _ = color;
+    return false;
+}
+
 pub fn getBackend() backend.Backend {
     return .{ .vtable = .{
         .init = initImpl,
@@ -261,5 +296,9 @@ pub fn getBackend() backend.Backend {
         .drawGround = drawGroundImpl,
         .drawBox = drawBoxImpl,
         .drawPlayerProxy = drawPlayerProxyImpl,
+        .drawBuilding = drawBuildingImpl,
+        .drawProp = drawPropImpl,
+        .drawCharacter = drawCharacterImpl,
+        .drawVehicle = drawVehicleImpl,
     } };
 }

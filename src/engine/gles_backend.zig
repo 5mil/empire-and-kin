@@ -140,6 +140,10 @@ fn drawCharacterImpl(pos: backend.Vec3, facing_yaw: f32, scale: f32, color: back
     if (!attached) return false;
     return rend.drawCharacter(pos, facing_yaw, scale, color);
 }
+fn drawVehicleImpl(pos: backend.Vec3, yaw: f32, wheel_spin: f32, steer: f32, health: u8, color: backend.Color) bool {
+    if (!attached) return false;
+    return rend.drawVehicle(pos, yaw, wheel_spin, steer, health, color);
+}
 
 pub fn getBackend() backend.Backend {
     return .{ .vtable = .{
@@ -159,5 +163,6 @@ pub fn getBackend() backend.Backend {
         .drawBuilding = drawBuildingImpl,
         .drawProp = drawPropImpl,
         .drawCharacter = drawCharacterImpl,
+        .drawVehicle = drawVehicleImpl,
     } };
 }

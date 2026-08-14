@@ -7,6 +7,7 @@ const resource_manager = @import("resource_manager.zig");
 
 pub const MAX_BUILDING_VARIANTS: usize = 32;
 pub const MAX_PROP_VARIANTS: usize = 24;
+pub const MAX_CHARACTER_VARIANTS: usize = 16;
 
 pub const Registry = struct {
     allocator: std.mem.Allocator,
@@ -18,6 +19,8 @@ pub const Registry = struct {
     vehicle_id: ?resource_manager.AssetId = null,
     prop_ids: [MAX_PROP_VARIANTS]resource_manager.AssetId = undefined,
     prop_count: usize = 0,
+    character_ids: [MAX_CHARACTER_VARIANTS]resource_manager.AssetId = undefined,
+    character_count: usize = 0,
 
     pub fn init(allocator: std.mem.Allocator) Registry {
         return .{ .allocator = allocator, .res = resource_manager.ResourceManager.init(allocator) };
@@ -39,6 +42,7 @@ pub const Registry = struct {
         self.res.addScanRoot("assets/generated/buildings");
         self.res.addScanRoot("assets/generated/props");
         self.res.addScanRoot("assets/generated/vehicles");
+        self.res.addScanRoot("assets/generated/characters");
         self.res.ingestTree();
 
         const prefer_boss = [_][]const u8{
@@ -52,7 +56,21 @@ pub const Registry = struct {
                 break;
             }
         }
-        if (self.boss_id == null) self.boss_id = self.res.firstOf(.character);
+
+        self.character_count = self.res.collectCategory(.character, self.character_ids[0..]);
+        if (self.character_count == 0) {
+            if (self.boss_id) |id| {
+                self.character_ids[0] = id;
+                self.character_count = 1;
+            } else if (self.res.firstOf(.character)) |id| {
+                self.character_ids[0] = id;
+                self.character_count = 1;
+                self.boss_id = id;
+            }
+        }
+        if (self.boss_id == null and self.character_count > 0) {
+            self.boss_id = self.character_ids[0];
+        }
 
         self.building_count = self.res.collectCategory(.building, self.building_ids[0..]);
         if (self.building_count == 0) {
@@ -86,10 +104,10 @@ pub const Registry = struct {
             }
         }
 
-        std.debug.print("[models] cache={d} chars={d} bld={d} variants={d} veh={d} props={d}\n", .{
+        std.debug.print("[models] cache={d} chars={d} variants={d} bld={d} veh={d} props={d}\n", .{
             self.res.totalCached(),
             self.res.countCategory(.character),
-            self.res.countCategory(.building),
+            self.character_count,
             self.building_count,
             self.res.countCategory(.vehicle),
             self.prop_count,
@@ -112,8 +130,21 @@ pub const Registry = struct {
         return self.prop_ids[h % self.prop_count];
     }
 
+    pub fn characterIdAt(self: *const Registry, x: f32, z: f32) ?resource_manager.AssetId {
+        if (self.character_count == 0) return self.boss_id;
+        const hx: i32 = @intFromFloat(x * 13.0);
+        const hz: i32 = @intFromFloat(z * 29.0);
+        const h: u32 = @bitCast(hx *% 1597334677 ^ hz *% 3812015801);
+        return self.character_ids[h % self.character_count];
+    }
+
     pub fn boss_gpu(self: *const Registry) ?gpu_mesh.GpuMesh {
         const id = self.boss_id orelse return null;
+        return @constCast(&self.res).getGpu(id);
+    }
+
+    pub fn character_gpu_at(self: *const Registry, x: f32, z: f32) ?gpu_mesh.GpuMesh {
+        const id = self.characterIdAt(x, z) orelse return null;
         return @constCast(&self.res).getGpu(id);
     }
 

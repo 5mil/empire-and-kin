@@ -1,6 +1,7 @@
 # Phase 5 — Driving physics (raycast vehicle)
 
-**Status:** code path complete. Pure Zig — no PhysX / Bullet.
+**Status:** **shipped in 0.6.0-alpha**. Pure Zig — no PhysX / Bullet.  
+Compile blockers fixed: `renderer.drawVehicle` pitch/roll orient, `main` handbrake via `raw.shift`.
 
 ## Honest scope
 

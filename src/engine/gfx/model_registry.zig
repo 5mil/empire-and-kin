@@ -8,6 +8,7 @@ const resource_manager = @import("resource_manager.zig");
 pub const MAX_BUILDING_VARIANTS: usize = 32;
 pub const MAX_PROP_VARIANTS: usize = 24;
 pub const MAX_CHARACTER_VARIANTS: usize = 16;
+pub const MAX_VEHICLE_VARIANTS: usize = 16;
 
 pub const Registry = struct {
     allocator: std.mem.Allocator,
@@ -17,6 +18,8 @@ pub const Registry = struct {
     building_ids: [MAX_BUILDING_VARIANTS]resource_manager.AssetId = undefined,
     building_count: usize = 0,
     vehicle_id: ?resource_manager.AssetId = null,
+    vehicle_ids: [MAX_VEHICLE_VARIANTS]resource_manager.AssetId = undefined,
+    vehicle_count: usize = 0,
     prop_ids: [MAX_PROP_VARIANTS]resource_manager.AssetId = undefined,
     prop_count: usize = 0,
     character_ids: [MAX_CHARACTER_VARIANTS]resource_manager.AssetId = undefined,
@@ -94,7 +97,14 @@ pub const Registry = struct {
         }
         if (self.building_count > 0) self.building_id = self.building_ids[0];
 
-        self.vehicle_id = self.res.firstOf(.vehicle);
+        self.vehicle_count = self.res.collectCategory(.vehicle, self.vehicle_ids[0..]);
+        if (self.vehicle_count == 0) {
+            if (self.res.firstOf(.vehicle)) |id| {
+                self.vehicle_ids[0] = id;
+                self.vehicle_count = 1;
+            }
+        }
+        if (self.vehicle_count > 0) self.vehicle_id = self.vehicle_ids[0];
 
         self.prop_count = self.res.collectCategory(.prop, self.prop_ids[0..]);
         if (self.prop_count == 0) {
@@ -104,12 +114,13 @@ pub const Registry = struct {
             }
         }
 
-        std.debug.print("[models] cache={d} chars={d} variants={d} bld={d} veh={d} props={d}\n", .{
+        std.debug.print("[models] cache={d} chars={d} variants={d} bld={d} veh={d} veh_var={d} props={d}\n", .{
             self.res.totalCached(),
             self.res.countCategory(.character),
             self.character_count,
             self.building_count,
             self.res.countCategory(.vehicle),
+            self.vehicle_count,
             self.prop_count,
         });
     }
@@ -136,6 +147,19 @@ pub const Registry = struct {
         const hz: i32 = @intFromFloat(z * 29.0);
         const h: u32 = @bitCast(hx *% 1597334677 ^ hz *% 3812015801);
         return self.character_ids[h % self.character_count];
+    }
+
+    pub fn vehicleIdAt(self: *const Registry, x: f32, z: f32) ?resource_manager.AssetId {
+        if (self.vehicle_count == 0) return self.vehicle_id;
+        const hx: i32 = @intFromFloat(x * 11.0);
+        const hz: i32 = @intFromFloat(z * 19.0);
+        const h: u32 = @bitCast(hx *% 2246822519 ^ hz *% 3266489917);
+        return self.vehicle_ids[h % self.vehicle_count];
+    }
+
+    pub fn vehicle_gpu_at(self: *const Registry, x: f32, z: f32) ?gpu_mesh.GpuMesh {
+        const id = self.vehicleIdAt(x, z) orelse return null;
+        return @constCast(&self.res).getGpu(id);
     }
 
     pub fn boss_gpu(self: *const Registry) ?gpu_mesh.GpuMesh {

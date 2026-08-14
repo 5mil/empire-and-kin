@@ -106,9 +106,11 @@ fn drawCharacterImpl(pos: backend.Vec3, facing_yaw: f32, scale: f32, color: back
     _ = color;
     return false;
 }
-fn drawVehicleImpl(pos: backend.Vec3, yaw: f32, wheel_spin: f32, steer: f32, health: u8, color: backend.Color) bool {
+fn drawVehicleImpl(pos: backend.Vec3, yaw: f32, pitch: f32, roll: f32, wheel_spin: f32, steer: f32, health: u8, color: backend.Color) bool {
     _ = pos;
     _ = yaw;
+    _ = pitch;
+    _ = roll;
     _ = wheel_spin;
     _ = steer;
     _ = health;

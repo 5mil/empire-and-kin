@@ -52,6 +52,12 @@ pub const Mat4 = struct {
         r.m[0] = c; r.m[2] = -s; r.m[8] = s; r.m[10] = c;
         return r;
     }
+    pub fn rotateX(pitch: f32) Mat4 {
+        const c = @cos(pitch); const s = @sin(pitch);
+        var r = identity();
+        r.m[5] = c; r.m[6] = s; r.m[9] = -s; r.m[10] = c;
+        return r;
+    }
     pub fn lookAt(eye: Vec3, target: Vec3, up: Vec3) Mat4 {
         const f = Vec3.normalize(Vec3.sub(target, eye));
         const s = Vec3.normalize(Vec3.cross(f, up));

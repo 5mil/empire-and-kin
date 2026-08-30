@@ -1,13 +1,8 @@
 # Empire & Kin — Godot 4
 
-**Active development path.** Zig prototype is frozen on branch `BETA`.
+**Active path.** Zig prototype frozen on branch `BETA` (0.6.0-alpha).
 
-## Goals
-
-- Street-level third-person (default) or FPS — **not** elevated god-cam
-- One authored district that reads at eye height
-- CC0 / public-domain assets only
-- Systems (heat, jobs, empire) only after the district holds up visually
+Systems from BETA are ported as autoloads + street-level play. Art is still temporary; **district geography will follow real NYC maps** (see `Districts.REAL_BOUNDS`).
 
 ## Requirements
 
@@ -15,32 +10,51 @@
 
 ## Open
 
-1. Install Godot 4.3+
-2. **Import** → select this folder (`godot/` containing `project.godot`)
-3. Press **F5** (main scene: `scenes/main.tscn`)
+```bash
+git pull
+# Godot → Import → empire-and-kin/godot/
+# F5
+```
 
-## Controls (initial)
+## Controls
 
 | Key | Action |
 |-----|--------|
-| WASD | Move |
+| WASD | Move / drive |
 | Mouse | Look |
-| Shift | Sprint |
-| E | Interact (stub) |
+| Shift | Sprint / **handbrake** (in car) |
+| E | Interact / enter·exit vehicle / start job |
+| F5 / F9 | Save / Load |
 | Esc | Release mouse |
+
+## Ported from BETA
+
+| System | Location |
+|--------|----------|
+| Balance numbers | `scripts/autoload/balance.gd` |
+| Districts + real map anchors | `scripts/autoload/districts.gd` |
+| Cash, heat, wanted, clock, events | `scripts/autoload/game_state.gd` |
+| Rackets | `scripts/autoload/empire.gd` |
+| Save/Load | `scripts/autoload/save_system.gd` |
+| Phase-5 style drive | `scripts/vehicle.gd` |
+| Jobs | `scripts/job_marker.gd` |
+| HUD | `scenes/hud.tscn` |
+
+Full mapping: [`docs/PORT_FROM_BETA.md`](docs/PORT_FROM_BETA.md)
 
 ## Layout
 
 ```
 godot/
   project.godot
-  scenes/main.tscn      # world + player spawn
-  scripts/player.gd     # street-level chase cam + movement
-  scripts/main.gd
+  scenes/main.tscn   # world + player + sedan + job + HUD
+  scenes/hud.tscn
+  scripts/…
+  docs/PORT_FROM_BETA.md
 ```
 
-## Zig freeze
+## Next
 
-```bash
-git checkout BETA   # full Zig 0.6.0-alpha snapshot + docs/BETA_FREEZE.md
-```
+1. Authored **Hell’s Kitchen** block from OSM (real streets)
+2. CC0 building/vehicle meshes at street scale
+3. Deeper empire UI / crew (from BETA menus)

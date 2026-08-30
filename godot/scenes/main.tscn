@@ -1,20 +1,21 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/player.gd" id="2_player"]
 [ext_resource type="Script" path="res://scripts/vehicle.gd" id="3_veh"]
 [ext_resource type="Script" path="res://scripts/job_marker.gd" id="4_job"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="5_hud"]
+[ext_resource type="Script" path="res://scripts/districts/hells_kitchen_block.gd" id="6_hk"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_ground"]
-size = Vector3(80, 0.2, 80)
+size = Vector3(200, 0.15, 200)
 
-[sub_resource type="StandardMaterial3D" id="Mat_asphalt"]
-albedo_color = Color(0.18, 0.18, 0.2, 1)
-roughness = 0.92
+[sub_resource type="StandardMaterial3D" id="Mat_dirt"]
+albedo_color = Color(0.12, 0.12, 0.13, 1)
+roughness = 1.0
 
 [sub_resource type="BoxShape3D" id="BoxShape_ground"]
-size = Vector3(80, 0.2, 80)
+size = Vector3(200, 0.15, 200)
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_player"]
 radius = 0.35
@@ -23,16 +24,6 @@ height = 1.7
 [sub_resource type="CapsuleShape3D" id="CapsuleShape_player"]
 radius = 0.35
 height = 1.7
-
-[sub_resource type="BoxMesh" id="BoxMesh_bld"]
-size = Vector3(8, 12, 8)
-
-[sub_resource type="StandardMaterial3D" id="Mat_brick"]
-albedo_color = Color(0.45, 0.28, 0.22, 1)
-roughness = 0.85
-
-[sub_resource type="BoxShape3D" id="BoxShape_bld"]
-size = Vector3(8, 12, 8)
 
 [sub_resource type="BoxMesh" id="BoxMesh_car"]
 size = Vector3(1.9, 0.9, 4.2)
@@ -58,41 +49,24 @@ emission = Color(0.1, 0.5, 0.2, 1)
 script = ExtResource("1_main")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 20, 0)
+transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 40, 0)
 shadow_enabled = true
-light_energy = 1.15
+light_energy = 1.2
 
-[node name="Ground" type="StaticBody3D" parent="."]
+[node name="WorldFloor" type="StaticBody3D" parent="."]
 
-[node name="Mesh" type="MeshInstance3D" parent="Ground"]
+[node name="Mesh" type="MeshInstance3D" parent="WorldFloor"]
 mesh = SubResource("BoxMesh_ground")
-surface_material_override/0 = SubResource("Mat_asphalt")
+surface_material_override/0 = SubResource("Mat_dirt")
 
-[node name="Collision" type="CollisionShape3D" parent="Ground"]
+[node name="Collision" type="CollisionShape3D" parent="WorldFloor"]
 shape = SubResource("BoxShape_ground")
 
-[node name="BuildingA" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 6, -10)
-
-[node name="Mesh" type="MeshInstance3D" parent="BuildingA"]
-mesh = SubResource("BoxMesh_bld")
-surface_material_override/0 = SubResource("Mat_brick")
-
-[node name="Collision" type="CollisionShape3D" parent="BuildingA"]
-shape = SubResource("BoxShape_bld")
-
-[node name="BuildingB" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 6, -8)
-
-[node name="Mesh" type="MeshInstance3D" parent="BuildingB"]
-mesh = SubResource("BoxMesh_bld")
-surface_material_override/0 = SubResource("Mat_brick")
-
-[node name="Collision" type="CollisionShape3D" parent="BuildingB"]
-shape = SubResource("BoxShape_bld")
+[node name="HellsKitchen" type="Node3D" parent="."]
+script = ExtResource("6_hk")
 
 [node name="Player" type="CharacterBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 8)
 collision_layer = 2
 collision_mask = 1
 script = ExtResource("2_player")
@@ -118,7 +92,7 @@ current = true
 fov = 70.0
 
 [node name="Sedan" type="RigidBody3D" parent="." groups=["vehicle"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.6, 6)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 3, 0.6, 5)
 collision_layer = 4
 collision_mask = 1
 mass = 1200.0
@@ -138,7 +112,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0.2)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2, 0, 0)
 
 [node name="JobBootleg" type="Area3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 1, 4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 1, 12)
 collision_layer = 0
 collision_mask = 2
 monitoring = true

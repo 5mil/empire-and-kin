@@ -11,6 +11,7 @@ var _time_left: float = 0.0
 var _player_near: bool = false
 
 func _ready() -> void:
+	add_to_group("job")
 	body_entered.connect(_on_enter)
 	body_exited.connect(_on_exit)
 

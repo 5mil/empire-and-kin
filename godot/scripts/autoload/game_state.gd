@@ -41,8 +41,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	elapsed += delta
-	# In-game clock (BETA TIME_SCALE_DEMO)
-	clock_hours += delta * Balance.TIME_SCALE_DEMO / 3600.0 * 60.0  # tuned feel
+	clock_hours += delta * Balance.TIME_SCALE_DEMO / 3600.0 * 60.0
 	if clock_hours >= 24.0:
 		clock_hours -= 24.0
 		day += 1
@@ -86,7 +85,7 @@ func raise_district_heat(id: String, amount: int) -> void:
 	if not districts.has(id):
 		return
 	var d: Dictionary = districts[id]
-	d["heat"] = mini(100, int(d["heat"]) + amount)
+	d["heat"] = clampi(int(d["heat"]) + amount, 0, 100)
 	districts[id] = d
 	heat_changed.emit(id, d["heat"])
 
@@ -101,7 +100,6 @@ func current_control() -> int:
 	return 0
 
 func daily_income(id: String) -> int:
-	# Port of city.dailyIncome
 	if not districts.has(id):
 		return 0
 	var d: Dictionary = districts[id]
@@ -121,7 +119,6 @@ func _on_new_day() -> void:
 	feed_line.emit("A new day")
 
 func _tick_heat_decay(delta: float) -> void:
-	# Mild decay when low profile
 	if wanted_level > 0:
 		return
 	for id in districts.keys():
@@ -187,6 +184,7 @@ func to_save_dict() -> Dictionary:
 		"current_district_id": current_district_id,
 		"districts": districts.duplicate(true),
 		"aspiration_tier": aspiration_tier,
+		"calm": calm,
 	}
 
 func from_save_dict(data: Dictionary) -> void:
@@ -201,6 +199,7 @@ func from_save_dict(data: Dictionary) -> void:
 	if data.has("districts"):
 		districts = data["districts"]
 	aspiration_tier = data.get("aspiration_tier", 1)
+	calm = data.get("calm", 70)
 	treasury_changed.emit(treasury)
 	wanted_changed.emit(wanted_level)
 	health_changed.emit(health)

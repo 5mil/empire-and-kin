@@ -1,5 +1,5 @@
 extends Node3D
-## Main world — BETA systems ported: empire, 40 spots, heat/rival/payday.
+## Main world — empire, 40 spots, dressing, travel gates.
 
 func _ready() -> void:
 	GameState.current_district_id = "hells_kitchen"
@@ -15,6 +15,10 @@ func _ready() -> void:
 	_spawn_extra_jobs()
 	_spawn_safehouse()
 	InteractCatalog.spawn_all(self)
+	var dress := Node3D.new()
+	dress.name = "StreetDressing"
+	dress.set_script(load("res://scripts/street_dressing.gd"))
+	add_child(dress)
 	GameState.feed_line.emit("%d street spots live — walk and press E" % InteractCatalog.catalog().size())
 
 func _spawn_extra_jobs() -> void:

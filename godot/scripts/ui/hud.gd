@@ -6,18 +6,23 @@ extends CanvasLayer
 @onready var cash_label: Label = $Root/TopLeft/Cash
 @onready var needs_label: Label = $Root/TopLeft/Needs
 @onready var wanted_label: Label = $Root/TopLeft/Wanted
-@onready var street_label: Label = $Root/TopLeft/Street
 @onready var aspiration_label: Label = $Root/TopRight/Aspiration
 @onready var toast_label: Label = $Root/Toast
 @onready var feed_label: Label = $Root/Feed
 @onready var prompt_label: Label = $Root/Prompt
 @onready var hints_label: Label = $Root/Hints
 
+var street_label: Label
 var _toast_time: float = 0.0
 var _feed_lines: PackedStringArray = []
 var _hud_accum: float = 0.0
 
 func _ready() -> void:
+	street_label = get_node_or_null("Root/TopLeft/Street") as Label
+	if street_label == null:
+		street_label = Label.new()
+		street_label.name = "Street"
+		$Root/TopLeft.add_child(street_label)
 	GameState.treasury_changed.connect(_on_cash)
 	GameState.wanted_changed.connect(_on_wanted)
 	GameState.health_changed.connect(_on_health)

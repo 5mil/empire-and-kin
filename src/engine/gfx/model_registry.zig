@@ -127,33 +127,33 @@ pub const Registry = struct {
 
     pub fn buildingIdAt(self: *const Registry, x: f32, z: f32) ?resource_manager.AssetId {
         if (self.building_count == 0) return self.building_id;
-        const hx: i32 = @intFromFloat(x * 10.0);
-        const hz: i32 = @intFromFloat(z * 10.0);
-        const h: u32 = @bitCast(hx *% 73856093 ^ hz *% 19349663);
+        const hx: u32 = @bitCast(@as(i32, @intFromFloat(x * 10.0)));
+        const hz: u32 = @bitCast(@as(i32, @intFromFloat(z * 10.0)));
+        const h: u32 = hx *% 73856093 ^ hz *% 19349663;
         return self.building_ids[h % self.building_count];
     }
 
     pub fn propIdAt(self: *const Registry, x: f32, z: f32) ?resource_manager.AssetId {
         if (self.prop_count == 0) return null;
-        const hx: i32 = @intFromFloat(x * 17.0);
-        const hz: i32 = @intFromFloat(z * 31.0);
-        const h: u32 = @bitCast(hx *% 2654435761 ^ hz *% 2246822519);
+        const hx: u32 = @bitCast(@as(i32, @intFromFloat(x * 17.0)));
+        const hz: u32 = @bitCast(@as(i32, @intFromFloat(z * 31.0)));
+        const h: u32 = hx *% 2654435761 ^ hz *% 2246822519;
         return self.prop_ids[h % self.prop_count];
     }
 
     pub fn characterIdAt(self: *const Registry, x: f32, z: f32) ?resource_manager.AssetId {
         if (self.character_count == 0) return self.boss_id;
-        const hx: i32 = @intFromFloat(x * 13.0);
-        const hz: i32 = @intFromFloat(z * 29.0);
-        const h: u32 = @bitCast(hx *% 1597334677 ^ hz *% 3812015801);
+        const hx: u32 = @bitCast(@as(i32, @intFromFloat(x * 13.0)));
+        const hz: u32 = @bitCast(@as(i32, @intFromFloat(z * 29.0)));
+        const h: u32 = hx *% 1597334677 ^ hz *% 3812015801;
         return self.character_ids[h % self.character_count];
     }
 
     pub fn vehicleIdAt(self: *const Registry, x: f32, z: f32) ?resource_manager.AssetId {
         if (self.vehicle_count == 0) return self.vehicle_id;
-        const hx: i32 = @intFromFloat(x * 11.0);
-        const hz: i32 = @intFromFloat(z * 19.0);
-        const h: u32 = @bitCast(hx *% 2246822519 ^ hz *% 3266489917);
+        const hx: u32 = @bitCast(@as(i32, @intFromFloat(x * 11.0)));
+        const hz: u32 = @bitCast(@as(i32, @intFromFloat(z * 19.0)));
+        const h: u32 = hx *% 2246822519 ^ hz *% 3266489917;
         return self.vehicle_ids[h % self.vehicle_count];
     }
 

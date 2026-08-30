@@ -1,5 +1,5 @@
 extends Node
-## Quick-save port of src/game/save.zig (subset).
+## Quick-save: GameState + Empire + WorldSim.
 
 const SAVE_PATH := "user://empire_save.json"
 
@@ -12,6 +12,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func save_game() -> void:
 	var data := GameState.to_save_dict()
+	data["empire"] = Empire.to_save_dict()
+	data["world_sim"] = WorldSim.to_save_dict()
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f == null:
 		GameState.toast.emit("Save failed", 2.0)
@@ -29,6 +31,11 @@ func load_game() -> void:
 	if typeof(parsed) != TYPE_DICTIONARY:
 		GameState.toast.emit("Save corrupt", 2.0)
 		return
-	GameState.from_save_dict(parsed)
+	var data: Dictionary = parsed
+	GameState.from_save_dict(data)
+	if data.has("empire"):
+		Empire.from_save_dict(data["empire"])
+	if data.has("world_sim"):
+		WorldSim.from_save_dict(data["world_sim"])
 	GameState.toast.emit("Loaded.", Balance.TOAST_SAVE_SEC)
 	GameState.feed_line.emit("Loaded save")

@@ -1,15 +1,21 @@
 extends Node3D
-## Main world — BETA systems + Hell's Kitchen street slice.
+## Main world — BETA systems ported: empire, 40 spots, heat/rival/payday.
 
 func _ready() -> void:
 	GameState.current_district_id = "hells_kitchen"
-	print("[Empire & Kin] Godot 4 | era=%s | district=%s" % [
+	var player := get_node_or_null("Player")
+	if player:
+		player.add_to_group("player")
+	print("[Empire & Kin] Godot 4 | era=%s | district=%s | spots=%d" % [
 		GameState.era_name(),
 		Districts.display_name(GameState.current_district_id),
+		InteractCatalog.catalog().size(),
 	])
 	GameState.feed_line.emit("Hell's Kitchen — watch the heat")
 	_spawn_extra_jobs()
 	_spawn_safehouse()
+	InteractCatalog.spawn_all(self)
+	GameState.feed_line.emit("%d street spots live — walk and press E" % InteractCatalog.catalog().size())
 
 func _spawn_extra_jobs() -> void:
 	add_child(_make_job(Vector3(12, 1, -10), 1, 350))
@@ -36,7 +42,6 @@ func _spawn_safehouse() -> void:
 	mat.emission = Color(0.1, 0.4, 0.2)
 	mesh_i.material_override = mat
 	area.add_child(mesh_i)
-	# Simple building shell
 	var shell := MeshInstance3D.new()
 	var sm := BoxMesh.new()
 	sm.size = Vector3(7, 6, 7)

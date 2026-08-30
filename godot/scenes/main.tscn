@@ -1,0 +1,97 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/player.gd" id="2_player"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_ground"]
+size = Vector3(80, 0.2, 80)
+
+[sub_resource type="StandardMaterial3D" id="Mat_asphalt"]
+albedo_color = Color(0.18, 0.18, 0.2, 1)
+roughness = 0.92
+
+[sub_resource type="BoxShape3D" id="BoxShape_ground"]
+size = Vector3(80, 0.2, 80)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_player"]
+radius = 0.35
+height = 1.7
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape_player"]
+radius = 0.35
+height = 1.7
+
+[sub_resource type="BoxMesh" id="BoxMesh_bld"]
+size = Vector3(8, 12, 8)
+
+[sub_resource type="StandardMaterial3D" id="Mat_brick"]
+albedo_color = Color(0.45, 0.28, 0.22, 1)
+roughness = 0.85
+
+[sub_resource type="BoxShape3D" id="BoxShape_bld"]
+size = Vector3(8, 12, 8)
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 20, 0)
+shadow_enabled = true
+light_energy = 1.15
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+
+[node name="Ground" type="StaticBody3D" parent="."]
+
+[node name="Mesh" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("BoxMesh_ground")
+surface_material_override/0 = SubResource("Mat_asphalt")
+
+[node name="Collision" type="CollisionShape3D" parent="Ground"]
+shape = SubResource("BoxShape_ground")
+
+[node name="BuildingA" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 6, -10)
+
+[node name="Mesh" type="MeshInstance3D" parent="BuildingA"]
+mesh = SubResource("BoxMesh_bld")
+surface_material_override/0 = SubResource("Mat_brick")
+
+[node name="Collision" type="CollisionShape3D" parent="BuildingA"]
+shape = SubResource("BoxShape_bld")
+
+[node name="BuildingB" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 6, -8)
+
+[node name="Mesh" type="MeshInstance3D" parent="BuildingB"]
+mesh = SubResource("BoxMesh_bld")
+surface_material_override/0 = SubResource("Mat_brick")
+
+[node name="Collision" type="CollisionShape3D" parent="BuildingB"]
+shape = SubResource("BoxShape_bld")
+
+[node name="Player" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 8)
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("2_player")
+
+[node name="Mesh" type="MeshInstance3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
+mesh = SubResource("CapsuleMesh_player")
+
+[node name="Collision" type="CollisionShape3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
+shape = SubResource("CapsuleShape_player")
+
+[node name="CameraPivot" type="Node3D" parent="Player"]
+
+[node name="SpringArm3D" type="SpringArm3D" parent="Player/CameraPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 1.7, 0)
+spring_length = 5.0
+margin = 0.2
+collision_mask = 1
+
+[node name="Camera3D" type="Camera3D" parent="Player/CameraPivot/SpringArm3D"]
+current = true
+fov = 70.0

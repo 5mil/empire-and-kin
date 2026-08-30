@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/player.gd" id="2_player"]
@@ -9,6 +9,8 @@
 [ext_resource type="PackedScene" path="res://scenes/empire_panel.tscn" id="7_emp"]
 [ext_resource type="Script" path="res://scripts/street_life.gd" id="8_life"]
 [ext_resource type="Script" path="res://scripts/cop_chase.gd" id="9_cop"]
+[ext_resource type="Script" path="res://scripts/day_night.gd" id="10_dn"]
+[ext_resource type="Script" path="res://scripts/rival_event.gd" id="11_riv"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 sky_top_color = Color(0.15, 0.18, 0.28, 1)
@@ -81,6 +83,12 @@ transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.6
 shadow_enabled = true
 light_energy = 0.85
 light_color = Color(1, 0.85, 0.7, 1)
+
+[node name="DayNight" type="Node" parent="."]
+script = ExtResource("10_dn")
+
+[node name="RivalEvent" type="Node" parent="."]
+script = ExtResource("11_riv")
 
 [node name="WorldFloor" type="StaticBody3D" parent="."]
 

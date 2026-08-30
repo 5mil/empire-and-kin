@@ -9,14 +9,45 @@ func _ready() -> void:
 	])
 	GameState.feed_line.emit("Hell's Kitchen — watch the heat")
 	_spawn_extra_jobs()
+	_spawn_safehouse()
 
 func _spawn_extra_jobs() -> void:
-	# Protection job
-	var p := _make_job(Vector3(12, 1, -10), 1, 350)
-	add_child(p)
-	# Smuggling job
-	var s := _make_job(Vector3(-15, 1, 20), 2, 500)
-	add_child(s)
+	add_child(_make_job(Vector3(12, 1, -10), 1, 350))
+	add_child(_make_job(Vector3(-15, 1, 20), 2, 500))
+
+func _spawn_safehouse() -> void:
+	var area := Area3D.new()
+	area.position = Vector3(-20, 1, -15)
+	var script: Script = load("res://scripts/safehouse.gd")
+	area.set_script(script)
+	var col := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(8, 4, 8)
+	col.shape = box
+	area.add_child(col)
+	var mesh_i := MeshInstance3D.new()
+	var m := BoxMesh.new()
+	m.size = Vector3(8, 0.2, 8)
+	mesh_i.mesh = m
+	mesh_i.position.y = -0.8
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.2, 0.55, 0.35)
+	mat.emission_enabled = true
+	mat.emission = Color(0.1, 0.4, 0.2)
+	mesh_i.material_override = mat
+	area.add_child(mesh_i)
+	# Simple building shell
+	var shell := MeshInstance3D.new()
+	var sm := BoxMesh.new()
+	sm.size = Vector3(7, 6, 7)
+	shell.mesh = sm
+	shell.position.y = 2.5
+	var smat := StandardMaterial3D.new()
+	smat.albedo_color = Color(0.25, 0.28, 0.22)
+	shell.material_override = smat
+	area.add_child(shell)
+	add_child(area)
+	GameState.feed_line.emit("Safehouse marked (green pad west)")
 
 func _make_job(pos: Vector3, kind: int, payout: int) -> Area3D:
 	var area := Area3D.new()

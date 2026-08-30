@@ -3,6 +3,7 @@
 //! Phase 2: building + prop GLBs on cityscape footprints.
 //! Phase 3: character GLBs with facing + scale.
 //! Phase 4: vehicle GLBs + spinning/steering wheels.
+//! Phase 5: vehicle pitch/roll body lean.
 
 const std = @import("std");
 const gl = @import("gl.zig");
@@ -267,11 +268,13 @@ pub const Renderer = struct {
         self.drawMesh(self.box, math.Mat4.mul(t, math.Mat4.mul(r, s)), color);
     }
 
-    /// Phase 4: vehicle body mesh + wheels (spin/steer/damage).
+    /// Phase 4+5: vehicle body mesh + wheels + pitch/roll lean.
     pub fn drawVehicle(
         self: *Renderer,
         pos: backend.Vec3,
         yaw: f32,
+        pitch: f32,
+        roll: f32,
         wheel_spin: f32,
         steer: f32,
         health: u8,
@@ -284,7 +287,17 @@ pub const Renderer = struct {
             .b = @intFromFloat(@as(f32, @floatFromInt(color.b)) * dark),
             .a = color.a,
         };
-        const world = math.Mat4.mul(math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z }), math.Mat4.rotateY(yaw));
+        // T * R_yaw * R_pitch * R_roll
+        const world = math.Mat4.mul(
+            math.Mat4.mul(
+                math.Mat4.mul(
+                    math.Mat4.translate(.{ .x = pos.x, .y = pos.y, .z = pos.z }),
+                    math.Mat4.rotateY(yaw),
+                ),
+                math.Mat4.rotateX(pitch),
+            ),
+            math.Mat4.rotateZ(roll),
+        );
         var used = false;
         if (g_models) |*reg| {
             if (reg.vehicle_gpu_at(pos.x, pos.z) orelse reg.vehicle_gpu()) |m| {

@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/player.gd" id="2_player"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="5_hud"]
 [ext_resource type="Script" path="res://scripts/districts/hells_kitchen_block.gd" id="6_hk"]
 [ext_resource type="PackedScene" path="res://scenes/empire_panel.tscn" id="7_emp"]
+[ext_resource type="Script" path="res://scripts/street_life.gd" id="8_life"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 sky_top_color = Color(0.15, 0.18, 0.28, 1)
@@ -91,6 +92,9 @@ shape = SubResource("BoxShape_ground")
 
 [node name="HellsKitchen" type="Node3D" parent="."]
 script = ExtResource("6_hk")
+
+[node name="StreetLife" type="Node3D" parent="."]
+script = ExtResource("8_life")
 
 [node name="Player" type="CharacterBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 8)

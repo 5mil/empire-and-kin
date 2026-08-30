@@ -1,1 +1,157 @@
-PLACEHOLDER
+-= dt;
+        if (weather_cd > 0) weather_cd -= dt;
+        if (ambush_cd > 0) ambush_cd -= dt;
+        if (radio_cd > 0) radio_cd -= dt;
+        if (turf_cd > 0) turf_cd -= dt;
+
+        if (boot.phase != .playing) {
+            boot_mod.handle(&boot, raw, &edge_1, &edge_2, &edge_enter);
+            boot_mod.draw(gfx, boot);
+            gfx.endFrame();
+            if (boot.phase == .playing and !world_ready) {
+                selected_era = boot.selected_era;
+                world_sim.init(&ws, selected_era);
+                ws.event_interval = balance.EVENT_INTERVAL;
+                ws.rival_interval = balance.RIVAL_INTERVAL;
+                if (boot.load_on_start) {
+                    if (save.readFromDisk() catch null) |data| {
+                        save.applyFull(data, &eco, &the_kin, &clock, &boss, districts[0..], &goal, &stash, &emp);
+                    }
+                }
+                std.debug.print("[alpha] Era: {s}\n", .{era_mod.name(selected_era)});
+                feed.push(era_mod.name(selected_era));
+                world_ready = true;
+            }
+            continue;
+        }
+
+        if (choice.active) {
+            if (choice_mod.handle(&choice, raw, &edge_1, &edge_2, &eco, &the_kin, &districts[0])) |msg| {
+                toast.show(msg, 2.5);
+                feed.push(msg);
+                respect.earnStreet(&emp, 1);
+                if (milestone.markJob(&marks)) |m| feed.push(m);
+                if (goals.check(&goal, districts[0], eco)) {
+                    toast.show("GOAL TIER UP", 3.5);
+                    feed.push("Goal tier advanced");
+                    if (milestone.markGoal(&marks)) |m| feed.push(m);
+                }
+            }
+            const car_ptr0 = garage.activeVehicle(&fleet);
+            const car_opt0: ?action.Vehicle = if (car_ptr0) |v| v.* else null;
+            const cam0 = follow.update(boss, false, dt);
+            play_draw.drawChoice(gfx, boss, living.currentPeriod(clock), car_opt0, cam0, selected_era, &street_peds, &cars, choice, &toast);
+            gfx.endFrame();
+            continue;
+        }
+
+        if (edge_f5.pressed(raw.f5)) {
+            const snap = save.captureFull(eco, the_kin, clock, boss, &districts, goal, stash, emp);
+            save.writeToDisk(snap) catch {};
+            toast.show("Saved.", balance.TOAST_SAVE_SEC);
+            feed.push("Quick-saved");
+        }
+        if (edge_f9.pressed(raw.f9)) {
+            if (save.readFromDisk() catch null) |data| {
+                save.applyFull(data, &eco, &the_kin, &clock, &boss, districts[0..], &goal, &stash, &emp);
+                toast.show("Loaded.", balance.TOAST_SAVE_SEC);
+                feed.push("Loaded save");
+            }
+        }
+
+        hints.handle(&tip, raw, &edge_h, &edge_x);
+
+        const car_ptr = garage.activeVehicle(&fleet);
+        const in_car = if (car_ptr) |v| v.occupied else false;
+        const speed: f32 = if (car_ptr) |v| v.speed else boss.speed;
+        const downed = death.isDown(boss);
+        if (!downed) _ = ctrl.tick(raw, &boss, if (in_car) 0 else dt);
+
+        const dx = boss.x - prev_boss_x;
+        const dy = boss.y - prev_boss_y;
+        scene.boss_moving = (dx * dx + dy * dy) > 0.0001;
+        prev_boss_x = boss.x;
+        prev_boss_y = boss.y;
+
+        const near_any = mission_ui.anyNear(&jobs, boss);
+        const cam = follow.update(boss, in_car, dt);
+
+        if (ctrl.paused) {
+            const keys = empire_ui.MenuKeys{
+                .order_collect = edge_ord[0].pressed(raw.key_1),
+                .order_rest = edge_ord[1].pressed(raw.key_2),
+                .order_enforce = edge_ord[2].pressed(raw.key_3),
+                .order_scout = edge_ord[3].pressed(raw.key_4),
+                .order_guard = edge_ord[4].pressed(raw.key_5),
+                .panel_next = edge_tab.pressed(raw.tab),
+                .nav_prev = edge_q.pressed(raw.q),
+                .nav_next = edge_nav_e.pressed(raw.e),
+                .primary = edge_enter.pressed(raw.enter),
+                .secondary = edge_r.pressed(raw.r),
+                .tertiary = edge_f.pressed(raw.f),
+            };
+            if (keys.order_guard and lookout_mod.post(&lookout, &the_kin)) {
+                toast.show("Lookout posted 20s", 2.0);
+                feed.push("Lookout on the corner");
+            }
+            if (keys.order_rest and menu.panel == .crew) {
+                if (tipjar.tip(&eco, &the_kin, 100)) {
+                    toast.show("Tipped the boys $100", 2.0);
+                    feed.push("Crew tipped");
+                }
+            }
+            if (keys.order_collect and menu.panel == .crew) {
+                if (loan_mod.borrow(&loan, &eco, 1000)) {
+                    toast.show("Borrowed $1000", 2.0);
+                    feed.push("Loan taken");
+                } else if (loan_mod.repay(&loan, &eco)) {
+                    toast.show("Loan repaid", 2.0);
+                    feed.push("Debt cleared");
+                }
+            }
+            if (keys.order_enforce and menu.panel == .crew) {
+                if (intimidate.press(&the_kin, &districts[0], &emp)) {
+                    toast.show("Enforcers on the street", 2.5);
+                    feed.push("Intimidation");
+                } else {
+                    const msg = turf.resolve(&districts[0], &emp, &the_kin, frame_seed);
+                    toast.show(msg, 2.5);
+                    feed.push(msg);
+                }
+            }
+            empire_ui.handleMenu(keys, &emp, &the_kin, &portfolio, &fleet, districts[0..], &menu, boss.x, boss.y, &eco);
+            const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
+            scene.drawMinimalScene(gfx, boss, living.currentPeriod(clock), car_opt, cam, selected_era, near_any);
+            empire_ui.draw(gfx, emp, the_kin, portfolio, fleet, &districts, menu);
+        } else if (downed) {
+            if (edge_interact.pressed(raw.e)) {
+                death.hospital(&boss, &eco);
+                toast.show("Hospital $400", 2.5);
+                feed.push("Woke in hospital");
+            }
+            const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
+            scene.drawMinimalScene(gfx, boss, living.currentPeriod(clock), car_opt, cam, selected_era, false);
+            gameover.draw(gfx, true);
+            toast.draw(gfx);
+        } else {
+            if (edge_interact.pressed(raw.e)) {
+                var used = false;
+                for (&jobs) |*j| {
+                    if (mission_ui.nearMarker(j.*, boss) and j.state == .available) {
+                        if (mission_ui.tryStart(j, boss)) {
+                            used = true;
+                            toast.show("Job started", 1.5);
+                            feed.push("Job started");
+                            break;
+                        }
+                    }
+                }
+                if (!used) {
+                    const res = interact.tryE(&boss, &eco, &districts[0], &inv, &stash, &rival, &emp, &the_kin, frame_seed, &safehouse_cd);
+                    if (res.handled) {
+                        toast.show(res.msg, 2.0);
+                        feed.push(res.msg);
+                        used = true;
+                    }
+                }
+                if (!used) {

@@ -238,7 +238,9 @@ pub fn integrate(
     }
 
     // Visual pitch/roll (smoothed)
-    const target_pitch = std.math.clamp(-pitch_torque / (t.mass * 40.0) - thr * 0.04 + (if (thr < -0.3) -0.06 else 0.0), -0.18, 0.14);
+    // Brake dive bias must be runtime f32 (Zig 0.14: no comptime_float from runtime if)
+    const brake_dive: f32 = if (thr < -0.3) @as(f32, -0.06) else @as(f32, 0.0);
+    const target_pitch = std.math.clamp(-pitch_torque / (t.mass * 40.0) - thr * 0.04 + brake_dive, -0.18, 0.14);
     const target_roll = std.math.clamp(roll_torque / (t.mass * 35.0) + v.yaw_rate * 0.08, -0.22, 0.22);
     v.pitch += (target_pitch - v.pitch) * @min(1.0, 8.0 * dt);
     v.roll += (target_roll - v.roll) * @min(1.0, 8.0 * dt);

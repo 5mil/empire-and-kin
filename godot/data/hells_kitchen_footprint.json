@@ -1,0 +1,28 @@
+{
+  "district_id": "hells_kitchen",
+  "center_lat": 40.7638,
+  "center_lon": -73.9918,
+  "meters_per_unit": 1.0,
+  "note": "Simplified playable lots inspired by 9th/10th Ave mid-40s; not full OSM dump.",
+  "avenues": [
+    {"name": "10th Ave", "x": -55},
+    {"name": "9th Ave", "x": 0},
+    {"name": "8th Ave", "x": 55}
+  ],
+  "streets": [
+    {"name": "W 48th", "z": -67.5},
+    {"name": "W 47th", "z": -22.5},
+    {"name": "W 46th", "z": 22.5},
+    {"name": "W 45th", "z": 67.5}
+  ],
+  "buildings": [
+    {"x": -28, "z": -45, "w": 18, "d": 12, "h": 22, "name": "Tenement A"},
+    {"x": -28, "z": -5, "w": 16, "d": 11, "h": 18, "name": "Walk-up B"},
+    {"x": -28, "z": 40, "w": 20, "d": 13, "h": 26, "name": "Warehouse C"},
+    {"x": 28, "z": -45, "w": 17, "d": 12, "h": 20, "name": "Brownstone D"},
+    {"x": 28, "z": -5, "w": 19, "d": 14, "h": 24, "name": "Hotel E"},
+    {"x": 28, "z": 40, "w": 15, "d": 11, "h": 16, "name": "Shop row F"},
+    {"x": -28, "z": -45, "w": 10, "d": 8, "h": 12, "name": "Corner store", "offset": true},
+    {"x": 0, "z": 0, "w": 8, "d": 8, "h": 10, "name": "Safe pad neighbor"}
+  ]
+}

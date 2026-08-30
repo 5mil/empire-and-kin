@@ -1,45 +1,51 @@
 extends RigidBody3D
-## Arcade vehicle inspired by BETA vehicle_phys.zig (Phase 5).
-## Godot physics instead of pure raycast integrate — same controls & feel goals.
+## Arcade vehicle — BETA Phase 5 controls (throttle/steer/handbrake).
 
 enum VehicleType { SEDAN, TAXI, TRUCK, MOTORCYCLE }
 
 @export var vehicle_type: VehicleType = VehicleType.SEDAN
-@export var max_steer: float = 0.55
-@export var engine_force_mult: float = 1.0
+@export var max_speed: float = 28.0
 @export var health: int = 100
 
 var occupied: bool = false
 var _steer: float = 0.0
 var _throttle: float = 0.0
 var _handbrake: bool = false
+var max_steer: float = 0.55
+var engine_force_mult: float = 1.0
 
-@onready var _seat: Marker3D = $Seat
 @onready var _exit: Marker3D = $ExitPoint
 
 func _ready() -> void:
+	add_to_group("vehicle")
 	_apply_tuning()
-	freeze = true  # parked until entered
+	freeze = true
+	contact_monitor = true
+	max_contacts_reported = 4
+	body_entered.connect(_on_body_entered)
 
 func _apply_tuning() -> void:
-	# Mass/power proxies from PhysTuning
 	match vehicle_type:
 		VehicleType.SEDAN:
 			mass = 1200
 			engine_force_mult = 1.0
 			max_steer = 0.55
+			max_speed = 28.0
 		VehicleType.TAXI:
 			mass = 1250
 			engine_force_mult = 0.95
 			max_steer = 0.52
+			max_speed = 26.0
 		VehicleType.TRUCK:
 			mass = 2800
 			engine_force_mult = 0.7
 			max_steer = 0.42
+			max_speed = 20.0
 		VehicleType.MOTORCYCLE:
 			mass = 220
-			engine_force_mult = 1.3
+			engine_force_mult = 1.35
 			max_steer = 0.7
+			max_speed = 32.0
 
 func enter(player: Node3D) -> void:
 	if occupied:
@@ -65,30 +71,60 @@ func exit(player: Node3D) -> void:
 	player.set_process_unhandled_input(true)
 	if player.has_method("clear_vehicle"):
 		player.clear_vehicle()
+	GameState.toast.emit("Left vehicle", 1.2)
 
 func _physics_process(delta: float) -> void:
 	if not occupied:
 		return
 	_throttle = Input.get_axis("move_back", "move_forward")
-	_steer = Input.get_axis("move_right", "move_left") * max_steer
+	_steer = Input.get_axis("move_right", "move_left")
 	_handbrake = Input.is_action_pressed("handbrake")
 
 	var forward := -global_transform.basis.z
-	var speed := linear_velocity.length()
-	var force := _throttle * 9000.0 * engine_force_mult
+	var right := global_transform.basis.x
+	var speed := Vector3(linear_velocity.x, 0.0, linear_velocity.z).length()
+
+	# Engine along forward
+	var power := 12000.0 * engine_force_mult
 	if _handbrake:
-		force *= 0.3
-	apply_central_force(forward * force * delta * 60.0)
+		power *= 0.25
+	apply_central_force(forward * _throttle * power * delta)
 
-	# Steering yaw
-	var steer_power := _steer * (1.0 + speed * 0.08)
+	# Steering: yaw rate scales with speed
+	var steer_input := _steer * max_steer
 	if _handbrake:
-		steer_power *= 1.4  # oversteer bias
-	apply_torque(Vector3.UP * steer_power * 4000.0 * delta)
+		steer_input *= 1.5
+	var yaw_torque := steer_input * clampf(speed, 0.5, 18.0) * 900.0
+	apply_torque(Vector3.UP * yaw_torque * delta)
 
-	# Drag
-	apply_central_force(-linear_velocity * (0.4 if not _handbrake else 1.2))
+	# Lateral grip / handbrake slide
+	var lat := linear_velocity.dot(right)
+	var grip := 8.0 if not _handbrake else 2.0
+	apply_central_force(-right * lat * mass * grip * delta)
 
-	# Keep camera-ish upright lightly
-	if absf(rotation.x) > 0.3 or absf(rotation.z) > 0.3:
-		angular_velocity *= 0.9
+	# Drag + rolling
+	var drag := 0.35 if not _handbrake else 1.1
+	apply_central_force(-linear_velocity * drag * mass * 0.15)
+
+	# Soft speed cap
+	if speed > max_speed:
+		var hz := Vector3(linear_velocity.x, 0.0, linear_velocity.z)
+		hz = hz.normalized() * max_speed
+		linear_velocity.x = hz.x
+		linear_velocity.z = hz.z
+
+	# Keep upright bias
+	if absf(rotation.x) > 0.2 or absf(rotation.z) > 0.2:
+		angular_velocity *= 0.85
+
+func _on_body_entered(body: Node) -> void:
+	if not occupied:
+		return
+	if body is StaticBody3D:
+		var impact := linear_velocity.length()
+		if impact > 8.0:
+			health = maxi(0, health - int(impact * 0.4))
+			linear_velocity *= -0.2
+			angular_velocity *= 0.5
+			if impact > 12.0:
+				GameState.toast.emit("Crashed", 1.5)

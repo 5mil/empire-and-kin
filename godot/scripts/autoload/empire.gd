@@ -7,7 +7,6 @@ var rackets: Array[Dictionary] = []
 var street_respect: int = 10
 
 func _ready() -> void:
-	# BETA starter: speakeasy Little Italy, protection Hell's Kitchen
 	add_racket(RacketKind.SPEAKEASY, "little_italy")
 	add_racket(RacketKind.PROTECTION, "hells_kitchen")
 
@@ -43,5 +42,5 @@ func collect_all() -> int:
 		GameState.toast.emit("Collected $%d" % total, 2.5)
 	return total
 
-earn_street_respect(1) -> void:  # syntax error - fix
-	pass
+func earn_street_respect(amount: int) -> void:
+	street_respect = mini(100, street_respect + amount)

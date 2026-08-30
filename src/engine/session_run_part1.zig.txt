@@ -1,4 +1,3 @@
--= dt;
         if (weather_cd > 0) weather_cd -= dt;
         if (ambush_cd > 0) ambush_cd -= dt;
         if (radio_cd > 0) radio_cd -= dt;

@@ -1,7 +1,10 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/player.gd" id="2_player"]
+[ext_resource type="Script" path="res://scripts/vehicle.gd" id="3_veh"]
+[ext_resource type="Script" path="res://scripts/job_marker.gd" id="4_job"]
+[ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="5_hud"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_ground"]
 size = Vector3(80, 0.2, 80)
@@ -31,6 +34,26 @@ roughness = 0.85
 [sub_resource type="BoxShape3D" id="BoxShape_bld"]
 size = Vector3(8, 12, 8)
 
+[sub_resource type="BoxMesh" id="BoxMesh_car"]
+size = Vector3(1.9, 0.9, 4.2)
+
+[sub_resource type="StandardMaterial3D" id="Mat_car"]
+albedo_color = Color(0.08, 0.08, 0.1, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape_car"]
+size = Vector3(1.9, 0.9, 4.2)
+
+[sub_resource type="SphereShape3D" id="SphereShape_job"]
+radius = 2.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_job"]
+size = Vector3(1, 2, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_job"]
+albedo_color = Color(0.2, 0.9, 0.4, 1)
+emission_enabled = true
+emission = Color(0.1, 0.5, 0.2, 1)
+
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
 
@@ -38,8 +61,6 @@ script = ExtResource("1_main")
 transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 20, 0)
 shadow_enabled = true
 light_energy = 1.15
-
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 
 [node name="Ground" type="StaticBody3D" parent="."]
 
@@ -95,3 +116,41 @@ collision_mask = 1
 [node name="Camera3D" type="Camera3D" parent="Player/CameraPivot/SpringArm3D"]
 current = true
 fov = 70.0
+
+[node name="Sedan" type="RigidBody3D" parent="." groups=["vehicle"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.6, 6)
+collision_layer = 4
+collision_mask = 1
+mass = 1200.0
+script = ExtResource("3_veh")
+
+[node name="Mesh" type="MeshInstance3D" parent="Sedan"]
+mesh = SubResource("BoxMesh_car")
+surface_material_override/0 = SubResource("Mat_car")
+
+[node name="Collision" type="CollisionShape3D" parent="Sedan"]
+shape = SubResource("BoxShape_car")
+
+[node name="Seat" type="Marker3D" parent="Sedan"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0.2)
+
+[node name="ExitPoint" type="Marker3D" parent="Sedan"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2, 0, 0)
+
+[node name="JobBootleg" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 1, 4)
+collision_layer = 0
+collision_mask = 2
+monitoring = true
+script = ExtResource("4_job")
+job_kind = 0
+payout = 400
+
+[node name="Collision" type="CollisionShape3D" parent="JobBootleg"]
+shape = SubResource("SphereShape_job")
+
+[node name="Mesh" type="MeshInstance3D" parent="JobBootleg"]
+mesh = SubResource("BoxMesh_job")
+surface_material_override/0 = SubResource("Mat_job")
+
+[node name="HUD" parent="." instance=ExtResource("5_hud")]

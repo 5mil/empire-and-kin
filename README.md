@@ -1,42 +1,40 @@
 # Empire & Kin
 
-**NYC mob life** — 1930s / 1980s · real-time free-roam + empire.
+**NYC mob life** — street-level open-world crime slice.
 
-**Version:** `0.6.0-alpha` — Phase 5 raycast driving physics
+| Branch | Status |
+|--------|--------|
+| **`main`** | **Godot 4** — active development (`godot/`) |
+| **`BETA`** | Zig 0.6.0-alpha prototype **frozen** (Phase 5 physics) |
 
-## Controls
+## Godot 4 (current)
+
+```bash
+git clone https://github.com/5mil/empire-and-kin.git
+cd empire-and-kin/godot
+# Open this folder in Godot 4.3+ → F5
+```
+
+See [`godot/README.md`](godot/README.md).
+
+**Camera contract:** street-level third-person (SpringArm), not elevated god-cam.
 
 | Key | Action |
 |-----|--------|
-| WASD | Move / drive throttle+steer |
-| Shift | Sprint (on foot) · **Handbrake** (in vehicle) |
-| E | Interact / enter·exit vehicle |
-| **M** | City map (WASD pan, Q/E zoom) |
-| **C** | Character map |
-| **[ ]** | Camera zoom |
-| Q/E | Camera orbit |
-| Esc | Empire menu |
-| F5/F9 | Save/Load |
+| WASD | Move |
+| Mouse | Look |
+| Shift | Sprint |
+| Esc | Release / capture mouse |
 
-## Build
+## Zig prototype (archive)
 
 ```bash
-git pull
-zig build -Dgpu=true -Doptimize=ReleaseFast
-./zig-out/bin/empire
+git checkout BETA
+# docs/BETA_FREEZE.md — build notes for Windows cross / WSL
 ```
 
-Windows cross: see prior notes (`-Dtarget=x86_64-windows-gnu -Dglfw_prefix=...`).
+Zig controls and Phase 5 docs remain on that branch.
 
-## Assets
+## License / assets
 
-```bash
-./tools/fetch_cc0_assets.sh
-```
-
-## Docs
-
-- [`docs/GRAPHICS_DETAIL.md`](docs/GRAPHICS_DETAIL.md) — detail path vs GTA 4
-- [`docs/RESOURCE_SYSTEM.md`](docs/RESOURCE_SYSTEM.md)
-- [`docs/MESH_SKINS.md`](docs/MESH_SKINS.md)
-- [`docs/PHASE5_PHYSICS.md`](docs/PHASE5_PHYSICS.md) — raycast drive physics
+CC0 / public-domain art only for shipped content.

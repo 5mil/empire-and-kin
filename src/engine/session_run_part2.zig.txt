@@ -1,1 +1,176 @@
-PLACEHOLDER
+                  if (car_ptr) |car| {
+                        if (car.occupied) {
+                            action.exitVehicle(car, &boss);
+                            toast.show("Left vehicle", 1.2);
+                        } else if (action.nearVehicle(car.*, boss, 4.0)) {
+                            action.enterVehicle(car, &boss);
+                            toast.show("Entered vehicle", 1.2);
+                        }
+                    }
+                }
+            }
+            if (edge_r.pressed(raw.r)) {
+                if (scene.nearSafehouse(boss)) {
+                    if (eco.treasury >= balance.BRIBE_COST and boss.wanted_level > 0) {
+                        eco.treasury -= balance.BRIBE_COST;
+                        boss.wanted_level = 0;
+                        toast.show("Bribed cops", 2.5);
+                        feed.push("Bribe paid");
+                        if (milestone.markBribe(&marks)) |m| feed.push(m);
+                    }
+                } else if (bartender.near(boss)) {
+                    if (bartender.buyTip(&eco, &districts[0])) {
+                        toast.show("Bartender tip", 2.0);
+                        feed.push("Bought street tip");
+                    }
+                } else if (medkit.use(&inv, &boss)) {
+                    toast.show("Used medkit", 1.5);
+                    feed.push("Medkit used");
+                }
+            }
+            if (edge_f.pressed(raw.f) and !cui.encounter.active) {
+                const res = interact.tryEmptyStash(boss, &stash, &eco);
+                if (res.handled) {
+                    toast.show(res.msg, 2.0);
+                    feed.push(res.msg);
+                }
+            }
+
+            const action_prompt = interact.promptNear(boss);
+
+            if (car_ptr) |car| {
+                if (car.occupied) {
+                    const st = ctrl.mapper.map(raw);
+                    // Phase 5: Shift = handbrake (rear grip drop / controllable slide)
+                    action.drive(car, &boss, st.move_x, st.move_y, raw.shift, dt);
+                    world.updatePlayerDistrict(&boss);
+                }
+            }
+            clock.tick(dt);
+            const sim_dt = dt * clock.time_scale;
+            economy.tick(&eco, &districts, &the_kin, sim_dt);
+            const period = living.currentPeriod(clock);
+            living.spawnStreetLife(&streets, living.activityLevel(period));
+            living.tickStreetLife(&streets, sim_dt);
+            world_sim.tick(&ws, sim_dt, districts[0..], &the_kin, &eco, &boss);
+            heat.applyDecayAccum(&districts[0], &heat_accum, dt);
+            street_peds.tick(dt);
+            cars.tick(dt);
+            patrol_car.tick(dt);
+            rival_mod.tick(&rival, &districts[0], clock.elapsed);
+            lookout_mod.suppressAlert(lookout, &police);
+
+            if (day_cycle.crossed(&dayw, clock)) {
+                loan_mod.tickDay(&loan, &eco);
+                reputation_tick.daily(&emp, districts[0]);
+                day_count += 1;
+                if (day_count % 7 == 0) {
+                    payday.weekly(&the_kin, &eco);
+                    feed.push("Crew payday");
+                }
+                feed.push("A new day");
+                if (loan.due > 0) feed.push("Loan still due");
+            }
+
+            if (street_event_cd <= 0) {
+                street_event_cd = balance.STREET_EVENT_INTERVAL;
+                const ev = events.rollEvent(frame_seed);
+                events.applyEvent(ev, districts[0..], &the_kin, &eco.treasury);
+                toast.show(ev.title, 3.0);
+                feed.push(ev.title);
+            }
+            if (news_cd <= 0) {
+                news_cd = 75.0;
+                feed.push(news.lineForSeed(frame_seed));
+            }
+            if (banter_cd <= 0) {
+                banter_cd = 50.0;
+                feed.push(crew_talk.line(frame_seed));
+            }
+            if (weather_cd <= 0) {
+                weather_cd = 120.0;
+                weather = weather_mod.fromSeed(frame_seed);
+                feed.push(weather_mod.name(weather));
+            }
+            if (ambush_cd <= 0) {
+                ambush_cd = balance.AMBUSH_CHECK_INTERVAL;
+                if (ambush.roll(frame_seed, districts[0].heat, boss.wanted_level)) {
+                    ambush.apply(&boss, &districts[0]);
+                    toast.showUrgent("AMBUSH!", 2.5);
+                    feed.push("Ambushed");
+                }
+            }
+            if (radio_cd <= 0) {
+                radio_cd = 60.0;
+                if (districts[0].heat > 30) feed.push(radio.chatter(frame_seed));
+            }
+            if (turf_cd <= 0) {
+                turf_cd = 120.0;
+                if (rival.pressure > 40) {
+                    const msg = turf.resolve(&districts[0], &emp, &the_kin, frame_seed);
+                    feed.push(msg);
+                }
+            }
+            if (heat_spike.maybe(&districts[0], boss, frame_seed)) {
+                toast.showUrgent("Heat spike!", 2.0);
+                feed.push("Police heat spike");
+            }
+
+            for (&jobs) |*j| {
+                const pay = mission_ui.tickJob(j, &boss, &eco, &districts[0], emp, dt);
+                if (pay > 0) {
+                    choice_mod.open(&choice, pay);
+                    feed.push("Job finished - choose");
+                    rival_mod.pushBack(&rival);
+                }
+            }
+
+            if (districts[0].heat < balance.HEAL_MAX_HEAT and !cui.encounter.active and boss.health < 100) {
+                heal_accum += balance.HEAL_PER_SEC * @as(f32, @floatCast(dt));
+                if (heal_accum >= 1.0) {
+                    const amt: u8 = @intFromFloat(@min(heal_accum, 5.0));
+                    player.heal(&boss, amt);
+                    heal_accum -= @as(f32, @floatFromInt(amt));
+                }
+            }
+
+            combat_ui.maybeSpawn(&cui, boss, districts[0].heat, frame_seed);
+            combat_ui.tick(&cui, &boss, dt, edge_f.pressed(raw.f) and cui.encounter.active);
+            wanted_ui.tickWanted(&boss, &police, &chase, districts[0].heat, period, speed, dt, clock.elapsed);
+            if (goals.check(&goal, districts[0], eco)) {
+                toast.show("GOAL TIER UP", 3.5);
+                feed.push("Goal tier up");
+                if (milestone.markGoal(&marks)) |m| feed.push(m);
+            }
+
+            const car_opt: ?action.Vehicle = if (car_ptr) |v| v.* else null;
+            play_draw.drawPlay(
+                gfx,
+                boss,
+                period,
+                car_opt,
+                cam,
+                selected_era,
+                near_any,
+                districts[0],
+                eco,
+                goal,
+                clock,
+                action_prompt,
+                &jobs,
+                &street_peds,
+                &cars,
+                &patrol_car,
+                &toast,
+                &feed,
+                cui,
+            );
+        }
+        gfx.endFrame();
+    }
+
+    const final_snap = save.captureFull(eco, the_kin, clock, boss, &districts, goal, stash, emp);
+    save.writeToDisk(final_snap) catch {};
+    gfx.shutdown();
+    std.debug.print("=== EXIT === Saved | ${d} | {s}\n", .{ eco.treasury, era_mod.name(selected_era) });
+}

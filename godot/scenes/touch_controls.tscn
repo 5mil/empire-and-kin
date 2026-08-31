@@ -1,0 +1,65 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/touch_controls.gd" id="1"]
+
+[node name="TouchControls" type="CanvasLayer"]
+layer = 20
+script = ExtResource("1")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="StickBg" type="Panel" parent="Root"]
+layout_mode = 0
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -180.0
+offset_right = 168.0
+offset_bottom = -36.0
+grow_vertical = 0
+modulate = Color(1, 1, 1, 0.35)
+
+[node name="Knob" type="Panel" parent="Root/StickBg"]
+layout_mode = 0	offset_left = 52.0
+offset_top = 52.0
+offset_right = 92.0
+offset_bottom = 92.0
+modulate = Color(1, 1, 1, 0.7)
+
+[node name="BtnE" type="Button" parent="Root"]
+layout_mode = 0
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -120.0
+offset_top = -100.0
+offset_right = -24.0
+offset_bottom = -36.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "E"
+
+[node name="BtnSprint" type="Button" parent="Root"]
+layout_mode = 0
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -120.0
+offset_top = -180.0
+offset_right = -24.0
+offset_bottom = -116.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "SPRINT"

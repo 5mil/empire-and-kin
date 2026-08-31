@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/player.gd" id="2_player"]
@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://scripts/cop_chase.gd" id="9_cop"]
 [ext_resource type="Script" path="res://scripts/day_night.gd" id="10_dn"]
 [ext_resource type="Script" path="res://scripts/rival_event.gd" id="11_riv"]
+[ext_resource type="PackedScene" path="res://scenes/touch_controls.tscn" id="12_touch"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 sky_top_color = Color(0.15, 0.18, 0.28, 1)
@@ -173,3 +174,5 @@ surface_material_override/0 = SubResource("Mat_job")
 [node name="HUD" parent="." instance=ExtResource("5_hud")]
 
 [node name="EmpirePanel" parent="." instance=ExtResource("7_emp")]
+
+[node name="TouchControls" parent="." instance=ExtResource("12_touch")]

@@ -21,13 +21,14 @@ var _sprint: bool = false
 @onready var _btn_sprint: Button = $Root/BtnSprint
 
 func _ready() -> void:
+	add_to_group("touch_controls")
 	layer = 20
 	var touch := DisplayServer.is_touchscreen_available()
 	var mobile := OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios")
 	_root.visible = touch or mobile
 	if not _root.visible:
+		# Still register so desktop ignore is fine
 		return
-	# Don't capture mouse on phone
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_btn_e.pressed.connect(func(): interact_pressed.emit())
 	_btn_sprint.button_down.connect(func():
@@ -76,8 +77,6 @@ func _input(event: InputEvent) -> void:
 			if raw.length() > max_r:
 				raw = raw.normalized() * max_r
 			move_vector = raw / max_r
-			# Godot move: y forward is negative in get_vector convention for our player
-			move_vector = Vector2(move_vector.x, move_vector.y)
 			_update_stick(raw)
 		elif sd.index == _look_touch:
 			look_delta += sd.position - _look_last

@@ -5,10 +5,10 @@ const std = @import("std");
 const gpu_mesh = @import("gpu_mesh.zig");
 const resource_manager = @import("resource_manager.zig");
 
-pub const MAX_BUILDING_VARIANTS: usize = 32;
-pub const MAX_PROP_VARIANTS: usize = 24;
-pub const MAX_CHARACTER_VARIANTS: usize = 16;
-pub const MAX_VEHICLE_VARIANTS: usize = 16;
+pub const MAX_BUILDING_VARIANTS: usize = 96;
+pub const MAX_PROP_VARIANTS: usize = 64;
+pub const MAX_CHARACTER_VARIANTS: usize = 24;
+pub const MAX_VEHICLE_VARIANTS: usize = 32;
 
 pub const Registry = struct {
     allocator: std.mem.Allocator,

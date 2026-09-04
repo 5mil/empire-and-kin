@@ -1,36 +1,32 @@
-# Auto-fetch CC0 assets
+# Fetch public CC0 GLBs (BETA)
+
+Git does **not** store the packs (too large). Run this on the machine that builds the game:
 
 ```bash
+cd ~/empire-and-kin
+git checkout BETA && git pull
 chmod +x tools/fetch_cc0_assets.sh
 ./tools/fetch_cc0_assets.sh
 ```
 
-## What is automated
+## Automated (no login)
 
-| Source | Method |
-|--------|--------|
-| Kenney City Roads / Commercial / Suburban / Industrial | Direct ZIP from `kenney.nl/media/...` |
-| Kenney Car Kit | Same |
-| Kenney Nature Kit | Same |
-| Poly Haven models (default 8) | Public API → glTF package |
-| Khronos Box / Duck / CesiumMan / RiggedSimple | GitHub raw GLB |
-
-## Options
+| Pack | Dest |
+|------|------|
+| Kenney City Roads / Commercial / Suburban / Industrial | buildings + environment |
+| Kenney Modular Buildings | buildings |
+| Kenney Car Kit + Train Kit | vehicles |
+| Kenney Nature / Furniture / Food | props |
+| Poly Haven models (24, urban-scored) | props |
+| Khronos Box / Cube / Triangle | props (loader smoke) |
 
 ```bash
 ./tools/fetch_cc0_assets.sh --kenney-only
-./tools/fetch_cc0_assets.sh --polyhaven-only --poly-limit 20
-./tools/fetch_cc0_assets.sh --no-samples
+./tools/fetch_cc0_assets.sh --polyhaven-only --poly-limit 40
 ```
 
-## Still manual (itch)
+## Manual (characters)
 
-- Kenney All-in-1 (huge)
-- Quaternius Universal Base Characters
-- Kenney Character Assets (rigged skins)
+Quaternius + Kenney character packs are itch-only. Drop `.glb` into `assets/cc0/characters/`.
 
-## Notes
-
-- Kenney CDN hashes change when packs update; if a download 404s, open the asset page on kenney.nl and update the URL in the script.
-- Requires: `curl`, `unzip`, `python3` (for Poly Haven).
-- Binaries stay local under `assets/cc0/` and `assets/.cache/` — not committed to git.
+`model_registry` scans those folders at GPU init and swaps boxes for meshes when files exist.

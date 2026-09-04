@@ -1,12 +1,13 @@
 # Asset credits
 
-Only list files **actually present** under `assets/cc0/` or `assets/generated/` (or shipped in a build).
+Provenance for packs pulled by `tools/fetch_cc0_assets.sh` (files live locally under `assets/cc0/`, not in git).
 
-| File / pack | Author | License | Source URL |
-|-------------|--------|---------|------------|
-| *(none yet — procedural only; TRELLIS pipeline ready)* | — | — | — |
-
-When you add a Kenney / Quaternius / Poly Haven / TRELLIS-generated file, append a row.  
-CC0 does not require attribution; we still record provenance for the team.
-
-TRELLIS.2-generated assets: list the **input image** source and note tool version in `meta.json` as well.
+| Pack | Author | License | Source |
+|------|--------|---------|--------|
+| City Kit Roads / Commercial / Suburban / Industrial | Kenney | CC0 | https://kenney.nl/assets |
+| Modular Buildings | Kenney | CC0 | https://kenney.nl/assets/modular-buildings |
+| Car Kit / Train Kit | Kenney | CC0 | https://kenney.nl/assets |
+| Nature / Furniture / Food kits | Kenney | CC0 | https://kenney.nl/assets |
+| Poly Haven models (selected) | various | CC0 | https://polyhaven.com/ |
+| Khronos Box / Cube / Triangle | Khronos | CC0 | https://github.com/KhronosGroup/glTF-Sample-Assets |
+| Quaternius UBC (manual) | Quaternius | CC0 | https://quaternius.com/ |

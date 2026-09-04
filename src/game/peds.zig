@@ -1,5 +1,4 @@
-//! Ambient pedestrians — mesh when available, procedural humanoid otherwise.
-const std = @import("std");
+//! Phase 7 — sidewalk wanderers (16). Stay off the avenue lanes.
 const backend = @import("../engine/backend.zig");
 const sim_actor = @import("../engine/sim_actor.zig");
 const anim = @import("../engine/anim.zig");
@@ -11,9 +10,11 @@ pub const Ped = struct {
     vz: f32,
     hue: u8,
     yaw: f32 = 0,
+    /// 0 north sidewalk, 1 south sidewalk
+    walk: u8 = 0,
 };
 
-pub const MAX_PEDS = 8;
+pub const MAX_PEDS = 16;
 
 pub const StreetPeds = struct {
     list: [MAX_PEDS]Ped = undefined,
@@ -22,16 +23,24 @@ pub const StreetPeds = struct {
 
     pub fn init(self: *StreetPeds) void {
         const seeds = [_]Ped{
-            .{ .x = 6, .z = 18, .vx = 1.2, .vz = 0, .hue = 0 },
-            .{ .x = 20, .z = 22, .vx = -0.9, .vz = 0.2, .hue = 1 },
-            .{ .x = 14, .z = 16, .vx = 0.3, .vz = 1.0, .hue = 2 },
-            .{ .x = 9, .z = 24, .vx = -0.5, .vz = -0.7, .hue = 3 },
-            .{ .x = 18, .z = 19, .vx = 0.8, .vz = -0.4, .hue = 4 },
-            .{ .x = 11, .z = 21, .vx = -1.1, .vz = 0.1, .hue = 5 },
-            .{ .x = 25, .z = 14, .vx = -0.6, .vz = 0.5, .hue = 6 },
-            .{ .x = 4, .z = 26, .vx = 0.7, .vz = -0.3, .hue = 7 },
+            .{ .x = 6, .z = 17.2, .vx = 1.2, .vz = 0, .hue = 0, .walk = 0 },
+            .{ .x = 20, .z = 22.6, .vx = -0.9, .vz = 0, .hue = 1, .walk = 1 },
+            .{ .x = 14, .z = 17.0, .vx = 0.8, .vz = 0, .hue = 2, .walk = 0 },
+            .{ .x = 9, .z = 22.8, .vx = -0.7, .vz = 0, .hue = 3, .walk = 1 },
+            .{ .x = 18, .z = 17.4, .vx = 1.0, .vz = 0, .hue = 4, .walk = 0 },
+            .{ .x = 11, .z = 22.4, .vx = -1.1, .vz = 0, .hue = 5, .walk = 1 },
+            .{ .x = 25, .z = 17.1, .vx = -0.6, .vz = 0, .hue = 6, .walk = 0 },
+            .{ .x = 4, .z = 22.9, .vx = 0.7, .vz = 0, .hue = 7, .walk = 1 },
+            .{ .x = 2, .z = 17.3, .vx = 1.05, .vz = 0, .hue = 8, .walk = 0 },
+            .{ .x = 28, .z = 22.5, .vx = -0.85, .vz = 0, .hue = 9, .walk = 1 },
+            .{ .x = 16, .z = 16.8, .vx = -0.95, .vz = 0, .hue = 10, .walk = 0 },
+            .{ .x = 7, .z = 23.0, .vx = 0.6, .vz = 0, .hue = 11, .walk = 1 },
+            .{ .x = 22, .z = 17.6, .vx = 0.5, .vz = 0, .hue = 12, .walk = 0 },
+            .{ .x = 13, .z = 22.2, .vx = -0.55, .vz = 0, .hue = 13, .walk = 1 },
+            .{ .x = 30, .z = 17.2, .vx = -1.15, .vz = 0, .hue = 14, .walk = 0 },
+            .{ .x = 1, .z = 22.7, .vx = 0.95, .vz = 0, .hue = 15, .walk = 1 },
         };
-        self.count = 8;
+        self.count = 16;
         var i: u8 = 0;
         while (i < self.count) : (i += 1) self.list[i] = seeds[i];
         self.time_s = 0;
@@ -44,10 +53,18 @@ pub const StreetPeds = struct {
         while (i < self.count) : (i += 1) {
             var p = &self.list[i];
             p.x += p.vx * dt32;
-            p.z += p.vz * dt32;
-            if (p.x < 2 or p.x > 28) p.vx = -p.vx;
-            if (p.z < 10 or p.z > 30) p.vz = -p.vz;
-            p.yaw = anim.yawFromVelocity(p.vx, p.vz, p.yaw);
+            // pin to sidewalk band
+            const target_z: f32 = if (p.walk == 0) 17.2 else 22.6;
+            p.z += (target_z - p.z) * 0.08;
+            if (p.x < 0) {
+                p.x = 0;
+                p.vx = @abs(p.vx);
+            }
+            if (p.x > 32) {
+                p.x = 32;
+                p.vx = -@abs(p.vx);
+            }
+            p.yaw = anim.yawFromVelocity(p.vx, 0, p.yaw);
         }
     }
 
@@ -65,7 +82,7 @@ pub const StreetPeds = struct {
                 6 => backend.Color.rgb(70, 85, 120),
                 else => backend.Color.rgb(110, 95, 75),
             };
-            const moving = (p.vx * p.vx + p.vz * p.vz) > 0.01;
+            const moving = (p.vx * p.vx) > 0.01;
             sim_actor.drawPedVariant(gfx, p.x, p.z, col, p.hue, self.time_s, moving, p.yaw);
         }
     }

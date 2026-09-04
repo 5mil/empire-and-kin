@@ -5,7 +5,7 @@ const session = @import("engine/session.zig");
 
 pub fn main() !void {
     _ = build_options;
-    std.debug.print("Empire & Kin - 0.6.1-alpha (Phase 6 telemetry)\n", .{});
+    std.debug.print("Empire & Kin - 0.7.0-alpha (Phase 7 street life)\n", .{});
     const gfx = gfx_mod.getBackend();
     try gfx.init("Empire & Kin", 1280, 720);
     try session.run(gfx);

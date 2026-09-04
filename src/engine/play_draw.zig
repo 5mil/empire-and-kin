@@ -2,6 +2,7 @@
 const backend = @import("backend.zig");
 const scene = @import("scene.zig");
 const sim_hud = @import("sim_hud.zig");
+const vehicle_hud = @import("vehicle_hud.zig");
 const interact = @import("interact.zig");
 const mission_ui = @import("mission_ui.zig");
 const toast_mod = @import("toast.zig");
@@ -42,14 +43,18 @@ pub fn drawPlay(
     cui: combat_ui.CombatUI,
 ) void {
     scene.drawMinimalScene(gfx, boss, period, car_opt, cam, era, near_job);
-    // World markers only — no text spam at each contact
     interact.drawMarkers(gfx);
     street_peds.draw(gfx);
     cars.draw(gfx);
     patrol.draw(gfx);
     for (jobs) |j| mission_ui.drawMarker(gfx, j, boss);
 
-    sim_hud.draw(gfx, boss, district, eco, goal, clock, period, action_prompt, 1280, 720);
+    const driving = if (car_opt) |c| c.occupied else false;
+    if (driving) {
+        vehicle_hud.draw(gfx, car_opt.?, 1280, 720);
+    } else {
+        sim_hud.draw(gfx, boss, district, eco, goal, clock, period, action_prompt, 1280, 720);
+    }
     feed.draw(gfx);
     combat_ui.draw(gfx, cui);
     toast.draw(gfx);
